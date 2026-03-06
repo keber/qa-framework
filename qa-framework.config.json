@@ -1,0 +1,87 @@
+{
+  "$schema": "./qa-framework.config.schema.json",
+  "frameworkVersion": "1.0.0",
+
+  "project": {
+    "name": "{{PROJECT_NAME}}",
+    "displayName": "{{PROJECT_DISPLAY_NAME}}",
+    "description": "{{PROJECT_DESCRIPTION}}",
+    "qaBaseUrl": "{{QA_BASE_URL}}",
+    "techStack": "{{TECH_STACK}}",
+    "loginPath": "{{LOGIN_PATH}}"
+  },
+
+  "modules": [
+    {
+      "code": "{{MODULE_CODE}}",
+      "name": "{{MODULE_NAME}}",
+      "description": "{{MODULE_DESCRIPTION}}",
+      "specPath": "qa/01-specifications/module-{{module-name}}",
+      "automationPath": "qa/07-automation/e2e/tests/{{module-name}}"
+    }
+  ],
+
+  "conventions": {
+    "language": "es",
+    "locale": "es-CL",
+    "testCaseIdPattern": "TC-{MODULE}-{SUBMODULE}-{NUM}",
+    "businessRuleIdPattern": "RN-{MODULE}-{NUM}",
+    "workflowIdPattern": "FL-{MODULE}-{NUM}",
+    "defectIdPattern": "DEF-{NUM}",
+    "testNamingPattern": "[{ID}] {title} @{priority}",
+    "timestampFormat": "YYYY-MM-DD_HH-MM-SS",
+    "tcPriorityLevels": ["P0", "P1", "P2", "P3"]
+  },
+
+  "testUsers": [
+    {
+      "role": "{{ROLE_NAME}}",
+      "envVarEmail": "QA_USER_{{ROLE_UPPER}}_EMAIL",
+      "envVarPassword": "QA_USER_{{ROLE_UPPER}}_PASSWORD",
+      "description": "{{ROLE_DESCRIPTION}}"
+    }
+  ],
+
+  "integrations": {
+    "playwright": {
+      "enabled": false,
+      "automationRoot": "qa/07-automation/e2e",
+      "workers": {
+        "local": 2,
+        "ci": 1
+      },
+      "timeout": 30000,
+      "navigationTimeout": 60000,
+      "actionTimeout": 10000,
+      "retries": {
+        "local": 0,
+        "ci": 2
+      },
+      "browsers": ["chromium"]
+    },
+
+    "azureDevOps": {
+      "enabled": false,
+      "organization": "{{ADO_ORG}}",
+      "project": "{{ADO_PROJECT}}",
+      "testPlanId": null,
+      "suiteId": null,
+      "variableGroup": "{{ADO_VARIABLE_GROUP}}",
+      "pipelineFile": "qa/08-azure-integration/pipelines/azure-pipeline-qa.yml",
+      "moduleRegistry": "qa/08-azure-integration/module-registry.json",
+      "reporterPackage": "@alex_neo/playwright-azure-reporter"
+    }
+  },
+
+  "agentSettings": {
+    "instructionsPath": "qa/00-guides",
+    "credentialPolicy": "env-vars-only",
+    "credentialPlaceholder": "<PLACEHOLDER>",
+    "screenshotPath": "qa/07-automation/e2e/diagnosis",
+    "sessionSummaryLocation": "qa/",
+    "tc_per_submodule_target": {
+      "min": 50,
+      "max": 85
+    }
+  }
+}

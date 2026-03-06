@@ -1,0 +1,52 @@
+{
+  "name": "keber/qa-framework",
+  "version": "1.0.0",
+  "description": "Reusable spec-driven QA framework for IDE-agent-assisted automated testing. Installable as an npm package. Provides structure, templates, agent instructions, and optional integrations for Playwright and Azure DevOps.",
+  "keywords": [
+    "qa",
+    "testing",
+    "playwright",
+    "spec-driven",
+    "azure-devops",
+    "agent",
+    "copilot",
+    "framework"
+  ],
+  "license": "MIT",
+  "main": "scripts/index.js",
+  "bin": {
+    "qa-framework": "scripts/cli.js"
+  },
+  "scripts": {
+    "init": "node scripts/cli.js init",
+    "generate": "node scripts/cli.js generate",
+    "validate": "node scripts/cli.js validate"
+  },
+  "files": [
+    "agent-instructions/",
+    "templates/",
+    "docs/",
+    "examples/",
+    "integrations/",
+    "scripts/",
+    "README.md",
+    "CHANGELOG.md",
+    "qa-framework.config.json"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {},
+  "peerDependencies": {
+    "@playwright/test": ">=1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/qa-framework.git"
+  }
+}

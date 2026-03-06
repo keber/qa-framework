@@ -1,0 +1,133 @@
+# -----------------------------------------------------------------------
+# keber/qa-framework — Azure Pipeline QA Template
+# -----------------------------------------------------------------------
+# Parameterized CI pipeline for running Playwright E2E tests and
+# optionally syncing results to Azure DevOps Test Plans.
+#
+# Required Pipeline Library Variable Group: "QA-Variables"
+#   QA_BASE_URL          — Target application URL for QA environment
+#   QA_USER_EMAIL        — Default test user email
+#   QA_USER_PASSWORD     — Default test user password (secret)
+#   AZURE_TOKEN          — ADO Personal Access Token (secret)
+#   ADO_ORG_URL          — https://dev.azure.com/your-org
+#   ADO_PROJECT_NAME     — ADO project name
+#   ADO_PLAN_ID          — Test Plan ID
+# -----------------------------------------------------------------------
+
+trigger:
+  branches:
+    include:
+      - main
+      - qa
+      - release/*
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  - group: QA-Variables
+  - name: NODE_VERSION
+    value: '20.x'
+  - name: QA_DIR
+    value: 'qa/07-automation'
+  - name: ADO_SYNC_DISABLED
+    value: 'false'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  # -----------------------------------------------------------------------
+  # Stage 1: Install & Setup
+  # -----------------------------------------------------------------------
+  - stage: Setup
+    displayName: 'Install Dependencies'
+    jobs:
+      - job: Install
+        displayName: 'npm install + Playwright browsers'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: 'Use Node.js $(NODE_VERSION)'
+
+          - script: |
+              cd $(QA_DIR)
+              npm ci
+              npx playwright install chromium --with-deps
+            displayName: 'Install npm deps and Playwright Chromium'
+
+          - task: CacheBeta@1
+            inputs:
+              key: 'playwright | "$(Agent.OS)" | $(QA_DIR)/package-lock.json'
+              path: '~/.cache/ms-playwright'
+            displayName: 'Cache Playwright browsers'
+
+  # -----------------------------------------------------------------------
+  # Stage 2: E2E Tests
+  # -----------------------------------------------------------------------
+  - stage: E2E
+    displayName: 'E2E Tests'
+    dependsOn: Setup
+    jobs:
+      - job: PlaywrightTests
+        displayName: 'Run Playwright suite'
+        timeoutInMinutes: 60
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - script: |
+              cd $(QA_DIR)
+              npm ci
+              npx playwright install chromium --with-deps
+            displayName: 'Restore dependencies'
+
+          - script: |
+              cd $(QA_DIR)
+              npx playwright test --grep @P0
+            displayName: 'Run P0 smoke suite'
+            env:
+              QA_BASE_URL:       $(QA_BASE_URL)
+              QA_USER_EMAIL:     $(QA_USER_EMAIL)
+              QA_USER_PASSWORD:  $(QA_USER_PASSWORD)
+              AZURE_TOKEN:       $(AZURE_TOKEN)
+              ADO_ORG_URL:       $(ADO_ORG_URL)
+              ADO_PROJECT_NAME:  $(ADO_PROJECT_NAME)
+              ADO_PLAN_ID:       $(ADO_PLAN_ID)
+              ADO_SYNC_DISABLED: $(ADO_SYNC_DISABLED)
+              CI:                'true'
+
+          - script: |
+              cd $(QA_DIR)
+              npx playwright test --grep "@P1|@P2"
+            displayName: 'Run P1/P2 regression suite'
+            condition: succeededOrFailed()
+            env:
+              QA_BASE_URL:       $(QA_BASE_URL)
+              QA_USER_EMAIL:     $(QA_USER_EMAIL)
+              QA_USER_PASSWORD:  $(QA_USER_PASSWORD)
+              AZURE_TOKEN:       $(AZURE_TOKEN)
+              ADO_ORG_URL:       $(ADO_ORG_URL)
+              ADO_PROJECT_NAME:  $(ADO_PROJECT_NAME)
+              ADO_PLAN_ID:       $(ADO_PLAN_ID)
+              CI:                'true'
+
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles:  '$(QA_DIR)/test-results/junit*.xml'
+              mergeTestResults:  true
+              testRunTitle:      'Playwright E2E — $(Build.SourceBranchName)'
+            displayName: 'Publish test results'
+
+          - task: PublishBuildArtifacts@1
+            condition: always()
+            inputs:
+              pathToPublish: '$(QA_DIR)/playwright-report'
+              artifactName:  'playwright-report'
+            displayName: 'Publish Playwright HTML report'
