@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * scripts/init.js — Scaffold qa/ folder structure from config
+ * scripts/init.js - Scaffold qa/ folder structure from config
  *
  * Usage:
  *   qa-framework init
@@ -60,7 +60,7 @@ const localConfigPath = path.join(qaRoot, 'qa-framework.config.json');
 
 // --skip-if-exists: bail out silently when qa/ is already initialised
 if (skipIfExists && fs.existsSync(localConfigPath)) {
-  process.stderr.write('[qa-framework/init] qa/ already initialised — skipping (postinstall).\n');
+  process.stderr.write('[qa-framework/init] qa/ already initialised - skipping (postinstall).\n');
   process.exit(0);
 }
 
@@ -69,7 +69,7 @@ if (!fs.existsSync(localConfigPath)) {
   fs.writeFileSync(localConfigPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
   console.log(`  [created] ${path.relative(cwd, localConfigPath)}`);
 } else {
-  console.log(`  [exists]  ${path.relative(cwd, localConfigPath)} — skipped`);
+  console.log(`  [exists]  ${path.relative(cwd, localConfigPath)} - skipped`);
 }
 
 process.stderr.write(`[qa-framework/init] Scaffolding qa/ at: ${qaRoot}\n`);
@@ -142,7 +142,7 @@ for (const mod of modules) {
         }
         console.log(`  [created] ${path.relative(cwd, dest)}`);
       } else {
-        console.log(`  [exists]  ${path.relative(cwd, dest)} — skipped`);
+        console.log(`  [exists]  ${path.relative(cwd, dest)} - skipped`);
       }
     }
 
@@ -248,8 +248,8 @@ This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'}
 ## Agent behavior rules
 
 1. Before performing any QA task, read the relevant instruction file from \`qa/00-guides/\`
-2. Always save artifacts in the correct \`qa/\` subfolder — refer to \`qa/QA-STRUCTURE-GUIDE.md\`
-3. Never hardcode credentials — always use env vars and \`<PLACEHOLDER>\` in documentation
+2. Always save artifacts in the correct \`qa/\` subfolder - refer to \`qa/QA-STRUCTURE-GUIDE.md\`
+3. Never hardcode credentials - always use env vars and \`<PLACEHOLDER>\` in documentation
 4. Follow the naming conventions in \`qa/00-standards/naming-conventions.md\`
 5. Project QA config is at \`qa/qa-framework.config.json\`
 
@@ -272,8 +272,8 @@ process.stderr.write('\n[qa-framework/init] ✅ QA framework scaffold complete!\
 process.stderr.write('\nNext steps for the agent:\n');
 process.stderr.write('  1. If ADO integration is needed, run: npm install @keber/ado-qa\n');
 process.stderr.write('  2. If Playwright automation is needed, run: npm install @playwright/test\n');
-process.stderr.write('  3. Edit qa/qa-framework.config.json — add your project modules\n');
-process.stderr.write('  4. Copy qa/07-automation/.env.example → qa/07-automation/.env and fill in credentials\n');
+process.stderr.write('  3. Edit qa/qa-framework.config.json - add your project modules\n');
+process.stderr.write('  4. Copy qa/07-automation/.env.example -> qa/07-automation/.env and fill in credentials\n');
 process.stderr.write('  5. Add qa/07-automation/.env and qa/07-automation/.auth/ to .gitignore\n');
 
 // -----------------------------------------------------------------------
