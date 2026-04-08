@@ -52,7 +52,7 @@ if (explicitConfigPath) {
 } else {
   config = buildBootstrapConfig();
   configSource = 'generated defaults';
-  console.log('[qa-framework/init] No config file found. Bootstrapping with default config.');
+  process.stderr.write('[qa-framework/init] No config file found. Bootstrapping with default config.\n');
 }
 
 const qaRoot  = path.resolve(cwd, config.conventions?.qaRoot ?? 'qa');
@@ -60,7 +60,7 @@ const localConfigPath = path.join(qaRoot, 'qa-framework.config.json');
 
 // --skip-if-exists: bail out silently when qa/ is already initialised
 if (skipIfExists && fs.existsSync(localConfigPath)) {
-  console.log('[qa-framework/init] qa/ already initialised — skipping (postinstall).');
+  process.stderr.write('[qa-framework/init] qa/ already initialised — skipping (postinstall).\n');
   process.exit(0);
 }
 
@@ -72,8 +72,8 @@ if (!fs.existsSync(localConfigPath)) {
   console.log(`  [exists]  ${path.relative(cwd, localConfigPath)} — skipped`);
 }
 
-console.log(`[qa-framework/init] Scaffolding qa/ at: ${qaRoot}`);
-console.log(`[qa-framework/init] Using config source: ${configSource}`);
+process.stderr.write(`[qa-framework/init] Scaffolding qa/ at: ${qaRoot}\n`);
+process.stderr.write(`[qa-framework/init] Using config source: ${configSource}\n`);
 
 // --- Top-level folders ---
 const topLevelFolders = [
@@ -89,7 +89,7 @@ const topLevelFolders = [
 for (const folder of topLevelFolders) {
   const fullPath = path.join(qaRoot, folder);
   fs.mkdirSync(fullPath, { recursive: true });
-  console.log(`  [created] ${path.relative(process.cwd(), fullPath)}/`);
+  console.log(`  [created] ${path.relative(cwd, fullPath)}/`);
 }
 
 // --- Standards placeholder ---
@@ -140,9 +140,9 @@ for (const mod of modules) {
         } else {
           fs.writeFileSync(dest, `# ${specFile}\n\n> Auto-generated placeholder\n`, 'utf8');
         }
-        console.log(`  [created] ${path.relative(process.cwd(), dest)}`);
+        console.log(`  [created] ${path.relative(cwd, dest)}`);
       } else {
-        console.log(`  [exists]  ${path.relative(process.cwd(), dest)} — skipped`);
+        console.log(`  [exists]  ${path.relative(cwd, dest)} — skipped`);
       }
     }
 
@@ -152,7 +152,7 @@ for (const mod of modules) {
     const specTs = path.join(e2eDir, `${subKey}.spec.ts`);
     if (!fs.existsSync(specTs)) {
       fs.writeFileSync(specTs, specScaffold(mod.name, sub.name, moduleKey, subKey), 'utf8');
-      console.log(`  [created] ${path.relative(process.cwd(), specTs)}`);
+      console.log(`  [created] ${path.relative(cwd, specTs)}`);
     }
   }
 }
@@ -164,7 +164,7 @@ for (const file of ['playwright.config.ts', 'global-setup.ts', '.env.example', '
   const dest = path.join(automationDir, file);
   if (!fs.existsSync(dest)) {
     fs.copyFileSync(path.join(scaffoldSrc, file), dest);
-    console.log(`  [created] ${path.relative(process.cwd(), dest)}`);
+    console.log(`  [created] ${path.relative(cwd, dest)}`);
   }
 }
 const fixturesDir = path.join(automationDir, 'fixtures');
@@ -173,7 +173,7 @@ for (const file of ['auth.ts', 'test-helpers.ts']) {
   const dest = path.join(fixturesDir, file);
   if (!fs.existsSync(dest)) {
     fs.copyFileSync(path.join(scaffoldSrc, 'fixtures', file), dest);
-    console.log(`  [created] ${path.relative(process.cwd(), dest)}`);
+    console.log(`  [created] ${path.relative(cwd  , dest)}`);
   }
 }
 
@@ -268,12 +268,13 @@ This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'}
 `;
 writeIfMissing(copilotInstrPath, copilotInstrContent);
 
-console.log('\n[qa-framework/init] Done!\n');
-console.log('Next steps:');
-console.log('  1. Copy qa/07-automation/.env.example to qa/07-automation/.env and fill in credentials');
-console.log('  2. Add qa/07-automation/.env and qa/07-automation/.auth/ to .gitignore');
-console.log('  3. Run: cd qa/07-automation && npm install && npx playwright install chromium');
-console.log('  4. Start filling in spec files with your module\'s real data');
+process.stderr.write('\n[qa-framework/init] ✅ QA framework scaffold complete!\n');
+process.stderr.write('\nNext steps for the agent:\n');
+process.stderr.write('  1. If ADO integration is needed, run: npm install @keber/ado-qa\n');
+process.stderr.write('  2. If Playwright automation is needed, run: npm install @playwright/test\n');
+process.stderr.write('  3. Edit qa/qa-framework.config.json — add your project modules\n');
+process.stderr.write('  4. Copy qa/07-automation/.env.example → qa/07-automation/.env and fill in credentials\n');
+process.stderr.write('  5. Add qa/07-automation/.env and qa/07-automation/.auth/ to .gitignore\n');
 
 // -----------------------------------------------------------------------
 // Helpers
@@ -282,7 +283,7 @@ function writeIfMissing(filePath, content) {
   if (!fs.existsSync(filePath)) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, content, 'utf8');
-    console.log(`  [created] ${path.relative(process.cwd(), filePath)}`);
+    console.log(`  [created] ${path.relative(cwd, filePath)}`);
   }
 }
 
