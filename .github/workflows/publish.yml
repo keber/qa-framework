@@ -1,0 +1,28 @@
+name: Publish to GitHub Packages
+
+on:
+  push:
+    tags:
+      - 'v*' # se dispara al hacer push con tag
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write      # permiso necesario para publicar en GitHub Packages
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@keber'
+
+      - run: npm ci
+
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # token automático, no necesitas crear uno
