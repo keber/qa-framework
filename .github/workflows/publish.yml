@@ -18,11 +18,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
+          registry-url: 'https://registry.npmjs.org'
           scope: '@keber'
 
       - run: npm ci
 
-      - run: npm publish
+      - run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # token automático, no necesitas crear uno
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}}  # token automático, no necesitas crear uno
