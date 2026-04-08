@@ -1,6 +1,6 @@
 {
   "name": "@keber/qa-framework",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Reusable spec-driven QA framework for IDE-agent-assisted automated testing. Installable as an npm package. Provides structure, templates, agent instructions, and optional integrations for Playwright and Azure DevOps.",
   "keywords": [
     "qa",
