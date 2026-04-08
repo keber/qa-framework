@@ -25,7 +25,9 @@ if (configFlag !== -1 && !args[configFlag + 1]) {
   process.exit(1);
 }
 
-const cwd = process.cwd();
+// When run as postinstall, process.cwd() points to node_modules/@keber/qa-framework.
+// INIT_CWD is set by npm to the directory where `npm install` was invoked (the project root).
+const cwd = process.env.INIT_CWD || process.cwd();
 const explicitConfigPath = configFlag !== -1 ? path.resolve(cwd, args[configFlag + 1]) : null;
 const rootConfigPath = path.resolve(cwd, 'qa-framework.config.json');
 const qaConfigPath = path.resolve(cwd, 'qa', 'qa-framework.config.json');
