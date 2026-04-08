@@ -18,6 +18,7 @@
     "qa-framework": "scripts/cli.js"
   },
   "scripts": {
+    "postinstall": "node scripts/init.js --skip-if-exists",
     "init": "node scripts/cli.js init",
     "generate": "node scripts/cli.js generate",
     "validate": "node scripts/cli.js validate"
@@ -38,12 +39,14 @@
   },
   "devDependencies": {},
   "peerDependencies": {
-    "@playwright/test": ">=1.40.0"
+    "@playwright/test": ">=1.40.0",
+    "@keber/ado-qa": ">=1.0.0"
   },
   "peerDependenciesMeta": {
     "@playwright/test": {
       "optional": true
-    }
+    },
+    "@keber/ado-qa": { "optional": true }
   },
   "repository": {
     "type": "git",

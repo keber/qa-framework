@@ -16,8 +16,9 @@ const fs   = require('fs');
 const path = require('path');
 
 // --- Parse args ---
-const args       = process.argv.slice(2);
-const configFlag = args.indexOf('--config');
+const args            = process.argv.slice(2);
+const configFlag      = args.indexOf('--config');
+const skipIfExists    = args.includes('--skip-if-exists');
 
 if (configFlag !== -1 && !args[configFlag + 1]) {
   console.error('[qa-framework/init] Missing value for --config <path>');
@@ -54,6 +55,12 @@ if (explicitConfigPath) {
 
 const qaRoot  = path.resolve(cwd, config.conventions?.qaRoot ?? 'qa');
 const localConfigPath = path.join(qaRoot, 'qa-framework.config.json');
+
+// --skip-if-exists: bail out silently when qa/ is already initialised
+if (skipIfExists && fs.existsSync(localConfigPath)) {
+  console.log('[qa-framework/init] qa/ already initialised — skipping (postinstall).');
+  process.exit(0);
+}
 
 if (!fs.existsSync(localConfigPath)) {
   fs.mkdirSync(qaRoot, { recursive: true });
@@ -172,6 +179,64 @@ for (const file of ['auth.ts', 'test-helpers.ts']) {
 const adoDir = path.join(qaRoot, '08-azure-integration');
 writeIfMissing(path.join(adoDir, 'README.md'), `# ADO Integration\n\nSee keber/qa-framework integrations/ado-powershell/ for setup instructions.\n`);
 writeIfMissing(path.join(adoDir, 'module-registry.json'), JSON.stringify({ modules: [] }, null, 2));
+
+// --- Agent instructions → qa/00-guides/ ---
+const agentInstrSrc = path.resolve(__dirname, '..', 'agent-instructions');
+const guidesDir     = path.join(qaRoot, '00-guides');
+const agentFileMap  = {
+  '00-module-analysis.md':      'AGENT-INSTRUCTIONS-MODULE-ANALYSIS.md',
+  '01-spec-generation.md':      'AGENT-INSTRUCTIONS-SPEC-GENERATION.md',
+  '02-test-plan-generation.md': 'AGENT-INSTRUCTIONS-TEST-PLAN.md',
+  '03-test-case-generation.md': 'AGENT-INSTRUCTIONS-TEST-CASES.md',
+  '04-automation-generation.md':'AGENT-INSTRUCTIONS-AUTOMATION.md',
+  '04b-test-stabilization.md':  'AGENT-INSTRUCTIONS-TEST-STABILIZATION.md',
+  '05-ado-integration.md':      'AGENT-INSTRUCTIONS-ADO-INTEGRATION.md',
+  '06-maintenance.md':          'AGENT-INSTRUCTIONS-MAINTENANCE.md',
+};
+for (const [src, dest] of Object.entries(agentFileMap)) {
+  const srcPath  = path.join(agentInstrSrc, src);
+  const destPath = path.join(guidesDir, dest);
+  if (fs.existsSync(srcPath)) {
+    writeIfMissing(destPath, fs.readFileSync(srcPath, 'utf8'));
+  }
+}
+
+// --- QA structure guide → qa/QA-STRUCTURE-GUIDE.md ---
+const structureGuideSrc  = path.resolve(__dirname, '..', 'docs', 'folder-structure-guide.md');
+const structureGuideDest = path.join(qaRoot, 'QA-STRUCTURE-GUIDE.md');
+if (fs.existsSync(structureGuideSrc)) {
+  writeIfMissing(structureGuideDest, fs.readFileSync(structureGuideSrc, 'utf8'));
+}
+
+// --- .github/copilot-instructions.md ---
+const githubDir         = path.join(cwd, '.github');
+const copilotInstrPath  = path.join(githubDir, 'copilot-instructions.md');
+const copilotInstrContent = `# QA Framework Instructions
+
+This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'} for spec-driven automated testing.
+
+## Agent behavior rules
+
+1. Before performing any QA task, read the relevant instruction file from \`qa/00-guides/\`
+2. Always save artifacts in the correct \`qa/\` subfolder — refer to \`qa/QA-STRUCTURE-GUIDE.md\`
+3. Never hardcode credentials — always use env vars and \`<PLACEHOLDER>\` in documentation
+4. Follow the naming conventions in \`qa/00-standards/naming-conventions.md\`
+5. Project QA config is at \`qa/qa-framework.config.json\`
+
+## Available agent instructions
+
+| Task | Instruction file |
+|---|---|
+| Analyze a module | \`qa/00-guides/AGENT-INSTRUCTIONS-MODULE-ANALYSIS.md\` |
+| Generate specifications | \`qa/00-guides/AGENT-INSTRUCTIONS-SPEC-GENERATION.md\` |
+| Generate a test plan | \`qa/00-guides/AGENT-INSTRUCTIONS-TEST-PLAN.md\` |
+| Generate test cases | \`qa/00-guides/AGENT-INSTRUCTIONS-TEST-CASES.md\` |
+| Generate automation | \`qa/00-guides/AGENT-INSTRUCTIONS-AUTOMATION.md\` |
+| Stabilize failing tests | \`qa/00-guides/AGENT-INSTRUCTIONS-TEST-STABILIZATION.md\` |
+| Sync with Azure DevOps | \`qa/00-guides/AGENT-INSTRUCTIONS-ADO-INTEGRATION.md\` |
+| Maintenance after changes | \`qa/00-guides/AGENT-INSTRUCTIONS-MAINTENANCE.md\` |
+`;
+writeIfMissing(copilotInstrPath, copilotInstrContent);
 
 console.log('\n[qa-framework/init] Done!\n');
 console.log('Next steps:');
