@@ -31,7 +31,7 @@ This framework was designed to be:
 ### Option A: Install from npm (recommended)
 
 ```bash
-npm install --save-dev keber/qa-framework
+npm install --save-dev github:keber/qa-framework
 npx qa-framework init
 ```
 
@@ -176,7 +176,11 @@ To use: copy the relevant instruction into a Copilot/agent chat, or reference it
 
 ## Configuration
 
-Copy `qa-framework.config.json` to your project root (or to `qa/`) and fill in your values:
+`qa-framework init` now bootstraps a default config automatically at `qa/qa-framework.config.json` if none exists.
+
+You can then edit that file, or place a config in your project root (`qa-framework.config.json`) and run `init` again. You can also pass a specific file with `--config <path>`.
+
+Example config:
 
 ```json
 {

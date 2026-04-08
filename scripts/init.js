@@ -18,22 +18,53 @@ const path = require('path');
 // --- Parse args ---
 const args       = process.argv.slice(2);
 const configFlag = args.indexOf('--config');
-const configPath = configFlag !== -1
-  ? path.resolve(process.cwd(), args[configFlag + 1])
-  : path.resolve(process.cwd(), 'qa-framework.config.json');
 
-// --- Load config ---
-if (!fs.existsSync(configPath)) {
-  console.error(`[qa-framework/init] Config file not found: ${configPath}`);
-  console.error('Run this command from a directory containing qa-framework.config.json,');
-  console.error('or pass --config <path> pointing to your config file.');
+if (configFlag !== -1 && !args[configFlag + 1]) {
+  console.error('[qa-framework/init] Missing value for --config <path>');
   process.exit(1);
 }
 
-const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-const qaRoot  = path.resolve(process.cwd(), config.conventions?.qaRoot ?? 'qa');
+const cwd = process.cwd();
+const explicitConfigPath = configFlag !== -1 ? path.resolve(cwd, args[configFlag + 1]) : null;
+const rootConfigPath = path.resolve(cwd, 'qa-framework.config.json');
+const qaConfigPath = path.resolve(cwd, 'qa', 'qa-framework.config.json');
+
+// --- Load or bootstrap config ---
+let config;
+let configSource;
+
+if (explicitConfigPath) {
+  if (!fs.existsSync(explicitConfigPath)) {
+    console.error(`[qa-framework/init] Config file not found: ${explicitConfigPath}`);
+    process.exit(1);
+  }
+  config = JSON.parse(fs.readFileSync(explicitConfigPath, 'utf8'));
+  configSource = explicitConfigPath;
+} else if (fs.existsSync(rootConfigPath)) {
+  config = JSON.parse(fs.readFileSync(rootConfigPath, 'utf8'));
+  configSource = rootConfigPath;
+} else if (fs.existsSync(qaConfigPath)) {
+  config = JSON.parse(fs.readFileSync(qaConfigPath, 'utf8'));
+  configSource = qaConfigPath;
+} else {
+  config = buildBootstrapConfig();
+  configSource = 'generated defaults';
+  console.log('[qa-framework/init] No config file found. Bootstrapping with default config.');
+}
+
+const qaRoot  = path.resolve(cwd, config.conventions?.qaRoot ?? 'qa');
+const localConfigPath = path.join(qaRoot, 'qa-framework.config.json');
+
+if (!fs.existsSync(localConfigPath)) {
+  fs.mkdirSync(qaRoot, { recursive: true });
+  fs.writeFileSync(localConfigPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+  console.log(`  [created] ${path.relative(cwd, localConfigPath)}`);
+} else {
+  console.log(`  [exists]  ${path.relative(cwd, localConfigPath)} — skipped`);
+}
 
 console.log(`[qa-framework/init] Scaffolding qa/ at: ${qaRoot}`);
+console.log(`[qa-framework/init] Using config source: ${configSource}`);
 
 // --- Top-level folders ---
 const topLevelFolders = [
@@ -175,4 +206,52 @@ test.describe('${modName} > ${subName} @P0', () => {
 
 });
 `;
+}
+
+function buildBootstrapConfig() {
+  const templatePath = path.resolve(__dirname, '..', 'qa-framework.config.json');
+  const projectName = path.basename(cwd);
+
+  let base = {
+    frameworkVersion: '1.0.0',
+    project: {
+      name: projectName,
+      displayName: projectName,
+      description: '',
+      qaBaseUrl: '',
+      techStack: '',
+      loginPath: ''
+    },
+    modules: [],
+    conventions: {
+      qaRoot: 'qa',
+      language: 'es',
+      locale: 'es-CL'
+    },
+    integrations: {
+      playwright: { enabled: false },
+      azureDevOps: { enabled: false }
+    }
+  };
+
+  if (fs.existsSync(templatePath)) {
+    try {
+      base = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
+    } catch {
+      // Keep fallback defaults above.
+    }
+  }
+
+  base.project = {
+    ...(base.project ?? {}),
+    name: projectName,
+    displayName: projectName
+  };
+  base.modules = [];
+  base.conventions = {
+    ...(base.conventions ?? {}),
+    qaRoot: 'qa'
+  };
+
+  return base;
 }
