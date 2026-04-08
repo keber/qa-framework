@@ -247,6 +247,7 @@ This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'}
 
 ## Agent behavior rules
 
+0. **On every conversation start:** check if \`qa/AGENT-NEXT-STEPS.md\` exists. If it does, read it and complete its steps before anything else.
 1. Before performing any QA task, read the relevant instruction file from \`qa/00-guides/\`
 2. Always save artifacts in the correct \`qa/\` subfolder - refer to \`qa/QA-STRUCTURE-GUIDE.md\`
 3. Never hardcode credentials - always use env vars and \`<PLACEHOLDER>\` in documentation
@@ -268,13 +269,42 @@ This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'}
 `;
 writeIfMissing(copilotInstrPath, copilotInstrContent);
 
-process.stderr.write('\n[qa-framework/init] ✅ QA framework scaffold complete!\n');
-process.stderr.write('\nNext steps for the agent:\n');
-process.stderr.write('  1. If ADO integration is needed, run: npm install @keber/ado-qa\n');
-process.stderr.write('  2. If Playwright automation is needed, run: npm install @playwright/test\n');
-process.stderr.write('  3. Edit qa/qa-framework.config.json - add your project modules\n');
-process.stderr.write('  4. Copy qa/07-automation/.env.example -> qa/07-automation/.env and fill in credentials\n');
-process.stderr.write('  5. Add qa/07-automation/.env and qa/07-automation/.auth/ to .gitignore\n');
+// --- AGENT-NEXT-STEPS.md — readable by the agent after install ---
+const nextStepsContent = `# ✅ @keber/qa-framework installed successfully
+
+> This file was generated automatically by the postinstall script.
+> Read it and follow the steps below, then delete this file.
+
+## What was scaffolded
+
+- \`qa/\` folder structure with spec templates and agent instructions
+- \`.github/copilot-instructions.md\` with QA agent behavior rules
+
+## Required next steps
+
+### 1. Configure your project modules
+Edit \`qa/qa-framework.config.json\` and add your project modules under the \`"modules"\` array.
+
+### 2. Optional integrations
+
+**Azure DevOps integration:**
+\`\`\`bash
+npm install @keber/ado-qa
+\`\`\`
+
+**Playwright automation:**
+\`\`\`bash
+npm install @playwright/test
+cd qa/07-automation && npm install && npx playwright install chromium
+\`\`\`
+
+### 3. Credentials
+- Copy \`qa/07-automation/.env.example\` → \`qa/07-automation/.env\` and fill in credentials
+- Add \`qa/07-automation/.env\` and \`qa/07-automation/.auth/\` to \`.gitignore\`
+`;
+const nextStepsPath = path.join(qaRoot, 'AGENT-NEXT-STEPS.md');
+fs.writeFileSync(nextStepsPath, nextStepsContent, 'utf8');
+console.log(`  [created] ${path.relative(cwd, nextStepsPath)}`);
 
 // -----------------------------------------------------------------------
 // Helpers
