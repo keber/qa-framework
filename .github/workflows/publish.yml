@@ -21,8 +21,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@keber'
 
-      - run: npm ci
-
       - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}  # token automático, no necesitas crear uno
