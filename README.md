@@ -28,27 +28,38 @@ This framework was designed to be:
 
 ## Quick Start
 
-### Option A: Install from npm (recommended)
+### Install from npm
 
 ```bash
-npm install --save-dev github:keber/qa-framework
-npx qa-framework init
+npm install @keber/qa-framework
 ```
 
-### Option B: Clone directly (during early adoption)
+The postinstall script scaffolds the `qa/` structure automatically. No need to run `init` manually.
+
+### Using with an AI agent (GitHub Copilot, Claude, etc.)
+
+Use this prompt in your IDE agent chat:
+
+```
+Install @keber/qa-framework and set up the project following qa/AGENT-NEXT-STEPS.md
+```
+
+The install creates `qa/AGENT-NEXT-STEPS.md` with the exact steps the agent needs to complete the setup (optional integrations, module configuration, credentials, etc.).
+
+### Using manually (without an agent)
 
 ```bash
-# Clone into your project's tools directory or as a submodule
-git clone <this-repo> tools/qa-framework
-node tools/qa-framework/scripts/cli.js init
+npm install @keber/qa-framework
+# then read qa/AGENT-NEXT-STEPS.md for next steps
 ```
 
 The `init` command will:
 
 1. Create the `qa/` directory tree in your project root
-2. Copy all base templates into place
+2. Copy all base templates and agent instructions into place
 3. Create `qa/qa-framework.config.json` for project-specific settings
-4. Optionally set up Playwright and Azure DevOps integrations
+4. Create `.github/copilot-instructions.md` with QA agent behavior rules
+5. Create `qa/AGENT-NEXT-STEPS.md` with follow-up steps
 
 ---
 
