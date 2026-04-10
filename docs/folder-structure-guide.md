@@ -11,6 +11,7 @@ This document explains the purpose, contents, and conventions for every folder i
 ```
 qa/
 ├── README.md                    ← Living master index (project-maintained)
+├── AGENT-NEXT-STEPS.md          ← Active sprint queue for the agent (project-maintained)
 ├── QA-STRUCTURE-GUIDE.md        ← Copy of this guide (installed by framework)
 ├── qa-framework.config.json     ← Project configuration
 │
@@ -23,7 +24,8 @@ qa/
 ├── 05-test-execution/           ← Execution reports and results
 ├── 06-defects/                  ← Defect tracking (optional)
 ├── 07-automation/               ← Automation code (Playwright, etc.)
-└── 08-azure-integration/        ← Azure DevOps integration (optional)
+├── 08-azure-integration/        ← Azure DevOps integration (optional)
+└── memory/                      ← Project QA learnings (project-maintained)
 ```
 
 ---
@@ -267,17 +269,69 @@ See `docs/generalization-decisions.md §7` for the full evaluation of this folde
 
 ## `qa/README.md` — The Living Index
 
-The `qa/README.md` is the **only project-maintained file at the root of `qa/`**. It should be updated whenever:
+The `qa/README.md` is the primary human-readable project status document. It should be updated whenever:
 - A new module is analyzed
 - A new test execution is completed
 - A blocker is identified or resolved
-- A major milestone is reached
+- A major milestone or sprint is completed
 
 Minimum contents:
 - Module status table (name, TCs documented, TCs automated, ADO plan link)
 - Quick-start commands for common tasks
 - Active blockers section
 - Last execution results summary
+- **`## Sprint History`** section — completed sprint checklists moved here from `AGENT-NEXT-STEPS.md`
+
+Template: `templates/qa-readme.md`
+
+---
+
+## `qa/AGENT-NEXT-STEPS.md` — Sprint Queue
+
+The `AGENT-NEXT-STEPS.md` is the agent's task queue for the current sprint. It is read by the agent at the start of every conversation.
+
+**Design principles (SRP + KISS)**:
+- Contains **one active sprint only** — no history, no completed checklists
+- Three sections maximum: module status table, active sprint checklist, context references
+- Does not repeat standing instructions already in `copilot-instructions.md`
+- Detailed environment notes and patterns belong in `qa/memory/`, referenced from here
+
+When a sprint completes, the agent **moves** the completed checklist to `qa/README.md → ## Sprint History` and **deletes** that section from this file.
+
+Template: `templates/agent-next-steps.md`
+
+---
+
+## `qa/memory/` — Project QA Learnings
+
+Project-maintained folder for accumulated knowledge about the application under test: environment quirks, DOM patterns, Playwright gotchas, sprint-specific discoveries.
+
+```
+qa/memory/
+├── INDEX.md                          ← Required entry point — index of all files
+├── {technology}-patterns.md          ← Framework/stack-specific patterns (e.g., playwright-blazor-wasm-patterns.md)
+├── {sprint-name}-discovery.md        ← DOM/UI findings for an in-progress sprint
+└── {sprint-name}-lessons.md          ← Retrospective patterns after a sprint completes
+```
+
+### `qa/memory/INDEX.md` — Required
+
+The `INDEX.md` is the **gate** that the agent reads before loading any other memory file. Its purpose is to let the agent load only what is relevant to the current task, rather than loading all files.
+
+```markdown
+# Memory Index — {PROJECT_NAME}
+
+| File | Topic | When to load |
+|---|---|---|
+| playwright-blazor-wasm-patterns.md | Blazor/Radzen DOM patterns | Any Playwright automation task |
+| sprint4-discovery.md | DOM quirks for BusinessPartner module | Sprint 4 automation only |
+| sprint3-lessons.md | Patterns from Sprint 3 | Reference when working on similar modules |
+```
+
+**Rules for `qa/memory/`**:
+- Always update `INDEX.md` when adding or modifying a memory file
+- Sprint-specific discovery files (`sprint-N-discovery.md`) are for the duration of that sprint; consolidate long-term patterns into a technology-specific file afterwards
+- Never load all memory files unconditionally — always read `INDEX.md` first and select by relevance
 
 ---
 

@@ -79,11 +79,16 @@ process.stderr.write(`[qa-framework/init] Using config source: ${configSource}\n
 const topLevelFolders = [
   '00-guides',
   '00-standards',
-  '05-test-plans',
+  '01-specifications',
+  '02-test-plans',
+  '03-test-cases',
+  '04-test-data',
+  '05-test-execution',
   '06-defects/open',
   '06-defects/resolved',
   '07-automation/e2e',
   '08-azure-integration',
+  'memory',
 ];
 
 for (const folder of topLevelFolders) {
@@ -92,11 +97,46 @@ for (const folder of topLevelFolders) {
   console.log(`  [created] ${path.relative(cwd, fullPath)}/`);
 }
 
+// --- qa/README.md ---
+const qaReadmeTemplate = path.resolve(__dirname, '..', 'templates', 'qa-readme.md');
+if (fs.existsSync(qaReadmeTemplate)) {
+  let readmeContent = fs.readFileSync(qaReadmeTemplate, 'utf8');
+  readmeContent = readmeContent
+    .replace(/\{PROJECT_DISPLAY_NAME\}/g, config.project?.displayName ?? config.project?.name ?? 'Project')
+    .replace(/\{VERSION\}/g, config.frameworkVersion ?? '1.0.0')
+    .replace(/\{LANGUAGE\}/g, config.conventions?.language ?? 'en')
+    .replace(/\{QA_BASE_URL\}/g, config.project?.qaBaseUrl ?? '<QA_BASE_URL>');
+  writeIfMissing(path.join(qaRoot, 'README.md'), readmeContent);
+}
+
+// --- qa/memory/INDEX.md ---
+const memoryDir = path.join(qaRoot, 'memory');
+writeIfMissing(path.join(memoryDir, 'INDEX.md'),
+`# Memory Index — ${config.project?.displayName ?? config.project?.name ?? 'Project'}
+
+> The agent reads this file first before loading any memory file.
+> Add a row here whenever you create or update a file in this directory.
+
+| File | Topic | When to load |
+|---|---|---|
+
+_No memory files yet. Add files to this directory and register them above._
+`);
+
 // --- Standards placeholder ---
 const stdDir = path.join(qaRoot, '00-standards');
 writeIfMissing(path.join(stdDir, 'naming-conventions.md'), `# Naming Conventions\n\n> Fill in per your project. See keber/qa-framework docs/spec-driven-philosophy.md.\n`);
 writeIfMissing(path.join(stdDir, 'bug-report-template.md'), fs.readFileSync(
   path.resolve(__dirname, '..', 'templates', 'defect-report.md'), 'utf8'
+));
+writeIfMissing(path.join(stdDir, 'test-case-template.md'), fs.readFileSync(
+  path.resolve(__dirname, '..', 'templates', 'test-case.md'), 'utf8'
+));
+writeIfMissing(path.join(stdDir, 'execution-report-template.md'), fs.readFileSync(
+  path.resolve(__dirname, '..', 'templates', 'execution-report.md'), 'utf8'
+));
+writeIfMissing(path.join(stdDir, 'test-data-guidelines.md'), fs.readFileSync(
+  path.resolve(__dirname, '..', 'templates', 'test-data-guidelines.md'), 'utf8'
 ));
 
 // --- Per-module folders ---
@@ -248,11 +288,18 @@ This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'}
 ## Agent behavior rules
 
 0. **On every conversation start:** check if \`qa/AGENT-NEXT-STEPS.md\` exists. If it does, read it and complete its steps before anything else.
-1. Before performing any QA task, read the relevant instruction file from \`qa/00-guides/\`
+1. Before performing any QA task, read the relevant instruction file from \`qa/00-guides/\`. For project context, read \`qa/memory/INDEX.md\` if it exists, then load only the memory files relevant to the current task — do not load all memory files unconditionally.
 2. Always save artifacts in the correct \`qa/\` subfolder - refer to \`qa/QA-STRUCTURE-GUIDE.md\`
 3. Never hardcode credentials - always use env vars and \`<PLACEHOLDER>\` in documentation
 4. Follow the naming conventions in \`qa/00-standards/naming-conventions.md\`
-5. Project QA config is at \`qa/qa-framework.config.json\`
+5. Read previous test suites code in \`qa/07-automation/e2e/tests/\` if available before writing new automation to maintain consistency in style and approach
+6. Project QA config is at \`qa/qa-framework.config.json\`
+7. Save learnings in \`qa/memory/\` with proper naming and metadata. Always update \`qa/memory/INDEX.md\` after adding or updating any memory file.
+8. **On module/sprint completion** (all TCs passing): (1) update the module status row in \`qa/README.md\`; (2) move the completed sprint checklist from \`AGENT-NEXT-STEPS.md\` to the \`## Sprint History\` section of \`qa/README.md\`; (3) trim \`AGENT-NEXT-STEPS.md\` so it contains only the next sprint — never let it accumulate more than one active sprint.
+
+## Formatting rules for generated content
+1. Generate the output in \`UTF-8\` encoding without BOM (\`UTF-8\`, no signature).
+2. Ensure the raw output is \`UTF-8\` encoded with no \`EF BB BF\` bytes at the beginning.
 
 ## Available agent instructions
 
@@ -266,6 +313,10 @@ This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'}
 | Stabilize failing tests | \`qa/00-guides/AGENT-INSTRUCTIONS-TEST-STABILIZATION.md\` |
 | Sync with Azure DevOps | \`qa/00-guides/AGENT-INSTRUCTIONS-ADO-INTEGRATION.md\` |
 | Maintenance after changes | \`qa/00-guides/AGENT-INSTRUCTIONS-MAINTENANCE.md\` |
+
+## Project KB
+1. \`qa/README.md\`          — The Living Index: module status, sprint history, blockers, quick-start commands.
+2. \`qa/memory/INDEX.md\`    — Index of all memory files; load this before selecting which files to read.
 `;
 writeIfMissing(copilotInstrPath, copilotInstrContent);
 

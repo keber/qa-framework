@@ -308,3 +308,33 @@ After writing automation for a module, create `COVERAGE-MAPPING.md` in the test 
 | TC-OPER-CAT-003 | Duplicate rejection | ... | tests/operacion/... | ⚠️ Partially (UI only) |
 | TC-OPER-ASI-001 | Access assistance list | ... | — | ⛔ Blocked (BLOCKED-PERMISSIONS) |
 ```
+
+---
+
+## Module Completion Checklist
+
+Run this checklist when all P0 tests for a module are passing.
+
+### Stability gate
+- [ ] All P0 tests pass on **2 consecutive runs** with different `EXEC_IDX` values (≥ 60 seconds apart)
+- [ ] No `waitForTimeout(N)` longer than 2000ms left in the suite
+- [ ] All skipped tests have a `DEF-` or ADO WI reference in their skip message
+
+### Artifacts
+- [ ] `COVERAGE-MAPPING.md` created or updated in the test directory
+- [ ] Execution report written to `qa/05-test-execution/automated/`
+
+### Living Index update — `qa/README.md`
+- [ ] Update the module's row in the status table (TCs automated, date, status → ✅)
+- [ ] Add a row to the `## Sprint History` section with: sprint name, date, submódulos covered, TC count, link to execution report
+
+### AGENT-NEXT-STEPS.md — trim
+- [ ] Move the completed sprint checklist block to `qa/README.md` under `## Sprint History`
+- [ ] Delete the completed sprint section from `AGENT-NEXT-STEPS.md`
+- [ ] Verify `AGENT-NEXT-STEPS.md` now contains **only one active sprint** (the next one)
+
+### Memory
+- [ ] If new patterns or environment quirks were discovered: add them to `qa/memory/` with a descriptive filename
+- [ ] Update `qa/memory/INDEX.md` to reflect any new or updated files
+
+> **Rule**: `AGENT-NEXT-STEPS.md` is a task queue, not a log. Completed sprints live in `qa/README.md`. The file must never accumulate more than one active sprint.
