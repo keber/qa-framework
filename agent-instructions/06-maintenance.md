@@ -114,6 +114,13 @@ After every maintenance session, update the master index:
 - Automation status (if changed)
 - Last updated date for the module
 
+If a **sprint was fully completed** as part of this maintenance pass (all TCs passing after the changes):
+1. Move the completed sprint checklist from `AGENT-NEXT-STEPS.md` to the `## Sprint History` section of `qa/README.md`
+2. Delete the completed sprint block from `AGENT-NEXT-STEPS.md`
+3. Confirm `AGENT-NEXT-STEPS.md` contains **only one active sprint** — never let it accumulate history
+
+Also update `qa/memory/INDEX.md` if any memory files were created or modified.
+
 ---
 
 ## Step 6: Write a Session Summary

@@ -41,7 +41,7 @@ The postinstall script scaffolds the `qa/` structure automatically. No need to r
 Use this prompt in your IDE agent chat:
 
 ```
-Install @keber/qa-framework and set up the project following qa/AGENT-NEXT-STEPS.md
+Install @keber/qa-framework, check it's readme file and set up the project for integration with azure devops
 ```
 
 The install creates `qa/AGENT-NEXT-STEPS.md` with the exact steps the agent needs to complete the setup (optional integrations, module configuration, credentials, etc.).
