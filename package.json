@@ -25,6 +25,7 @@
   },
   "files": [
     "agent-instructions/",
+    "skills/",
     "templates/",
     "docs/",
     "examples/",
