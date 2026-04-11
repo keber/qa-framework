@@ -15,7 +15,6 @@ qa/
 ├── QA-STRUCTURE-GUIDE.md        ← Copy of this guide (installed by framework)
 ├── qa-framework.config.json     ← Project configuration
 │
-├── 00-guides/                   ← Process guides and agent instructions
 ├── 00-standards/                ← Naming conventions and artifact templates
 ├── 01-specifications/           ← Functional specifications per module
 ├── 02-test-plans/               ← Test plans (scope + priority decisions)
@@ -28,28 +27,30 @@ qa/
 └── memory/                      ← Project QA learnings (project-maintained)
 ```
 
+Agent skills live in `.github/skills/` (not inside `qa/`). See the `.github/skills/` section below.
+
 ---
 
-## 00-guides/
+## .github/skills/
 
-**Purpose**: Process guides and operating instructions for both humans and agents.
+**Purpose**: 3-layer QA pipeline skills installed by the framework. Loaded by the agent on demand — only the relevant skill for the current task is loaded, not all skills at once.
 
-**Installed by framework** (not project-maintained):
+**Installed by framework** via `npm install @keber/qa-framework`:
 
-| File | Contents |
-|---|---|
-| `README.md` | Index with reading order by persona |
-| `AGENT-INSTRUCTIONS-MODULE-ANALYSIS.md` | How to analyze a module (4-phase process) |
-| `AGENT-INSTRUCTIONS-SPEC-GENERATION.md` | How to produce the 6-file spec set |
-| `AGENT-INSTRUCTIONS-TEST-CASES.md` | How to write test case tables |
-| `AGENT-INSTRUCTIONS-AUTOMATION.md` | How to write Playwright E2E tests |
-| `AGENT-INSTRUCTIONS-ADO-INTEGRATION.md` | How to sync results with Azure DevOps |
-| `AGENT-INSTRUCTIONS-MAINTENANCE.md` | How to update QA artifacts after code changes |
+| Skill folder | Stage | When the agent loads it |
+|---|---|---|
+| `qa-module-analysis/` | 1 | Analyzing a new module or refreshing specs |
+| `qa-spec-generation/` | 2 | Writing the 6-file spec set |
+| `qa-test-plan/` | 3 | Creating a test plan document |
+| `qa-test-cases/` | 4 | Writing TC-*.md files |
+| `qa-automation/` | 5 | Implementing Playwright specs |
+| `qa-test-stabilization/` | 5b | Diagnosing and fixing failing tests |
+| `qa-ado-integration/` | opt | Syncing with Azure DevOps Test Plans |
+| `qa-maintenance/` | 6 | Updating specs and tests after app changes |
 
-**Project-maintained** (added over time):
-- `DEBUG-ARTIFACTS-POLICY.md` — where to save screenshots and debug output
-- `NOTAS-TECNICAS-PLAYWRIGHT.md` — project-specific Playwright gotchas
-- `RETROSPECTIVA-*.md` — session debug chronicles (optional, high value)
+Each skill folder contains:
+- `SKILL.md` — process outline (~400-600 tokens, always loaded when skill applies)
+- `references/` — detailed templates and code patterns (loaded on demand)
 
 ---
 

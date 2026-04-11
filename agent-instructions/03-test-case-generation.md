@@ -1,5 +1,8 @@
 # Agent Instructions: Test Case Generation
 
+> ⚠️ **DEPRECATED**: This file is superseded by `.github/skills/qa-test-cases/SKILL.md`.
+> Kept as reference during the transition period. Do not update this file.
+
 **File**: `agent-instructions/03-test-case-generation.md`  
 **Purpose**: Instructions for writing detailed, standalone test case documents from approved spec scenarios.
 

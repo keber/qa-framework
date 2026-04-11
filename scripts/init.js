@@ -77,7 +77,6 @@ process.stderr.write(`[qa-framework/init] Using config source: ${configSource}\n
 
 // --- Top-level folders ---
 const topLevelFolders = [
-  '00-guides',
   '00-standards',
   '01-specifications',
   '02-test-plans',
@@ -222,24 +221,18 @@ const adoDir = path.join(qaRoot, '08-azure-integration');
 writeIfMissing(path.join(adoDir, 'README.md'), `# ADO Integration\n\nSee keber/qa-framework integrations/ado-powershell/ for setup instructions.\n`);
 writeIfMissing(path.join(adoDir, 'module-registry.json'), JSON.stringify({ modules: [] }, null, 2));
 
-// --- Agent instructions → qa/00-guides/ ---
-const agentInstrSrc = path.resolve(__dirname, '..', 'agent-instructions');
-const guidesDir     = path.join(qaRoot, '00-guides');
-const agentFileMap  = {
-  '00-module-analysis.md':      'AGENT-INSTRUCTIONS-MODULE-ANALYSIS.md',
-  '01-spec-generation.md':      'AGENT-INSTRUCTIONS-SPEC-GENERATION.md',
-  '02-test-plan-generation.md': 'AGENT-INSTRUCTIONS-TEST-PLAN.md',
-  '03-test-case-generation.md': 'AGENT-INSTRUCTIONS-TEST-CASES.md',
-  '04-automation-generation.md':'AGENT-INSTRUCTIONS-AUTOMATION.md',
-  '04b-test-stabilization.md':  'AGENT-INSTRUCTIONS-TEST-STABILIZATION.md',
-  '05-ado-integration.md':      'AGENT-INSTRUCTIONS-ADO-INTEGRATION.md',
-  '06-maintenance.md':          'AGENT-INSTRUCTIONS-MAINTENANCE.md',
-};
-for (const [src, dest] of Object.entries(agentFileMap)) {
-  const srcPath  = path.join(agentInstrSrc, src);
-  const destPath = path.join(guidesDir, dest);
-  if (fs.existsSync(srcPath)) {
-    writeIfMissing(destPath, fs.readFileSync(srcPath, 'utf8'));
+// --- Skills → .github/skills/ ---
+const skillsSrc = path.resolve(__dirname, '..', 'skills');
+const skillsDest = path.join(cwd, '.github', 'skills');
+fs.mkdirSync(skillsDest, { recursive: true });
+if (fs.existsSync(skillsSrc)) {
+  for (const skillName of fs.readdirSync(skillsSrc)) {
+    const skillSrcDir = path.join(skillsSrc, skillName);
+    if (!fs.statSync(skillSrcDir).isDirectory()) continue;
+    const skillDestDir = path.join(skillsDest, skillName);
+    fs.mkdirSync(skillDestDir, { recursive: true });
+    // Copy SKILL.md and references/ recursively
+    copyDirIfMissing(skillSrcDir, skillDestDir);
   }
 }
 
@@ -288,7 +281,7 @@ This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'}
 ## Agent behavior rules
 
 0. **On every conversation start:** check if \`qa/AGENT-NEXT-STEPS.md\` exists. If it does, read it and complete its steps before anything else.
-1. Before performing any QA task, read the relevant instruction file from \`qa/00-guides/\`. For project context, read \`qa/memory/INDEX.md\` if it exists, then load only the memory files relevant to the current task — do not load all memory files unconditionally.
+1. Before performing any QA task, load the relevant skill from \`.github/skills/\`. For project context, read \`qa/memory/INDEX.md\` if it exists, then load only the memory files relevant to the current task — do not load all memory files unconditionally. Never execute a pipeline stage unless its prerequisite is satisfied.
 2. Always save artifacts in the correct \`qa/\` subfolder - refer to \`qa/QA-STRUCTURE-GUIDE.md\`
 3. Never hardcode credentials - always use env vars and \`<PLACEHOLDER>\` in documentation
 4. Follow the naming conventions in \`qa/00-standards/naming-conventions.md\`
@@ -301,18 +294,20 @@ This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'}
 1. Generate the output in \`UTF-8\` encoding without BOM (\`UTF-8\`, no signature).
 2. Ensure the raw output is \`UTF-8\` encoded with no \`EF BB BF\` bytes at the beginning.
 
-## Available agent instructions
+## QA Pipeline
 
-| Task | Instruction file |
-|---|---|
-| Analyze a module | \`qa/00-guides/AGENT-INSTRUCTIONS-MODULE-ANALYSIS.md\` |
-| Generate specifications | \`qa/00-guides/AGENT-INSTRUCTIONS-SPEC-GENERATION.md\` |
-| Generate a test plan | \`qa/00-guides/AGENT-INSTRUCTIONS-TEST-PLAN.md\` |
-| Generate test cases | \`qa/00-guides/AGENT-INSTRUCTIONS-TEST-CASES.md\` |
-| Generate automation | \`qa/00-guides/AGENT-INSTRUCTIONS-AUTOMATION.md\` |
-| Stabilize failing tests | \`qa/00-guides/AGENT-INSTRUCTIONS-TEST-STABILIZATION.md\` |
-| Sync with Azure DevOps | \`qa/00-guides/AGENT-INSTRUCTIONS-ADO-INTEGRATION.md\` |
-| Maintenance after changes | \`qa/00-guides/AGENT-INSTRUCTIONS-MAINTENANCE.md\` |
+Stages must run in order. Never start a stage unless its prerequisite is met.
+
+| Stage | Task | Skill | Prerequisite |
+|---|---|---|---|
+| 1 | Analyze module | \`.github/skills/qa-module-analysis/SKILL.md\` | None |
+| 2 | Generate specifications | \`.github/skills/qa-spec-generation/SKILL.md\` | 00-inventory.md exists |
+| 3 | Generate test plan | \`.github/skills/qa-test-plan/SKILL.md\` | 05-test-scenarios.md exists |
+| 4 | Generate test cases | \`.github/skills/qa-test-cases/SKILL.md\` | Test plan exists |
+| 5 | Generate automation | \`.github/skills/qa-automation/SKILL.md\` | Specs approved, no PENDING-CODE |
+| 5b | Stabilize failing tests | \`.github/skills/qa-test-stabilization/SKILL.md\` | Failing tests exist |
+| 6 | Maintenance | \`.github/skills/qa-maintenance/SKILL.md\` | Application change delivered |
+| — | ADO integration | \`.github/skills/qa-ado-integration/SKILL.md\` | ADO enabled in config |
 
 ## Project KB
 1. \`qa/README.md\`          — The Living Index: module status, sprint history, blockers, quick-start commands.
@@ -365,6 +360,19 @@ function writeIfMissing(filePath, content) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, content, 'utf8');
     console.log(`  [created] ${path.relative(cwd, filePath)}`);
+  }
+}
+
+function copyDirIfMissing(srcDir, destDir) {
+  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+    const srcPath  = path.join(srcDir, entry.name);
+    const destPath = path.join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      fs.mkdirSync(destPath, { recursive: true });
+      copyDirIfMissing(srcPath, destPath);
+    } else {
+      writeIfMissing(destPath, fs.readFileSync(srcPath, 'utf8'));
+    }
   }
 }
 

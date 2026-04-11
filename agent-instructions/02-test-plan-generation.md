@@ -1,5 +1,8 @@
 # Agent Instructions: Test Plan Generation
 
+> ⚠️ **DEPRECATED**: This file is superseded by `.github/skills/qa-test-plan/SKILL.md`.
+> Kept as reference during the transition period. Do not update this file.
+
 **File**: `agent-instructions/02-test-plan-generation.md`  
 **Purpose**: Instructions for generating a test plan document for a module, after its spec set is complete.
 

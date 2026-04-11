@@ -8,6 +8,7 @@
  *
  * Commands:
  *   init      Scaffold a qa/ folder structure from qa-framework.config.json
+ *   upgrade   Update framework-owned files after npm update (skills, copilot-instructions)
  *   generate  Generate an artifact (spec template, test plan, etc.)
  *   validate  Validate qa/ folder structure and conventions
  */
@@ -21,6 +22,7 @@ const [, , command, ...args] = process.argv;
 
 const commands = {
   init:     'init.js',
+  upgrade:  'upgrade.js',
   generate: 'generate.js',
   validate: 'validate.js',
 };
@@ -54,6 +56,7 @@ Usage:
 
 Commands:
   init [--config <path>]      Scaffold qa/ structure from config file
+  upgrade [--dry-run]         Update framework-owned files after npm update
   generate <artifact>         Generate from template
                                 artifact: spec | test-plan | test-case |
                                           execution-report | defect-report |
@@ -67,6 +70,8 @@ Options:
 Examples:
   qa-framework init
   qa-framework init --config ./my-project.config.json
+  qa-framework upgrade
+  qa-framework upgrade --dry-run
   qa-framework generate spec --module suppliers --submodule create
   qa-framework validate
   qa-framework validate --strict

@@ -1,5 +1,8 @@
 # Agent Instructions: Maintenance and Updates
 
+> ⚠️ **DEPRECATED**: This file is superseded by `.github/skills/qa-maintenance/SKILL.md`.
+> Kept as reference during the transition period. Do not update this file.
+
 **File**: `agent-instructions/06-maintenance.md`  
 **Purpose**: Instructions for updating QA artifacts after application code changes.
 

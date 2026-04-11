@@ -1,5 +1,8 @@
 # Agent Instructions: Azure DevOps Integration
 
+> ⚠️ **DEPRECATED**: This file is superseded by `.github/skills/qa-ado-integration/SKILL.md`.
+> Kept as reference during the transition period. Do not update this file.
+
 **File**: `agent-instructions/05-ado-integration.md`  
 **Purpose**: Instructions for an agent to create, configure, and maintain Azure DevOps Test Plans integration with Playwright automation results.
 
