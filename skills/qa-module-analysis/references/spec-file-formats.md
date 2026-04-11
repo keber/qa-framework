@@ -1,37 +1,11 @@
-# Agent Instructions: Specification Generation
+# Reference: Specification File Formats
 
-> ⚠️ **DEPRECATED**: This file is superseded by `.github/skills/qa-spec-generation/SKILL.md`.
-> Kept as reference during the transition period. Do not update this file.
-
-**File**: `agent-instructions/01-spec-generation.md`  
-**Purpose**: Detailed instructions for generating the 6-file submodule specification set from a completed module analysis or from existing source material (UI observation, requirements docs, developer input).
+> Shared by `skills/qa-module-analysis/` and `skills/qa-spec-generation/`.  
+> Contains the exact format templates for all 6 spec files.
 
 ---
 
-## When to use
-
-- After Phase 2 (Exploration) of module analysis is complete
-- When updating specs after a code change
-- When a spec file is missing or incomplete
-
----
-
-## Inputs Required
-
-Before generating specs, gather:
-
-1. **Module exploration notes** — from the analysis session
-2. **Module code** — from `qa/00-standards/naming-conventions.md` or allocate a new one
-3. **Submodule name** and its kebab-case directory name
-4. **QA environment observations** — what you actually saw in the UI
-
----
-
-## File-by-File Generation Rules
-
-### `00-inventory.md` — UI and API Inventory
-
-**Header block** (always required):
+## `00-inventory.md`
 
 ```markdown
 # MODULE: {Module Display Name} — Submodule: {Submodule Display Name}
@@ -43,21 +17,13 @@ Before generating specs, gather:
 | Primary URL | {{QA_BASE_URL}}/path/to/submodule |
 | Status | Active / Deprecated / In Development |
 | Last updated | YYYY-MM-DD |
-```
 
-**UI element table**:
-
-```markdown
 ## UI Elements
 
 | Element | Type | Required | Notes |
 |---------|------|----------|-------|
 | {field-name} | text / select / checkbox / date | Yes/No | {validation rule} |
-```
 
-**API endpoints table**:
-
-```markdown
 ## API Endpoints
 
 | Method | Path | Purpose |
@@ -66,13 +32,9 @@ Before generating specs, gather:
 | POST | /api/{endpoint} | {description} |
 ```
 
-**Do NOT include**: credentials, personal data, real user IDs.
-
 ---
 
-### `01-business-rules.md` — Business Rules
-
-**Format for each rule**:
+## `01-business-rules.md`
 
 ```markdown
 ### RN-{MODULE}-{NNN}: {Rule Title}
@@ -85,19 +47,15 @@ Before generating specs, gather:
 ```
 
 **Rule identification tips**:
-- Every required field → at least 1 RN (field is required)
+- Every required field → at least 1 RN
 - Every unique constraint → 1 RN (duplicate not allowed)
 - Every state transition → 1 RN (can only approve if status=pending)
-- Every role restriction → 1 RN (only role X can see this)
-- Every auto-calculated field → 1 RN (total = quantity × price)
-
-**Minimum**: 5 rules per submodule. **Typical**: 8–15.
+- Every role restriction → 1 RN
+- Every auto-calculated field → 1 RN
 
 ---
 
-### `02-workflows.md` — User Workflows
-
-**Format for each workflow**:
+## `02-workflows.md`
 
 ```markdown
 ### FL-{MODULE}-{NNN}: {Workflow Title}
@@ -125,16 +83,9 @@ Before generating specs, gather:
 **Postcondition**: {State of the system after the workflow completes}
 ```
 
-Cover at minimum:
-- Primary happy path (end-to-end main scenario)
-- Rejection / cancellation path (if applicable)
-- Error path (validation failure, system error)
-
 ---
 
-### `03-roles-permissions.md` — Role Matrix
-
-**Format**:
+## `03-roles-permissions.md`
 
 ```markdown
 # Roles and Permissions — {Submodule}
@@ -156,23 +107,17 @@ Cover at minimum:
 |------|----------------|-------------------|
 | {Role 1} | `QA_USER_{ROLE}_EMAIL` | `QA_USER_{ROLE}_PASSWORD` |
 
-**Notes**: {any conditional access rules, e.g., "Admin can only edit own records"}
+**Notes**: {conditional access rules}
 ```
-
-**Do NOT include**: actual email addresses, passwords, or personal identifiers.
 
 ---
 
-### `04-test-data.md` — Test Data Requirements
-
-**Format**:
+## `04-test-data.md`
 
 ```markdown
 # Test Data — {Submodule}
 
 ## Prerequisites
-
-The following data must exist in the QA environment before tests run:
 
 | Item | Description | Source |
 |------|-------------|--------|
@@ -181,8 +126,7 @@ The following data must exist in the QA environment before tests run:
 ## Data shapes for key scenarios
 
 ### Scenario: {happy path}
-- Field A: {value type, e.g., "any valid text, max 100 chars"}
-- Field B: {value type}
+- Field A: {value type}
 - User: role `{ROLE_NAME}`, credentials from `QA_USER_{ROLE}_EMAIL` env var
 
 ### Scenario: {negative — duplicate}
@@ -190,27 +134,23 @@ The following data must exist in the QA environment before tests run:
 - Field A: {same value as existing record}
 - Expected: {system rejection behavior}
 
-## Dynamic data generation
-
-For tests that create new records, use the EXEC_IDX pattern to avoid collisions:
+## Dynamic data generation (EXEC_IDX pattern)
 
 ```typescript
-const EXEC_IDX = Math.floor(Date.now() / 60_000) % 100_000;
+const EXEC_IDX = process.env.EXEC_IDX ?? String(Math.floor(Date.now() / 60_000) % 100_000);
 const uniqueTitle = `Test-${EXEC_IDX}`;
 ```
 
 ## Data isolation rules
 
-1. Each test must operate on its own data (no shared mutable state between tests)
-2. Tests that require pre-existing data must provision it in `beforeAll`
-3. Provisioned data does not need to be cleaned up if EXEC_IDX-based names are used
+1. Each test operates on its own data (no shared mutable state between TCs)
+2. Tests requiring pre-existing data provision it in `beforeAll`
+3. EXEC_IDX-named data does not require cleanup
 ```
 
 ---
 
-### `05-test-scenarios.md` — Test Cases
-
-**Header block** (always required):
+## `05-test-scenarios.md`
 
 ```markdown
 # Test Scenarios — {Module}: {Submodule}
@@ -228,11 +168,9 @@ const uniqueTitle = `Test-${EXEC_IDX}`;
 | P2 | {N} | {N} | {N} |
 | P3 | {N} | {N} | {N} |
 | **Total** | **{N}** | **{N}** | **{N}** |
-```
 
-**Format for each test case**:
+---
 
-```markdown
 ### TC-{MODULE}-{SUBMODULE}-{NNN}: {TC Title}
 
 | Field | Value |
@@ -241,7 +179,7 @@ const uniqueTitle = `Test-${EXEC_IDX}`;
 | Type | Functional / Negative / Regression / Security / Integration |
 | Origin | UI-OBSERVED / PENDING-CODE / BLOCKED-PERMISSIONS |
 | Automation | Yes / Partial / No |
-| Playwright | (leave blank until automation is written; then: `tests/{module}/file.spec.ts`) |
+| Playwright | (fill after automation is written) |
 
 **Preconditions**:
 - {precondition 1}
@@ -251,31 +189,31 @@ const uniqueTitle = `Test-${EXEC_IDX}`;
 2. {step 2}
 3. {step 3}
 
-**Expected result**: {what should happen}
+**Expected result**: {observable, measurable outcome}
 
-**Notes**: {any special considerations, DEF references, skip conditions}
+**Notes**: {DEF references, skip conditions, edge cases}
 ```
 
-**Mandatory coverage categories** (must have at least 1 TC per category where applicable):
+### Mandatory coverage checklist
 
 - [ ] Access: unauthenticated user redirected to login
-- [ ] Access: role without permission receives error / empty page
+- [ ] Access: role without permission receives error or empty page
 - [ ] Happy path: primary workflow with valid data succeeds
 - [ ] Negative: required field missing → validation error shown
 - [ ] Negative: duplicate record → system rejects with error message
-- [ ] Negative: invalid format → system rejects with format error
+- [ ] Negative: invalid format → format error shown
 - [ ] State transition: state changes correctly on action
-- [ ] Export / download: if feature exists, file is generated
-- [ ] Pagination / search: if feature exists, filtering works correctly
+- [ ] Export/download: file is generated (if feature exists)
+- [ ] Pagination/search: filtering works correctly (if feature exists)
 
 ---
 
-## Common Anti-Patterns to Avoid
+## Common Anti-Patterns
 
 | Anti-pattern | Why it's wrong | Correct approach |
 |---|---|---|
-| TC for a feature not in QA env | Creates invalid test expectations | Mark as `PENDING-CODE`, don't write test steps |
-| TC with a real user's DNI in steps | Security issue | Use env var reference |
-| TC with "click the X button" without knowing the element exists | Assumes UI without observation | Verify element exists first |
-| 100+ TCs per submodule by copy-pasting variations | Bloats the spec without value | Merge near-identical cases, use parameterization |
-| TC with "verify system works correctly" as expected result | Untestable | Write observable, measurable expected result |
+| TC for a feature not in QA env | Invalid test expectations | Mark as `PENDING-CODE` |
+| Real user data in steps | Security issue | Use env var reference |
+| "click the X button" without observed element | Assumes UI | Verify element exists first |
+| 100+ TCs by copy-pasting variations | Bloats spec | Merge near-identical cases |
+| "verify system works correctly" | Untestable | Write observable expected result |

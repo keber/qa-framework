@@ -1,5 +1,8 @@
 # Agent Instructions: Automation Generation
 
+> ⚠️ **DEPRECATED**: This file is superseded by `.github/skills/qa-automation/SKILL.md`.
+> Kept as reference during the transition period. Do not update this file.
+
 **File**: `agent-instructions/04-automation-generation.md`  
 **Purpose**: Instructions for writing Playwright E2E automation tests that trace back to approved test cases in `01-specifications/`.
 

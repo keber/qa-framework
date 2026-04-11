@@ -1,5 +1,8 @@
 # Agent Instructions: Module Analysis
 
+> ⚠️ **DEPRECATED**: This file is superseded by `.github/skills/qa-module-analysis/SKILL.md`.
+> Kept as reference during the transition period. Do not update this file.
+
 **File**: `agent-instructions/00-module-analysis.md`  
 **Purpose**: Instructions for an AI agent to perform complete functional analysis of an application module and produce the 6-file specification set.
 

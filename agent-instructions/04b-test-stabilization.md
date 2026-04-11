@@ -1,5 +1,8 @@
 # Agent Instructions: Test Stabilization
 
+> ⚠️ **DEPRECATED**: This file is superseded by `.github/skills/qa-test-stabilization/SKILL.md`.
+> Kept as reference during the transition period. Do not update this file.
+
 **File**: `agent-instructions/04b-test-stabilization.md`  
 **Purpose**: Instructions for exhaustively reviewing and stabilizing generated Playwright tests to ensure they are logically correct, technically sound, and free of false positives and false negatives before ADO integration.
 
