@@ -52,7 +52,9 @@ Category summary:
 - **F — Network dependency**: external call not mocked; add mock or skip
 - **G — Environment**: missing env var or wrong base URL; fix config
 - **H — CI environment**: OS/browser difference; add retry or tag as `@ci-skip`
-- **I — Logic error**: test assertion is wrong; fix assertion to match spec
+- **I — Logic error**: test assertion does not match the spec; fix assertion 
+  to match spec — **not** to match wrong app behavior. If the app is at fault, 
+  use `test.fail()` instead of correcting the assertion direction.
 
 ### Step 3 — Apply fixes in priority order
 
@@ -63,6 +65,14 @@ For each fix:
 2. Re-run the specific TC to verify fix
 3. Re-run the full describe block to verify no regression
 4. Note confidence score (0-100) for each fix
+
+**Category I special rule — assertion polarity:**  
+Before flipping or weakening an assertion, confirm its direction against the 
+spec. If the spec says the condition should hold and the app violates it → 
+the original assertion was *correct* and the app is broken → use `test.fail()` 
++ open a defect. Do NOT invert the assertion.  
+A test flipped from failing to passing by inverting its assertion is masking 
+a defect - which is worse than a failing test.
 
 ### Step 4 — Confidence scoring
 

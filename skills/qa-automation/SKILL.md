@@ -92,6 +92,20 @@ For each TC:
 - Locators attached to dynamic data must use `EXEC_IDX` suffix
 - All test data cleared in `afterAll` — never leave residue
 
+### Step 4b — Assertion polarity check (MANDATORY before committing any test)
+
+Every assertion must be verified against the spec, not against the app's 
+observed output.
+
+**Rule**: if the app does X but the spec requires NOT X, use `test.fail()` 
+with the correct assertion — do not adapt the assertion to match the app.
+
+Red flags that require review before proceeding:
+- `expect(X).toBe(false)` where the spec describes a positive condition
+- Assertions with `|| fallback`, `?.`, or `Math.max(a, b)` to avoid zero/falsy
+- Assertions inside an `if (condition)` that only execute on the happy path
+- A test that starts passing after a refactor without a clear spec justification
+
 ### Step 5 — Module Completion Checklist
 
 Before marking the submodule as ✅ Automation Complete:
