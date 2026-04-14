@@ -58,6 +58,25 @@ await expect(page.locator('.toast')).toHaveText('TEXTO_QUE_NO_EXISTE');
 
 ---
 
+### Persistence check (for tests that write data)
+
+For tests that create, update, or delete records: do not rely solely on a success toast.
+Verify persistence with a follow-up API call or page reload:
+
+```typescript
+// After clicking Guardar:
+await expect(page.locator('.toast')).toHaveText('Guardado exitosamente');
+// Verify via API — a passing toast is a false positive if the save failed silently
+const resp = await page.request.get(`${API_BASE}/api/{Entity}/{id}`);
+const data = await resp.json();
+expect(data.fieldChanged).toBe(expectedValue);
+```
+
+A test that only checks the UI toast is Category B (Wrong assertion) if the spec requires
+verifying the change was persisted.
+
+---
+
 ## Confidence Scoring
 
 | Level | Criteria |
