@@ -181,9 +181,39 @@ afterAll(async () => {
   });
   console.log(`[afterAll] Cleanup: ${resp.status}`);
 });
+```
 
 Rule: if beforeAll sets up a fixture by reading state from the API, afterAll must restore that same state.
 Design cleanup from the start — retrofitting it costs as many runs as the test itself.
+
+---
+
+### Pattern 9: Debug Screenshots — Path-bound Artifacts
+
+Screenshots MUST always be saved to `agentSettings.screenshotPath` defined in `qa/qa-framework.config.json`. Never save to the workspace root or any ad-hoc path.
+
+```typescript
+// Read screenshotPath from config or use default
+const DIAG_DIR = 'qa/07-automation/e2e/diagnosis';
+
+// On test failure — capture state for diagnosis:
+await page.screenshot({ path: `${DIAG_DIR}/${SUBMODULE}-${tcId}-fail-${Date.now()}.png` });
+
+// In beforeAll for warm-up verification:
+await page.screenshot({ path: `${DIAG_DIR}/{submodule}-warmup.png` });
+
+// In inspection scripts (_inspect-*.js) — always use the same dir:
+await page.screenshot({ path: `${DIAG_DIR}/_inspect-${SUBMODULE}.png`, fullPage: true });
+```
+
+Naming convention: {submodule}-{context}-{optional-timestamp}.png
+When to capture:
+
+* End of beforeAll warmup — confirms the app state before tests run
+* Inside catch blocks in beforeAll/beforeEach — documents the failure condition
+* Inside inspection scripts — captures the rendered UI state at each navigation step
+* Never inside individual test() bodies — Playwright's built-in trace (--trace on) already captures this
+* Enforcement: The diagnosis/ folder is gitignored. Screenshots are local-only artifacts, never committed to the repo.
 
 ---
 

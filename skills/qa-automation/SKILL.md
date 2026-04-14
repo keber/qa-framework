@@ -27,6 +27,7 @@ description: >
 2. `qa/07-automation/playwright.config.ts` — confirm project name maps to submodule tag
 3. `qa/07-automation/fixtures/auth.ts` — identify available auth fixtures
 4. TC list (from test plan or Stage 4) — defines which TCs to automate in this session
+5. `qa/qa-framework.config.json` → screenshotPath, automationRoot
 
 ---
 
@@ -64,6 +65,17 @@ Before writing a line of code:
 - Search all spec files for `PENDING-CODE` — stop and flag if found
 - Confirm `playwright.config.ts` exists; scaffold it if missing using `references/config-checklist.md`
 - Verify `fixtures/auth.ts` has the roles required by this submodule
+
+### Step 1b — Decide POM vs inline locators
+
+Create a Page Object in `qa/07-automation/e2e/page-objects/{SubmoduleName}Page.ts` when ANY of these is true:
+- The submodule has a form with 5+ fields (locators will be reused across P0 + P1 suites)
+- The submodule is referenced as a precondition by another submodule (BP, tabs, modals)
+- The submodule requires navigation to 2+ distinct URLs (list + create + edit)
+
+Otherwise, inline locators are acceptable for simple catalog submodules (single URL, < 5 fields).
+
+POM template: `references/pom-template.md`
 
 ### Step 2 — Scaffold spec file
 
@@ -124,11 +136,13 @@ Before marking the submodule as ✅ Automation Complete:
 |---|---|
 | `EXEC_IDX` | Any TC that creates persistent data |
 | `auth-fixture` | All authenticated TCs |
-| `fast-fail` | P0 TCs — skip P1+ if P0 fails |
+| `fast-fail` | Element state checks where the default timeout would cause silent hangs |
 | `email-intercept` | Email verification flows |
-| `skip-conditional` | Scenarios blocked by PENDING-CODE |
+| `skip-conditional` | TCs blocked by a known app defect (DEF-xxx) |
 | `beforeAll-setup` | Shared precondition across TC group |
 | `password-env` | Any credential usage |
+| `afterAll-cleanup` | When a test assigns, creates, or modifies persistent data |
+| `debug-screenshots` | beforeAll warmup verification, catch blocks in setup, and inspection scripts |
 
 See `references/patterns.md` for full TypeScript implementations.
 
@@ -137,5 +151,6 @@ See `references/patterns.md` for full TypeScript implementations.
 ## Outputs
 
 - `qa/07-automation/e2e/{module}/{submodule}.spec.ts`
+- `qa/07-automation/e2e/page-objects/{SubmoduleName}Page.ts`  (when POM criteria met)
 - `qa/07-automation/playwright.config.ts` (updated or confirmed)
 - `qa/README.md` automation status updated
