@@ -165,6 +165,28 @@ await page.evaluate(
 
 ---
 
+## Pattern 8: afterAll Cleanup for Data-Mutating Tests
+
+When a test assigns, creates, or modifies persistent data (e.g., assigning a role, linking a record),
+always implement `afterAll` cleanup — otherwise the second run finds a different state and fails.
+
+```typescript
+afterAll(async () => {
+  // Restore fixture to pre-test state via direct API call
+  const token = await getFixtureToken(); // from storageState
+  const resp = await fetch(`${API_BASE}/api/{Entity}/Edit`, {
+    method: 'PUT',
+    headers: { 'Authorization': Bearer ${token}, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ /* original state without the assigned record */ }),
+  });
+  console.log(`[afterAll] Cleanup: ${resp.status}`);
+});
+
+Rule: if beforeAll sets up a fixture by reading state from the API, afterAll must restore that same state.
+Design cleanup from the start — retrofitting it costs as many runs as the test itself.
+
+---
+
 ## Coverage Mapping Template
 
 Create `COVERAGE-MAPPING.md` in the test directory after automation is complete:
