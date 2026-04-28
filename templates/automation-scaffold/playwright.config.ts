@@ -13,16 +13,27 @@ for (const key of required) {
 }
 
 // Optional: Azure DevOps reporter configuration
-// Uncomment and fill in when ADO integration is enabled.
+// To enable: set env vars ADO_ORG, ADO_PROJECT, ADO_PAT, ADO_PLAN_ID and CI=true,
+// then uncomment the reporter entry in the `reporter` array below.
+// Install:  npm install @alex_neo/playwright-azure-reporter --save-dev
 // import { AzureReporter } from '@alex_neo/playwright-azure-reporter';
-// const adoConfig = {
-//   token:           process.env.AZURE_TOKEN!,
-//   planId:          Number(process.env.ADO_PLAN_ID),
-//   projectName:     process.env.ADO_PROJECT_NAME!,
-//   orgUrl:          process.env.ADO_ORG_URL!,
-//   testRunTitle:    `[Automated] Sprint {{NNN}} — ${new Date().toISOString().slice(0, 10)}`,
-//   publishResultsOnFailure: true,
-//   isDisabled:      process.env.ADO_SYNC_DISABLED === 'true',
+// const adoReporterConfig = {
+//   orgUrl:                  `https://dev.azure.com/${process.env.ADO_ORG}`,
+//  // In CI it uses System.AccessToken (pipeline's OAuth, not subject to Conditional Access Policy).
+//  // Locally, if you want to test the reporter, you can set ADO_PAT manually.
+//   token:                   process.env.SYSTEM_ACCESSTOKEN ?? process.env.ADO_PAT,
+//   planId:                  Number(process.env.ADO_PLAN_ID),
+//   projectName:             process.env.ADO_PROJECT!,
+//   testRunTitle:            `[Auto] Sprint {{NNN}} — ${new Date().toISOString().slice(0, 10)}`,
+//   publishTestResultsMode:  'testRun' as const,
+//   uploadAttachments:       true,
+//   attachmentsType:         ['screenshot', 'video', 'trace'] as const,
+//   isDisabled:              !process.env.CI,   // only publishes when CI=true
+//  autoMarkTestCasesAsAutomated: {
+//    enabled:                    true,
+//    updateAutomatedTestName:    true,   // saves test title in AutomatedTestName
+//    updateAutomatedTestStorage: true,   // saves spec file name in AutomatedTestStorage
+//  },
 // };
 
 export default defineConfig({
@@ -44,7 +55,7 @@ export default defineConfig({
     ['html',  { open: 'never' }],
     ['list'],
     // Uncomment for ADO:
-    // ['@alex_neo/playwright-azure-reporter', adoConfig],
+    // ['@alex_neo/playwright-azure-reporter', adoReporterConfig],
   ],
 
   // ------ Global settings ------
