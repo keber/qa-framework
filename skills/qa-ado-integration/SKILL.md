@@ -63,7 +63,7 @@ After sync, each TC file must have `adoId: <NNN>` in its YAML frontmatter block.
 
 ### Step 4 — Configure Playwright ADO reporter
 
-See `references/scripts-and-config.md` for the reporter config block to add to `qa/07-automation/playwright.config.ts`.
+See `references/scripts-and-config.md` for the reporter config block to add to `qa/07-automation/e2e/playwright.config.ts`.
 
 Required fields:
 - `orgUrl`, `projectName`, `planId`, `runName`
@@ -100,4 +100,4 @@ Update `qa/08-azure-integration/module-registry.json` with:
 - ADO Test Plan populated with test cases
 - `qa/03-test-cases/automated/TC-*.md` — ADO IDs injected
 - `qa/08-azure-integration/module-registry.json` updated
-- `qa/07-automation/playwright.config.ts` updated with reporter config
+- `qa/07-automation/e2e/playwright.config.ts` updated with reporter config

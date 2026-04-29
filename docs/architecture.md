@@ -2,8 +2,8 @@
 
 ## Framework Architecture
 
-**Version**: 1.0.0  
-**Date**: 2026-03-04
+**Version**: 1.6.0  
+**Date**: 2026-04-29
 
 ---
 
@@ -27,16 +27,17 @@
 │  │                        FRAMEWORK CORE                               │   │
 │  │                                                                      │   │
 │  │  ┌────────────────┐  ┌──────────────────┐  ┌─────────────────────┐  │   │
-│  │  │  qa/ structure │  │  Agent           │  │  Standards &        │  │   │
-│  │  │  (9 folders)   │  │  instructions    │  │  Naming conventions │  │   │
-│  │  │                │  │  (7 files)       │  │                     │  │   │
+│  │  │  qa/ structure │  │  Agent skills    │  │  Standards &        │  │   │
+│  │  │  (10 folders)  │  │  (8 skill sets,  │  │  Naming conventions │  │   │
+│  │  │                │  │  3-layer model)  │  │                     │  │   │
 │  │  └────────────────┘  └──────────────────┘  └─────────────────────┘  │   │
 │  │                                                                      │   │
 │  │  ┌────────────────┐  ┌──────────────────┐  ┌─────────────────────┐  │   │
 │  │  │  6-file        │  │  CLI commands    │  │  Config schema      │  │   │
-│  │  │  submodule     │  │  (init/generate/ │  │  (qa-framework.     │  │   │
-│  │  │  templates     │  │   validate)      │  │   config.json)      │  │   │
-│  │  └────────────────┘  └──────────────────┘  └─────────────────────┘  │   │
+│  │  │  submodule     │  │  (init/upgrade/  │  │  (qa-framework.     │  │   │
+│  │  │  templates     │  │  generate/       │  │   config.json)      │  │   │
+│  │  └────────────────┘  │  validate)       │  └─────────────────────┘  │   │
+│  │                       └──────────────────┘                           │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
@@ -44,18 +45,18 @@
 │  │                                                                      │   │
 │  │  ┌─────────────────────────┐    ┌──────────────────────────────┐    │   │
 │  │  │  playwright/            │    │  playwright-azure-reporter/  │    │   │
-│  │  │  - playwright.config.ts │    │  - reporter config template  │    │   │
-│  │  │  - global-setup.ts      │    │  - ado-ids-mapping.json      │    │   │
-│  │  │  - fixtures/auth.ts     │    │  - inject-ado-ids.ps1        │    │   │
-│  │  │  - .env.example         │    │  - module-registry.json      │    │   │
+│  │  │  - e2e/playwright.cfg   │    │  - reporter config template  │    │   │
+│  │  │  - e2e/global-setup.ts  │    │  - ado-ids-mapping.json      │    │   │
+│  │  │  - e2e/fixtures/        │    │  - inject-ado-ids.ps1        │    │   │
+│  │  │  - e2e/.env.example     │    │  - module-registry.json      │    │   │
 │  │  └─────────────────────────┘    └──────────────────────────────┘    │   │
 │  │                                                                      │   │
-│  │  ┌─────────────────────────┐    ┌──────────────────────────────┐    │   │
-│  │  │  ado-powershell/        │    │  blazor-radzen/ (stub)       │    │   │
-│  │  │  - create-testplan.ps1  │    │  - openDropdownAndSelect()   │    │   │
-│  │  │  - sync-ado-titles.ps1  │    │  - waitForBlazorRender()     │    │   │
-│  │  │  - azure-pipeline.yml   │    │  - toBeAttached() guidance   │    │   │
-│  │  └─────────────────────────┘    └──────────────────────────────┘    │   │
+│  │  ┌─────────────────────────┐                                        │   │
+│  │  │  ado-powershell/        │                                        │   │
+│  │  │  - create-testplan.ps1  │                                        │   │
+│  │  │  - sync-ado-titles.ps1  │                                        │   │
+│  │  │  - azure-pipeline.yml   │                                        │   │
+│  │  └─────────────────────────┘                                        │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
 
@@ -65,20 +66,26 @@
 │                         TARGET PROJECT                                      │
 │                                                                             │
 │  qa/                                                                        │
-│  ├── README.md                   ← living index (project-specific)          │
-│  ├── QA-STRUCTURE-GUIDE.md       ← copy from framework                      │
-│  ├── qa-framework.config.json    ← project config (parameterized)           │
+│  ├── README.md                   <- living index (project-specific)         │
+│  ├── AGENT-NEXT-STEPS.md         <- active sprint queue (project-specific)  │
+│  ├── QA-STRUCTURE-GUIDE.md       <- copy from framework (framework-owned)   │
+│  ├── qa-framework.config.json    <- project config (parameterized)          │
 │  │                                                                          │
-│  ├── 00-guides/                  ← agent instructions (copied from pkg)     │
-│  ├── 00-standards/               ← naming + templates (copied from pkg)     │
-│  ├── 01-specifications/          ← generated per module (project work)      │
-│  ├── 02-test-plans/              ← generated (project work)                 │
-│  ├── 03-test-cases/              ← generated (project work)                 │
-│  ├── 04-test-data/               ← project data (project work)              │
-│  ├── 05-test-execution/          ← execution reports (project work)         │
-│  ├── 06-defects/                 ← optional defect cache                    │
-│  ├── 07-automation/              ← Playwright code (project work)           │
-│  └── 08-azure-integration/       ← optional ADO integration                 │
+│  ├── 00-standards/               <- naming + templates (copied from pkg)    │
+│  ├── 01-specifications/          <- generated per module (project work)     │
+│  ├── 02-test-plans/              <- generated (project work)                │
+│  ├── 03-test-cases/              <- generated (project work)                │
+│  ├── 04-test-data/               <- project data (project work)             │
+│  ├── 05-test-execution/          <- execution reports (project work)        │
+│  ├── 06-defects/open|resolved/   <- optional defect cache                   │
+│  ├── 07-automation/e2e/          <- Playwright project (self-contained)     │
+│  ├── 07-automation/integration/  <- API/integration tests                   │
+│  ├── 07-automation/load/         <- load/performance tests                  │
+│  ├── 08-azure-integration/       <- optional ADO integration                │
+│  └── memory/                     <- agent learnings (project-maintained)    │
+│                                                                             │
+│  .github/copilot-instructions.md <- generated (framework-owned)            │
+│  .github/skills/                 <- copied from package (framework-owned)  │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -107,7 +114,7 @@ Module analysis (agent)
                               │
                               ▼
                   07-automation/e2e/tests/{module}/
-                    *.spec.ts  ←── test title contains TC-ID
+                    *.spec.ts  <--- test title contains TC-ID
                                                    │
                               ┌────────────────────┘
                               │
@@ -129,21 +136,25 @@ Module analysis (agent)
 
 Installed always. Contains:
 
-- `qa/` directory skeleton (9 folders)
-- `00-guides/` — agent instructions
+- `qa/` directory skeleton (10 folders)
+- `.github/skills/` — 8 agent skill sets (3-layer model: SKILL.md + references/)
 - `00-standards/` — naming conventions, templates
 - `QA-STRUCTURE-GUIDE.md`
+- `.github/copilot-instructions.md` — generated pipeline sequencer
 - `qa-framework.config.json` schema
 
 ### Layer 2 — Playwright Integration (opt-in)
 
-Installed when `integrations.playwright.enabled = true`:
+Installed always (scaffold is always created by `init`):
 
 - `qa/07-automation/e2e/playwright.config.ts`
 - `qa/07-automation/e2e/global-setup.ts`
 - `qa/07-automation/e2e/.env.example`
 - `qa/07-automation/e2e/fixtures/auth.ts`
+- `qa/07-automation/e2e/fixtures/test-helpers.ts`
 - `qa/07-automation/e2e/package.json`
+- `qa/07-automation/integration/README.md` (placeholder)
+- `qa/07-automation/load/README.md` (placeholder)
 
 ### Layer 3 — Azure DevOps Integration (opt-in)
 
@@ -154,13 +165,6 @@ Installed when `integrations.azureDevOps.enabled = true`:
 - `ado-ids-mapping.json` template
 - PowerShell scripts (inject, create-plan, sync)
 - Azure Pipeline YAML template
-
-### Layer 4 — Framework Adapters (opt-in per adapter)
-
-Technology-specific extensions. Currently available:
-
-- `blazor-radzen` — Playwright helpers for Radzen Blazor apps (STUB - v1.1 planned)
-- `aspnet-mvc` — Select2/jQuery datatable helpers (STUB - v1.1 planned)
 
 ---
 
@@ -188,10 +192,11 @@ The framework uses **Semantic Versioning**:
 
 | Change type | Version bump |
 |---|---|
-| New folder added to `qa/` tree | MAJOR (breaks existing structure) |
+| New folder added to `qa/` tree or restructured | MAJOR |
 | New template file | MINOR |
 | New integration adapter | MINOR |
-| Agent instruction update | PATCH |
+| New skill or skill update | MINOR |
+| CLI command update | PATCH |
 | Documentation correction | PATCH |
 
 **Upgrade path**: When a new MAJOR version changes the `qa/` structure, the `MIGRATION-NOTES.md` in the package provides a step-by-step migration script. Projects should pin their framework version in `package.json` and upgrade deliberately.

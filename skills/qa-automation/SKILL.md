@@ -14,7 +14,7 @@ description: >
 
 **Stage**: 5 — Automation  
 **Prerequisite**: All specs for the target submodule are complete and contain no `PENDING-CODE` sections  
-**Output**: `qa/07-automation/e2e/{module}/{submodule}.spec.ts` + supporting files  
+**Output**: `qa/07-automation/e2e/tests/{module}/{submodule}.spec.ts` + supporting files  
 **Next stage**: Stage 6 — Maintenance (`qa-maintenance`) or Stage 5b — Stabilization (`qa-test-stabilization`) if tests fail
 
 > **Pipeline rule**: Never automate a TC whose spec contains `PENDING-CODE`. Resolve spec gaps first.
@@ -24,8 +24,8 @@ description: >
 ## Inputs Required
 
 1. `qa/01-specifications/{module}/` — full spec set for target submodule
-2. `qa/07-automation/playwright.config.ts` — confirm project name maps to submodule tag
-3. `qa/07-automation/fixtures/auth.ts` — identify available auth fixtures
+2. `qa/07-automation/e2e/playwright.config.ts` — confirm project name maps to submodule tag
+3. `qa/07-automation/e2e/fixtures/auth.ts` — identify available auth fixtures
 4. TC list (from test plan or Stage 4) — defines which TCs to automate in this session
 5. `qa/qa-framework.config.json` → screenshotPath, automationRoot
 
@@ -38,7 +38,7 @@ description: >
 For every new submodule, run a dedicated inspection script before writing tests.
 **Template**: `references/dom-inspection-template.js` — copy, set the 4 constants at the top, run.
 
-1. Copy `references/dom-inspection-template.js` → `qa/07-automation/_inspect-{submodule}.js`
+1. Copy `references/dom-inspection-template.js` → `qa/07-automation/e2e/_inspect-{submodule}.js`
 2. Set the 4 constants at the top of the script:
    - `MODULE_ROUTE` — the submodule's URL path (e.g. `'/Users'`, `'/Products/list'`)
    - `APP_SHELL_SEL` — a selector that confirms the SPA has loaded (nav, sidebar, app shell)
@@ -150,7 +150,7 @@ See `references/patterns.md` for full TypeScript implementations.
 
 ## Outputs
 
-- `qa/07-automation/e2e/{module}/{submodule}.spec.ts`
+- `qa/07-automation/e2e/tests/{module}/{submodule}.spec.ts`
 - `qa/07-automation/e2e/page-objects/{SubmoduleName}Page.ts`  (when POM criteria met)
-- `qa/07-automation/playwright.config.ts` (updated or confirmed)
+- `qa/07-automation/e2e/playwright.config.ts` (updated or confirmed)
 - `qa/README.md` automation status updated

@@ -16,56 +16,48 @@
 ## Option A — npm install (recommended)
 
 ```bash
-# Install as a dev dependency
-npm install --save-dev keber/qa-framework
-
-# Run the init command
-npx qa-framework init
+npm install --save-dev @keber/qa-framework
 ```
 
-The `init` command will prompt you for:
+The `postinstall` script runs `init --skip-if-exists` automatically. On first install it
+creates the full `qa/` structure without prompts, reading `qa-framework.config.json` if
+present or bootstrapping defaults.
 
-1. **Project name** (used in config and directory labels)
-2. **QA base URL** (e.g., `https://myproject-qa.example.com`)
-3. **Login path** (e.g., `/login` or `/Seguridad/Login`)
-4. **Number of test user roles** (1 = single role, 2+ = multi-role)
-5. **Enable Playwright integration?** (y/n)
-6. **Enable Azure DevOps integration?** (y/n)
+After install, read `qa/AGENT-NEXT-STEPS.md` for the exact follow-up steps.
 
-After answering these, `init` creates:
+`init` creates:
 
 ```
 qa/
-├── README.md                       ← Prefilled with your project name
-├── QA-STRUCTURE-GUIDE.md           ← Full structure guide
-├── qa-framework.config.json        ← Your project config
-├── 00-guides/                      ← Agent instructions (copied)
-├── 00-standards/                   ← Templates and naming conventions
-├── 01-specifications/README.md
-├── 02-test-plans/README.md
-├── 03-test-cases/README.md
-├── 04-test-data/README.md
-├── 05-test-execution/README.md
-├── 06-defects/README.md
-├── 07-automation/README.md
-└── 08-azure-integration/README.md  ← Only if ADO enabled
-```
+├── README.md                       <- Prefilled with your project name
+├── AGENT-NEXT-STEPS.md             <- Follow-up checklist for the agent
+├── QA-STRUCTURE-GUIDE.md           <- Full structure guide (framework-owned)
+├── qa-framework.config.json        <- Your project config
+├── 00-standards/                   <- Templates and naming conventions
+├── 01-specifications/
+├── 02-test-plans/
+├── 03-test-cases/
+├── 04-test-data/
+├── 05-test-execution/
+├── 06-defects/open|resolved/
+├── 07-automation/
+│   ├── e2e/                        <- Playwright project (self-contained)
+│   │   ├── playwright.config.ts
+│   │   ├── global-setup.ts
+│   │   ├── .env.example
+│   │   └── fixtures/auth.ts + test-helpers.ts
+│   ├── integration/README.md       <- Placeholder for k6, JMeter, etc.
+│   └── load/README.md              <- Placeholder for load tests
+└── 08-azure-integration/README.md
+└── memory/INDEX.md
 
-If Playwright is enabled, it also creates:
-
-```
-qa/07-automation/e2e/
-├── package.json
-├── playwright.config.ts
-├── global-setup.ts
-├── .env.example
-└── fixtures/
-    └── auth.ts
+.github/copilot-instructions.md     <- Generated agent rules
+.github/skills/                     <- 8 agent skill sets (SKILL.md + references/)
 ```
 
 ---
 
-## Option B — Clone or copy (early adoption / no npm registry)
+## Option B — Clone or copy (no npm registry)
 
 ```bash
 # From your project root
@@ -82,15 +74,33 @@ node tools/qa-framework/scripts/cli.js init
 If you prefer to control exactly what gets created:
 
 ```bash
-# Clone the package
 git clone https://github.com/your-org/qa-framework.git tools/qa-framework
 
-# Copy only the templates you need
+# Copy templates
 cp -r tools/qa-framework/templates/specification qa/01-specifications/shared/
-cp -r tools/qa-framework/agent-instructions qa/00-guides/
 cp -r tools/qa-framework/templates/automation-scaffold qa/07-automation/e2e/
 
-# Then manually fill in qa-framework.config.json
+# Then fill in qa-framework.config.json manually
+```
+
+---
+
+## Upgrading
+
+After `npm update @keber/qa-framework`:
+
+```bash
+npx qa-framework upgrade
+```
+
+This overwrites only framework-owned files (`.github/skills/`, `copilot-instructions.md`,
+`QA-STRUCTURE-GUIDE.md`) and migrates the `07-automation/` structure if upgrading from
+v1.5.x. Your specs, tests, and memory are never touched.
+
+Use `--dry-run` to preview without writing:
+
+```bash
+npx qa-framework upgrade --dry-run
 ```
 
 ---

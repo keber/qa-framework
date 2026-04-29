@@ -85,7 +85,7 @@ const topLevelFolders = [
   '05-test-execution',
   '06-defects/open',
   '06-defects/resolved',
-  '07-automation/e2e',
+  '07-automation/e2e/tests',
   '08-azure-integration',
   'memory',
 ];
@@ -185,8 +185,8 @@ for (const mod of modules) {
       }
     }
 
-    // Create automation e2e subdir placeholder
-    const e2eDir = path.join(qaRoot, '07-automation', 'e2e', moduleKey);
+    // Create automation spec stub in e2e/tests/{module}/
+    const e2eDir = path.join(qaRoot, '07-automation', 'e2e', 'tests', moduleKey);
     fs.mkdirSync(e2eDir, { recursive: true });
     const specTs = path.join(e2eDir, `${subKey}.spec.ts`);
     if (!fs.existsSync(specTs)) {
@@ -196,25 +196,33 @@ for (const mod of modules) {
   }
 }
 
-// --- Automation scaffold ---
-const automationDir = path.join(qaRoot, '07-automation');
-const scaffoldSrc   = path.resolve(__dirname, '..', 'templates', 'automation-scaffold');
+// --- Automation scaffold (lives in 07-automation/e2e/) ---
+const automationDir  = path.join(qaRoot, '07-automation');
+const e2eScaffoldDir = path.join(automationDir, 'e2e');
+const scaffoldSrc    = path.resolve(__dirname, '..', 'templates', 'automation-scaffold');
+fs.mkdirSync(e2eScaffoldDir, { recursive: true });
 for (const file of ['playwright.config.ts', 'global-setup.ts', '.env.example', 'package.json']) {
-  const dest = path.join(automationDir, file);
+  const dest = path.join(e2eScaffoldDir, file);
   if (!fs.existsSync(dest)) {
     fs.copyFileSync(path.join(scaffoldSrc, file), dest);
     console.log(`  [created] ${path.relative(cwd, dest)}`);
   }
 }
-const fixturesDir = path.join(automationDir, 'fixtures');
+const fixturesDir = path.join(e2eScaffoldDir, 'fixtures');
 fs.mkdirSync(fixturesDir, { recursive: true });
 for (const file of ['auth.ts', 'test-helpers.ts']) {
   const dest = path.join(fixturesDir, file);
   if (!fs.existsSync(dest)) {
     fs.copyFileSync(path.join(scaffoldSrc, 'fixtures', file), dest);
-    console.log(`  [created] ${path.relative(cwd  , dest)}`);
+    console.log(`  [created] ${path.relative(cwd, dest)}`);
   }
 }
+
+// --- Integration + Load test placeholders ---
+writeIfMissing(path.join(automationDir, 'integration', 'README.md'),
+`# Integration Tests\n\n> Placeholder for API/integration tests (k6, JMeter, Azure Load Testing, etc.).\n> Each tool gets its own subdirectory.\n`);
+writeIfMissing(path.join(automationDir, 'load', 'README.md'),
+`# Load Tests\n\n> Placeholder for load and performance tests.\n> Each tool gets its own subdirectory (e.g. k6/, jmeter/).\n`);
 
 // --- ADO integration placeholder ---
 const adoDir = path.join(qaRoot, '08-azure-integration');
@@ -344,12 +352,12 @@ npm install @keber/ado-qa
 **Playwright automation:**
 \`\`\`bash
 npm install @playwright/test
-cd qa/07-automation && npm install && npx playwright install chromium
+cd qa/07-automation/e2e && npm install && npx playwright install chromium
 \`\`\`
 
 ### 3. Credentials
-- Copy \`qa/07-automation/.env.example\` → \`qa/07-automation/.env\` and fill in credentials
-- Add \`qa/07-automation/.env\` and \`qa/07-automation/.auth/\` to \`.gitignore\`
+- Copy \`qa/07-automation/e2e/.env.example\` → \`qa/07-automation/e2e/.env\` and fill in credentials
+- Add \`qa/07-automation/e2e/.env\` and \`qa/07-automation/e2e/.auth/\` to \`.gitignore\`
 `;
 const nextStepsPath = path.join(qaRoot, 'AGENT-NEXT-STEPS.md');
 fs.writeFileSync(nextStepsPath, nextStepsContent, 'utf8');

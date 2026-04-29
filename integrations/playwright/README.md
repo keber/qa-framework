@@ -17,7 +17,7 @@ Peer dependency: `@playwright/test >= 1.40.0`
 ## Configuration
 
 Copy `templates/automation-scaffold/playwright.config.ts` into your project's
-`qa/07-automation/` directory and replace all `{{PLACEHOLDER}}` values.
+`qa/07-automation/e2e/` directory and replace all `{{PLACEHOLDER}}` values.
 
 ## Key conventions
 

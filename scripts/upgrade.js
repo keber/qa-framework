@@ -8,21 +8,30 @@
  *
  * What this command does (safe by design):
  *   ALWAYS updates (framework-owned):
- *     - .github/skills/             ← New skills architecture; always current
- *     - .github/copilot-instructions.md ← Pipeline sequencer; framework-owned
- *     - qa/QA-STRUCTURE-GUIDE.md    ← Folder reference; framework-owned
+ *     - .github/skills/             <- New skills architecture; always current
+ *     - .github/copilot-instructions.md <- Pipeline sequencer; framework-owned
+ *     - qa/QA-STRUCTURE-GUIDE.md    <- Folder reference; framework-owned
+ *
+ *   MIGRATES (v1.5.x -> v1.6.0, non-destructive):
+ *     - qa/07-automation/playwright.config.ts  -> qa/07-automation/e2e/
+ *     - qa/07-automation/global-setup.ts       -> qa/07-automation/e2e/
+ *     - qa/07-automation/package.json          -> qa/07-automation/e2e/
+ *     - qa/07-automation/.env.example          -> qa/07-automation/e2e/
+ *     - qa/07-automation/fixtures/             -> qa/07-automation/e2e/fixtures/
+ *     - qa/07-automation/e2e/{module}/         -> qa/07-automation/e2e/tests/{module}/
+ *     - Creates integration/ and load/ placeholders
  *
  *   NEVER touches (project-owned):
- *     - qa/01-specifications/       ← Your specs
- *     - qa/02-test-plans/           ← Your test plans
- *     - qa/03-test-cases/           ← Your TCs
- *     - qa/07-automation/           ← Your Playwright code
- *     - qa/memory/                  ← Your learnings
- *     - qa/README.md                ← Your living index
- *     - qa/AGENT-NEXT-STEPS.md       ← Your sprint queue
+ *     - qa/01-specifications/       <- Your specs
+ *     - qa/02-test-plans/           <- Your test plans
+ *     - qa/03-test-cases/           <- Your TCs
+ *     - qa/07-automation/e2e/tests/ <- Your Playwright tests (only moves, never overwrites)
+ *     - qa/memory/                  <- Your learnings
+ *     - qa/README.md                <- Your living index
+ *     - qa/AGENT-NEXT-STEPS.md      <- Your sprint queue
  *
  *   REPORTS but does not delete:
- *     - qa/00-guides/               ← Old location (can be deleted manually)
+ *     - qa/00-guides/               <- Old location (can be deleted manually)
  */
 
 'use strict';
@@ -96,6 +105,86 @@ if (fs.existsSync(oldGuidesDir)) {
     `qa/00-guides/ still exists (old location). It can be deleted:\n` +
     `    Remove-Item -Recurse -Force qa/00-guides`
   );
+}
+
+// ---------------------------------------------------------------------------
+// 5. Migration v1.5.x -> v1.6.0: restructure qa/07-automation/
+//    Safe: only moves files when source exists and destination does NOT.
+// ---------------------------------------------------------------------------
+const automationDir  = path.join(qaRoot, '07-automation');
+const e2eDir         = path.join(automationDir, 'e2e');
+
+// 5a. Scaffold files: 07-automation/*.* -> 07-automation/e2e/*.*
+const scaffoldFiles = ['playwright.config.ts', 'global-setup.ts', 'package.json', '.env.example', 'package-lock.json'];
+for (const file of scaffoldFiles) {
+  const oldPath = path.join(automationDir, file);
+  const newPath = path.join(e2eDir, file);
+  if (fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
+    if (!dryRun) {
+      fs.mkdirSync(e2eDir, { recursive: true });
+      fs.renameSync(oldPath, newPath);
+    }
+    updated.push(newPath);
+    console.log(`  [migrated] ${path.relative(cwd, oldPath)} -> e2e/${file}`);
+  }
+}
+
+// 5b. fixtures/: 07-automation/fixtures/ -> 07-automation/e2e/fixtures/
+const oldFixturesDir = path.join(automationDir, 'fixtures');
+const newFixturesDir = path.join(e2eDir, 'fixtures');
+if (fs.existsSync(oldFixturesDir) && !fs.existsSync(newFixturesDir)) {
+  if (!dryRun) {
+    fs.mkdirSync(e2eDir, { recursive: true });
+    fs.renameSync(oldFixturesDir, newFixturesDir);
+  }
+  updated.push(newFixturesDir);
+  console.log(`  [migrated] ${path.relative(cwd, oldFixturesDir)}/ -> e2e/fixtures/`);
+}
+
+// 5c. Spec stubs: e2e/{module}/*.spec.ts -> e2e/tests/{module}/
+//     Moves any directory directly under e2e/ that is not a known non-module dir.
+const testsDir = path.join(e2eDir, 'tests');
+const knownE2eDirs = new Set(['tests', 'page-objects', 'fixtures', 'diagnosis', 'scripts', 'seeds', 'helpers']);
+if (fs.existsSync(e2eDir)) {
+  for (const entry of fs.readdirSync(e2eDir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || knownE2eDirs.has(entry.name)) continue;
+    const oldModDir = path.join(e2eDir, entry.name);
+    const newModDir = path.join(testsDir, entry.name);
+    if (!fs.existsSync(newModDir)) {
+      if (!dryRun) {
+        fs.mkdirSync(testsDir, { recursive: true });
+        fs.renameSync(oldModDir, newModDir);
+      }
+      updated.push(newModDir);
+      console.log(`  [migrated] e2e/${entry.name}/ -> e2e/tests/${entry.name}/`);
+    } else {
+      warnings.push(
+        `Cannot migrate e2e/${entry.name}/ — target e2e/tests/${entry.name}/ already exists. Merge manually.`
+      );
+    }
+  }
+}
+
+// 5d. Create integration/ and load/ placeholders if missing.
+const integrationReadme = path.join(automationDir, 'integration', 'README.md');
+const loadReadme        = path.join(automationDir, 'load', 'README.md');
+if (!fs.existsSync(integrationReadme)) {
+  if (!dryRun) {
+    fs.mkdirSync(path.dirname(integrationReadme), { recursive: true });
+    fs.writeFileSync(integrationReadme,
+      '# Integration Tests\n\n> Placeholder for API/integration tests (k6, JMeter, Azure Load Testing, etc.).\n> Each tool gets its own subdirectory.\n', 'utf8');
+  }
+  updated.push(integrationReadme);
+  console.log(`  [created] ${path.relative(cwd, integrationReadme)}`);
+}
+if (!fs.existsSync(loadReadme)) {
+  if (!dryRun) {
+    fs.mkdirSync(path.dirname(loadReadme), { recursive: true });
+    fs.writeFileSync(loadReadme,
+      '# Load Tests\n\n> Placeholder for load and performance tests.\n> Each tool gets its own subdirectory (e.g. k6/, jmeter/).\n', 'utf8');
+  }
+  updated.push(loadReadme);
+  console.log(`  [created] ${path.relative(cwd, loadReadme)}`);
 }
 
 // ---------------------------------------------------------------------------
