@@ -24,7 +24,7 @@ description: >
 
 1. Description of the change — which submodule, what changed, and why
 2. `qa/01-specifications/{module}/` — specs affected by the change
-3. `qa/07-automation/e2e/{module}/` — automation affected by the change
+3. `qa/07-automation/e2e/tests/{module}/` — automation affected by the change
 4. Optionally: ADO work item or defect report describing the change
 
 ---
@@ -105,6 +105,6 @@ change-summary: {one-line description of what changed}
 
 - Updated `qa/01-specifications/{module}/*.md` files
 - Updated `qa/03-test-cases/automated/TC-*.md` files
-- Updated `qa/07-automation/e2e/{module}/*.spec.ts`
+- Updated `qa/07-automation/e2e/tests/{module}/*.spec.ts`
 - Updated `qa/README.md`
 - Updated `AGENT-NEXT-STEPS.md` (or sprint moved to history if complete)

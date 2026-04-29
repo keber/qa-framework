@@ -33,21 +33,54 @@ has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/gen
 
 ---
 
-## [Unreleased]
+## [1.6.0] - 2026-04-29
+
+### Changed (breaking - automated by `upgrade`)
+
+- **`07-automation/` restructured**: the Playwright project root moves from `07-automation/` to
+  `07-automation/e2e/`. Affected files: `playwright.config.ts`, `global-setup.ts`, `package.json`,
+  `.env.example`, `fixtures/`. Spec stubs move from `07-automation/e2e/{module}/` to
+  `07-automation/e2e/tests/{module}/`. Run `npx qa-framework upgrade` to migrate automatically.
+- `testDir` in `playwright.config.ts` template is now `'./tests'` (was `'.'`).
+- `QA_DIR` in the Azure Pipeline template now points to `qa/07-automation/e2e` (was `qa/07-automation`).
+- CI commands: `cd qa/07-automation/e2e && npm install && npx playwright install chromium`.
+
+### Removed
+
+- `agent-instructions/` directory (legacy monolithic per-task instruction files) — superseded by `skills/`
+  architecture since v1.5.0. All behavior is now in `skills/*/SKILL.md` + `references/`.
+- `docs/comparison-matrix.md` — superseded by `docs/skills-architecture.md`.
+- `docs/generalization-decisions.md` — internal design notes; no longer relevant.
+
+### Documentation
+
+- `docs/architecture.md` — updated for v1.6.0: correct 07-automation/e2e/ tree, removed blazor-radzen
+  stub, added `.github/skills/` and `memory/` to target project box.
+- `docs/installation.md` — rewritten: correct `npm install` command, no interactive prompts, correct
+  directory tree with e2e/integration/load, added `upgrade` command section.
+- `docs/usage-with-agent.md` — rewritten: all `00-guides/` references replaced with `.github/skills/`,
+  session workflows updated to reflect skills model, DO/DON'T list corrected (e2e/ is now correct run location).
+- `README.md` — version bumped, `agent-instructions/` entry removed from package tree.
 
 ### Added
 
-- **Stage 3.5 — Test Stabilization** (`agent-instructions/04b-test-stabilization.md`) — new agent
+- `07-automation/integration/` — placeholder for API/integration tests (k6, JMeter, Azure Load Testing);
+  created on `init` and `upgrade`.
+- `07-automation/load/` — placeholder for load and performance tests; created on `init` and `upgrade`.
+- **`scripts/upgrade.js` migration section 5** — detects old v1.5.x structure and relocates all
+  affected files non-destructively (moves only when destination does not exist; warns on conflict).
+- **Stage 3.5 - Test Stabilization** (`agent-instructions/04b-test-stabilization.md`) — agent
   instruction file for exhaustively reviewing and stabilizing generated Playwright tests before
   ADO integration. Covers baseline collection, failure classification (9 categories), false-positive
-  validation, confidence scoring (≥90% exit threshold), `STABILIZATION-REPORT.md` schema, and
-  upstream artifact update rules. Sits between Stage 4 (Automation Generation) and Stage 5
-  (ADO Integration) and is mandatory before any CI pipeline registration.
+  validation, confidence scoring (>=90% exit threshold), `STABILIZATION-REPORT.md` schema, and
+  upstream artifact update rules.
 
 ### Planned
 
 - `qa-framework generate spec <module-name>` — scaffold a full spec set from CLI
 - `qa-framework validate` — check `qa/` structure for compliance with conventions
-- `qa-framework upgrade` — migrate old embedded structure to package-based layout
 - Integration: `jest` support alongside Playwright
 - Integration: GitHub Actions pipeline template (alongside existing Azure Pipelines template)
+
+---
+

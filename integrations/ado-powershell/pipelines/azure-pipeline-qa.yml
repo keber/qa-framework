@@ -31,7 +31,7 @@ variables:
   - name: NODE_VERSION
     value: '20.x'
   - name: QA_DIR
-    value: 'qa/07-automation'
+    value: 'qa/07-automation/e2e'
   - name: ADO_SYNC_DISABLED
     value: 'false'
 

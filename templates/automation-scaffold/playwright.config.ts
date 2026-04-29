@@ -38,7 +38,7 @@ for (const key of required) {
 
 export default defineConfig({
   // ------ Test discovery ------
-  testDir:  '.',
+  testDir:  './tests',
   // Use any subdir pattern your project standardizes on, e.g.:
   // testMatch: ['**/*.spec.ts'],
 
