@@ -84,15 +84,12 @@ This overwrites **only** framework-owned files (skills, `copilot-instructions.md
 qa-framework/
 ├── README.md                         <- This file
 ├── CHANGELOG.md                      <- Version history
-├── MIGRATION-NOTES.md                <- How to migrate from embedded to package
 ├── package.json                      <- npm descriptor
 ├── qa-framework.config.json          <- Example config (copy to project)
 │
 ├── docs/                             <- Framework documentation
 │   ├── architecture.md               <- Design decisions and component map
 │   ├── skills-architecture.md        <- 3-layer skills model explanation
-│   ├── comparison-matrix.md          <- Source-repo analysis (Phase 1 artifact)
-│   ├── generalization-decisions.md   <- What was abstracted and why (Phase 2 artifact)
 │   ├── installation.md               <- Detailed installation guide
 │   ├── usage-with-agent.md           <- How to use the framework with an IDE agent
 │   ├── spec-driven-philosophy.md     <- Core QA methodology
