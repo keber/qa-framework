@@ -1,7 +1,7 @@
 # qa-framework
 
 > Reusable, installable, agent-oriented QA framework for spec-driven automated testing.
-> Current version: **v1.6.0**
+> Current version: **v1.6.2**
 
 ---
 
@@ -170,8 +170,8 @@ qa/
 ├── 01-specifications/           <- Functional specs (used by generate command)
 ├── {module}/{submodule}/        <- 6-file spec sets created per module/submodule in config
 ├── 02-test-plans/               <- Test plans (automated + manual)
-├── 03-test-cases/               <- Explicit test case documents
-├── 04-test-data/                <- Test data, fixtures, factories
+├── 03-test-cases/               <- TC-*.md step-by-step docs (manual track; optional if fully automated)
+├── 04-test-data/                <- Shared test data factories/seeders (optional — per-module data lives in 01-specs)
 ├── 05-test-execution/           <- Execution reports and results
 ├── 06-defects/open|resolved/    <- Defect tracking
 ├── 07-automation/               <- Playwright automation code and config
@@ -220,16 +220,16 @@ them via `read_file` without touching `node_modules`.
 
 Skills map to the pipeline stages enforced by `.github/copilot-instructions.md`:
 
-| Stage | Skill | Task | Prerequisite |
-|---|---|---|---|
-| 1 | `qa-module-analysis` | Analyze module, produce 6-file spec set | None |
-| 2 | `qa-spec-generation` | Generate/update 6-file spec set | `00-inventory.md` exists |
-| 3 | `qa-test-plan` | Generate test plan | `05-test-scenarios.md` exists |
-| 4 | `qa-test-cases` | Generate TC-{ID}.md files | Test plan exists |
-| 5 | `qa-automation` | Implement Playwright tests | Specs approved, no PENDING-CODE |
-| 5b | `qa-test-stabilization` | Stabilize failing tests | Failing tests exist |
-| 6 | `qa-maintenance` | Update artifacts after app changes | Delivered change |
-| - | `qa-ado-integration` | Sync with Azure DevOps Test Plans | ADO enabled in config |
+| Stage | Skill | Task | Track | Prerequisite |
+|---|---|---|---|---|
+| 1 | `qa-module-analysis` | Analyze module, produce 6-file spec set | Both | None |
+| 2 | `qa-spec-generation` | Generate/update 6-file spec set | Both | `00-inventory.md` exists |
+| 3 | `qa-test-plan` | Generate test plan | Both | `05-test-scenarios.md` exists |
+| 4 | `qa-test-cases` | Generate TC-{ID}.md files | Manual | Test plan exists |
+| 5 | `qa-automation` | Implement Playwright tests | Automation | Specs approved, no PENDING-CODE |
+| 5b | `qa-test-stabilization` | Stabilize failing tests | Automation | Failing tests exist |
+| 6 | `qa-maintenance` | Update artifacts after app changes | Both | Delivered change |
+| - | `qa-ado-integration` | Sync with Azure DevOps Test Plans | Both | ADO enabled in config |
 
 See [docs/skills-architecture.md](docs/skills-architecture.md) for the full design rationale.
 

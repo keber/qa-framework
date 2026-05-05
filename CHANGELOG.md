@@ -33,6 +33,33 @@ has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/gen
 
 ---
 
+## [1.6.2] - 2026-05-05
+
+### Added
+
+- **`tests/helpers/debug/`** — diagnostic scripts directory created by `init` and `upgrade` inside
+  `07-automation/e2e/tests/`. Scripts here are excluded from test runs via `testIgnore`.
+- **`tests/seeds/`** — data seeding specs directory created by `init` and `upgrade` inside
+  `07-automation/e2e/tests/`. Excluded from test runs via `testIgnore`.
+- **`testIgnore`** in `playwright.config.ts` template — excludes `**/helpers/debug/**` and
+  `**/seeds/**` from Playwright test discovery.
+- **`upgrade` step 5e** — patches existing `playwright.config.ts` in `e2e/`: replaces
+  `testDir: '.'` with `'./tests'`, injects `testIgnore` if missing, creates `helpers/debug/`
+  and `seeds/` if absent.
+- **Dual-Track Pipeline** section in `docs/folder-structure-guide.md` and `qa/QA-STRUCTURE-GUIDE.md`
+  — documents the automation track and manual track as parallel paths sharing `01-specifications/`
+  as source of truth. Includes entry point table (3 scenarios) and track selection guidance.
+  Clarifies that `03-test-cases/` is the manual track artifact and `04-test-data/` is optional.
+
+### Fixed
+
+- `qa/QA-STRUCTURE-GUIDE.md` — removed stale reference to deleted `docs/generalization-decisions.md`
+  from the `06-defects/` section.
+- `README.md` — pipeline table updated with Track column; `03-test-cases/` and `04-test-data/`
+  annotated as manual-track / optional in the directory tree.
+
+---
+
 ## [1.6.0] - 2026-04-29
 
 ### Changed (breaking - automated by `upgrade`)
@@ -69,11 +96,10 @@ has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/gen
 - `07-automation/load/` — placeholder for load and performance tests; created on `init` and `upgrade`.
 - **`scripts/upgrade.js` migration section 5** — detects old v1.5.x structure and relocates all
   affected files non-destructively (moves only when destination does not exist; warns on conflict).
-- **Stage 3.5 - Test Stabilization** (`agent-instructions/04b-test-stabilization.md`) — agent
-  instruction file for exhaustively reviewing and stabilizing generated Playwright tests before
-  ADO integration. Covers baseline collection, failure classification (9 categories), false-positive
-  validation, confidence scoring (>=90% exit threshold), `STABILIZATION-REPORT.md` schema, and
-  upstream artifact update rules.
+- **Stage 5b - Test Stabilization** (`skills/qa-test-stabilization/`) — skill for exhaustively
+  reviewing and stabilizing generated Playwright tests before ADO integration. Covers baseline
+  collection, failure classification (9 categories), false-positive validation, confidence scoring
+  (>=90% exit threshold), `STABILIZATION-REPORT.md` schema, and upstream artifact update rules.
 
 ### Planned
 

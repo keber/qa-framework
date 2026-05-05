@@ -19,8 +19,8 @@
  *     - qa/07-automation/.env.example          -> qa/07-automation/e2e/
  *     - qa/07-automation/fixtures/             -> qa/07-automation/e2e/fixtures/
  *     - qa/07-automation/e2e/{module}/         -> qa/07-automation/e2e/tests/{module}/
- *     - Creates integration/ and load/ placeholders
- *
+ *     - Creates integration/ and load/ placeholders *     - Patches playwright.config.ts: testDir '.' -> './tests', adds testIgnore
+ *     - Creates tests/helpers/debug/ and tests/seeds/ if absent *
  *   NEVER touches (project-owned):
  *     - qa/01-specifications/       <- Your specs
  *     - qa/02-test-plans/           <- Your test plans
@@ -185,6 +185,45 @@ if (!fs.existsSync(loadReadme)) {
   }
   updated.push(loadReadme);
   console.log(`  [created] ${path.relative(cwd, loadReadme)}`);
+}
+
+// 5e. Patch playwright.config.ts in e2e/:
+const playwrightConfigPath = path.join(e2eDir, 'playwright.config.ts');
+if (fs.existsSync(playwrightConfigPath)) {
+  let cfg = fs.readFileSync(playwrightConfigPath, 'utf8');
+  let cfgChanged = false;
+
+  // Fix testDir: '.' -> './tests'
+  if (/testDir\s*:\s*['"]\.['"]/.test(cfg)) {
+    cfg = cfg.replace(/testDir\s*:\s*['"]\.['"]/g, "testDir:  './tests'");
+    cfgChanged = true;
+    console.log(`  [patched] e2e/playwright.config.ts — testDir: '.' -> './tests'`);
+  }
+
+  // Inject testIgnore after testDir line if not present
+  if (!cfg.includes('testIgnore')) {
+    cfg = cfg.replace(
+      /(testDir\s*:.*\n)/,
+      "$1  testIgnore: ['**/helpers/debug/**', '**/seeds/**'],\n"
+    );
+    cfgChanged = true;
+    console.log(`  [patched] e2e/playwright.config.ts — added testIgnore`);
+  }
+
+  if (cfgChanged) {
+    if (!dryRun) fs.writeFileSync(playwrightConfigPath, cfg, 'utf8');
+    updated.push(playwrightConfigPath);
+  }
+}
+
+// Create tests/helpers/debug and tests/seeds if missing
+for (const subdir of ['tests/helpers/debug', 'tests/seeds']) {
+  const subdirPath = path.join(e2eDir, subdir);
+  if (!fs.existsSync(subdirPath)) {
+    if (!dryRun) fs.mkdirSync(subdirPath, { recursive: true });
+    updated.push(subdirPath);
+    console.log(`  [created] ${path.relative(cwd, subdirPath)}/`);
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -39,6 +39,8 @@ for (const key of required) {
 export default defineConfig({
   // ------ Test discovery ------
   testDir:  './tests',
+  // Exclude non-suite directories from test runs
+  testIgnore: ['**/helpers/debug/**', '**/seeds/**'],
   // Use any subdir pattern your project standardizes on, e.g.:
   // testMatch: ['**/*.spec.ts'],
 
