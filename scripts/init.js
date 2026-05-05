@@ -86,6 +86,8 @@ const topLevelFolders = [
   '06-defects/open',
   '06-defects/resolved',
   '07-automation/e2e/tests',
+  '07-automation/e2e/tests/helpers/debug',
+  '07-automation/e2e/tests/seeds',
   '08-azure-integration',
   'memory',
 ];

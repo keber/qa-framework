@@ -31,6 +31,59 @@ Agent skills live in `.github/skills/` (not inside `qa/`). See the `.github/skil
 
 ---
 
+## Dual-Track Pipeline
+
+All pipeline paths share the same input: `01-specifications/`. From there, work splits into
+two tracks that can run in parallel or independently depending on team maturity.
+
+```
+01-specifications/  (source of truth — what the app does and what must be tested)
+        │
+        ├─── Automation track ──────────────────────────────────────────────────
+        │         │
+        │         ▼
+        │    02-test-plans/automated/      ← scope + priority decisions
+        │         │
+        │         ▼
+        │    07-automation/e2e/tests/      ← Playwright .spec.ts files
+        │         │
+        │         ▼
+        │    05-test-execution/automated/  ← execution reports
+        │         │
+        │         ▼
+        │    08-azure-integration/         ← ADO sync via playwright-azure-reporter
+        │
+        └─── Manual track ──────────────────────────────────────────────────────
+                  │
+                  ▼
+             02-test-plans/manual/         ← scope + manual test approach
+                  │
+                  ▼
+             03-test-cases/manual/         ← TC-*.md with steps (for human testers)
+                  │
+                  ▼
+             05-test-execution/manual/     ← manual run evidence
+                  │
+                  ▼
+             08-azure-integration/         ← ADO sync via ado-integration skill
+```
+
+**Entry points:**
+
+| Scenario | Entry point | Tracks active |
+|---|---|---|
+| New system, no prior QA | Module analysis → spec generation | Automation (primary), Manual (as needed) |
+| Sprint with ADO stories | Stories → spec generation → test plan | Both, driven by sprint scope |
+| Maintenance/continuous improvement | Changed module → maintenance skill | Automation (update existing tests) |
+
+**Track selection guidance:**
+- Use **automation track** when the goal is regression coverage and CI integration.
+- Use **manual track** when: (a) team has manual testers who need step-by-step documents; (b) auditability or traceability to external standards is required; (c) features are not yet automatable.
+- Both tracks use the same TC-IDs from `01-specifications/*/05-test-scenarios.md` — traceability is preserved regardless of which track executes a given TC.
+- `04-test-data/` is optional in both tracks. Use it when test data factories or seeders are shared across multiple modules. Per-submodule data belongs in `01-specifications/*/04-test-data.md`.
+
+---
+
 ## .github/skills/
 
 **Purpose**: 3-layer QA pipeline skills installed by the framework. Loaded by the agent on demand — only the relevant skill for the current task is loaded, not all skills at once.
