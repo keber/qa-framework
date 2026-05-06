@@ -84,7 +84,10 @@ if (!fs.existsSync(skillsSrc)) {
 // 2. .github/instructions/qa-framework.instructions.md — overwrite (framework-owned)
 // ---------------------------------------------------------------------------
 const copilotInstrPath = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
-const copilotContent = buildCopilotInstructions(config);
+const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.instructions.md');
+const copilotContent = fs.readFileSync(instrTemplatePath, 'utf8')
+  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0')
+  .replace('{{ADO_SECTION}}', '');
 forceWrite(copilotInstrPath, copilotContent);
 
 // ---------------------------------------------------------------------------
@@ -312,43 +315,3 @@ function copyDirForce(srcDir, destDir) {
   }
 }
 
-function buildCopilotInstructions(cfg) {
-  const version = cfg.frameworkVersion ?? '1.0.0';
-  return `---
-applyTo: '**'
----
-# QA Framework Instructions
-
-This project uses \`@keber/qa-framework\` v${version} for spec-driven automated testing.
-
-## Agent behavior rules
-
-0. **On every conversation start:** check if \`qa/AGENT-NEXT-STEPS.md\` exists. If it does, read it and complete its steps before anything else.
-1. Before performing any QA task, load the relevant skill from \`.github/skills/\`. For project context, read \`qa/memory/INDEX.md\` if it exists, then load only the memory files relevant to the current task — do not load all memory files unconditionally. Never execute a pipeline stage unless its prerequisite is satisfied.
-2. Always save artifacts in the correct \`qa/\` subfolder — refer to \`qa/QA-STRUCTURE-GUIDE.md\`
-3. Never hardcode credentials — always use env vars and \`<PLACEHOLDER>\` in documentation
-4. Follow the naming conventions in \`qa/00-standards/naming-conventions.md\`
-5. Project QA config is at \`qa/qa-framework.config.json\`
-6. Save learnings in \`qa/memory/\` with proper naming and metadata. Always update \`qa/memory/INDEX.md\` after adding or updating any memory file.
-7. **On module/sprint completion** (all TCs passing): (1) update the module status row in \`qa/README.md\`; (2) move the completed sprint checklist from \`AGENT-NEXT-STEPS.md\` to the \`## Sprint History\` section of \`qa/README.md\`; (3) trim \`AGENT-NEXT-STEPS.md\` so it contains only the next sprint — never let it accumulate more than one active sprint.
-
-## QA Pipeline
-
-Stages must run in order. Never start a stage unless its prerequisite is met.
-
-| Stage | Task | Skill | Prerequisite |
-|---|---|---|---|
-| 1 | Analyze module | \`.github/skills/qa-module-analysis/SKILL.md\` | None |
-| 2 | Generate specifications | \`.github/skills/qa-spec-generation/SKILL.md\` | 00-inventory.md exists |
-| 3 | Generate test plan | \`.github/skills/qa-test-plan/SKILL.md\` | 05-test-scenarios.md exists |
-| 4 | Generate test cases | \`.github/skills/qa-test-cases/SKILL.md\` | Test plan exists |
-| 5 | Generate automation | \`.github/skills/qa-automation/SKILL.md\` | Specs approved, no PENDING-CODE |
-| 5b | Stabilize failing tests | \`.github/skills/qa-test-stabilization/SKILL.md\` | Failing tests exist |
-| 6 | Maintenance | \`.github/skills/qa-maintenance/SKILL.md\` | Application change delivered |
-| — | ADO integration | \`.github/skills/qa-ado-integration/SKILL.md\` | ADO enabled in config |
-
-## Project KB
-1. \`qa/README.md\`          — The Living Index: module status, sprint history, blockers, quick-start commands.
-2. \`qa/memory/INDEX.md\`    — Index of all memory files; load this before selecting which files to read.
-`;
-}

@@ -33,6 +33,18 @@ has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/gen
 
 ---
 
+## [1.7.1] - 2026-05-06
+
+### Fixed
+
+- **Agent instructions template extracted** — `templates/qa-framework.instructions.md` is now
+  the single source of truth for QA agent rules. Both `init` and `upgrade` read and interpolate
+  this file instead of maintaining separate hardcoded strings, eliminating the rule divergence
+  that caused `upgrade` to deploy only 7 rules instead of 11.
+- `upgrade.js` — removed `buildCopilotInstructions()` function (dead code after template extraction).
+
+---
+
 ## [1.7.0] - 2026-05-06
 
 ### Changed
