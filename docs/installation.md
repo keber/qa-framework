@@ -51,7 +51,7 @@ qa/
 └── 08-azure-integration/README.md
 └── memory/INDEX.md
 
-.github/copilot-instructions.md     <- Generated agent rules
+.github/instructions/qa-framework.instructions.md  <- QA agent rules (framework-owned)
 .github/skills/                     <- 8 agent skill sets (SKILL.md + references/)
 ```
 
@@ -93,7 +93,7 @@ After `npm update @keber/qa-framework`:
 npx qa-framework upgrade
 ```
 
-This overwrites only framework-owned files (`.github/skills/`, `copilot-instructions.md`,
+This overwrites only framework-owned files (`.github/skills/`, `.github/instructions/qa-framework.instructions.md`,
 `QA-STRUCTURE-GUIDE.md`) and migrates the `07-automation/` structure if upgrading from
 v1.5.x. Your specs, tests, and memory are never touched.
 
