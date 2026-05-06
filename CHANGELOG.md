@@ -33,6 +33,17 @@ has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/gen
 
 ---
 
+## [1.7.2] - 2026-05-06
+
+### Fixed
+
+- **`init` no longer overwrites `qa/AGENT-NEXT-STEPS.md`** on already-initialized projects.
+  The file was written with a bare `fs.writeFileSync` (no existence check), causing active sprint
+  checklists to be silently replaced. Changed to `writeIfMissing` — consistent with all other
+  project-owned files.
+
+---
+
 ## [1.7.1] - 2026-05-06
 
 ### Fixed
