@@ -253,9 +253,9 @@ if (fs.existsSync(structureGuideSrc)) {
   writeIfMissing(structureGuideDest, fs.readFileSync(structureGuideSrc, 'utf8'));
 }
 
-// --- .github/copilot-instructions.md ---
+// --- .github/instructions/qa-framework.instructions.md ---
 const githubDir         = path.join(cwd, '.github');
-const copilotInstrPath  = path.join(githubDir, 'copilot-instructions.md');
+const copilotInstrPath  = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
 
 // Detect whether the ado-qa skill is available (installed or already copied)
 const adoQaInstalled = fs.existsSync(path.join(cwd, 'node_modules', '@keber', 'ado-qa'))
@@ -284,7 +284,10 @@ Refer to \`qa/00-guides/AGENT-INSTRUCTIONS-ADO-INTEGRATION.md\` for the full ADO
 > This will automatically copy the ADO skills to \`.github/skills/\` via postinstall.
 `;
 
-const copilotInstrContent = `# QA Framework Instructions
+const copilotInstrContent = `---
+applyTo: '**'
+---
+# QA Framework Instructions
 
 This project uses \`@keber/qa-framework\` v${config.frameworkVersion ?? '1.0.0'} for spec-driven automated testing.
 
@@ -337,7 +340,7 @@ const nextStepsContent = `# ✅ @keber/qa-framework installed successfully
 ## What was scaffolded
 
 - \`qa/\` folder structure with spec templates and agent instructions
-- \`.github/copilot-instructions.md\` with QA agent behavior rules
+- \`.github/instructions/qa-framework.instructions.md\` with QA agent behavior rules (framework-owned, safe to upgrade)
 
 ## Required next steps
 

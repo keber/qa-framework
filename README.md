@@ -1,7 +1,7 @@
 # qa-framework
 
 > Reusable, installable, agent-oriented QA framework for spec-driven automated testing.
-> Current version: **v1.6.2**
+> Current version: **v1.7.0**
 
 ---
 
@@ -61,7 +61,7 @@ npm install @keber/qa-framework
 1. Create the `qa/` directory tree in your project root
 2. Copy all base templates into place
 3. Create `qa/qa-framework.config.json` for project-specific settings
-4. Generate `.github/copilot-instructions.md` with QA agent behavior rules (11 rules + ADO detection)
+4. Generate `.github/instructions/qa-framework.instructions.md` with QA agent behavior rules (11 rules + ADO detection)
 5. Copy the `skills/` set to `.github/skills/` so the agent can load them on demand
 6. Create `qa/AGENT-NEXT-STEPS.md` with follow-up steps
 
@@ -73,8 +73,12 @@ After `npm update @keber/qa-framework`, run:
 npx qa-framework upgrade
 ```
 
-This overwrites **only** framework-owned files (skills, `copilot-instructions.md`,
+This overwrites **only** framework-owned files (skills, `qa-framework.instructions.md`,
 `QA-STRUCTURE-GUIDE.md`) and never touches your specs, test plans, automation code, or memory.
+
+If upgrading from a version that wrote to `.github/copilot-instructions.md`, `upgrade`
+automatically removes the QA section from that file (or deletes it if it contained only
+framework content), and creates `.github/instructions/qa-framework.instructions.md` instead.
 
 ---
 
@@ -148,7 +152,7 @@ qa-framework/
 │
 └── scripts/                          <- CLI commands
     ├── cli.js                        <- Entry point (qa-framework <command>)
-    ├── init.js                       <- Scaffold qa/ tree + skills + copilot-instructions
+    ├── init.js                       <- Scaffold qa/ tree + skills + qa-framework.instructions.md
     ├── upgrade.js                    <- Refresh framework-owned files after npm update
     ├── generate.js                   <- Generate individual artifact from template
     └── validate.js                   <- Check structure compliance
@@ -194,9 +198,14 @@ Additionally, `init` writes to the project root:
 
 ```
 .github/
-├── copilot-instructions.md      <- Generated agent rules (11 rules + ADO detection)
-└── skills/                      <- Copied from package skills/ (one folder per pipeline stage)
+├── instructions/
+│   └── qa-framework.instructions.md  <- QA agent rules (framework-owned, applyTo: '**')
+└── skills/                           <- Copied from package skills/ (one folder per pipeline stage)
 ```
+
+> `qa-framework.instructions.md` is a VS Code `*.instructions.md` file, separate from any
+> custom `.github/copilot-instructions.md` the project may already have. The two files
+> coexist without conflict and are independently upgradeable.
 
 See [docs/folder-structure-guide.md](docs/folder-structure-guide.md) for a full explanation of every folder.
 
@@ -218,7 +227,7 @@ them via `read_file` without touching `node_modules`.
 
 ### QA Pipeline
 
-Skills map to the pipeline stages enforced by `.github/copilot-instructions.md`:
+Skills map to the pipeline stages enforced by `.github/instructions/qa-framework.instructions.md`:
 
 | Stage | Skill | Task | Track | Prerequisite |
 |---|---|---|---|---|
@@ -254,7 +263,7 @@ Options:
   --version, -v               Show version
 ```
 
-**upgrade** overwrites only framework-owned files (skills, `copilot-instructions.md`,
+**upgrade** overwrites only framework-owned files (skills, `qa-framework.instructions.md`,
 `QA-STRUCTURE-GUIDE.md`) and never touches project-owned files. Run `--dry-run` to preview
 without writing.
 
