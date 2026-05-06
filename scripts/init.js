@@ -324,8 +324,7 @@ cd qa/07-automation/e2e && npm install && npx playwright install chromium
 - Add \`qa/07-automation/e2e/.env\` and \`qa/07-automation/e2e/.auth/\` to \`.gitignore\`
 `;
 const nextStepsPath = path.join(qaRoot, 'AGENT-NEXT-STEPS.md');
-fs.writeFileSync(nextStepsPath, nextStepsContent, 'utf8');
-console.log(`  [created] ${path.relative(cwd, nextStepsPath)}`);
+writeIfMissing(nextStepsPath, nextStepsContent);
 
 // -----------------------------------------------------------------------
 // Helpers
