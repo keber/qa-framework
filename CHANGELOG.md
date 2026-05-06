@@ -33,6 +33,31 @@ has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/gen
 
 ---
 
+## [1.7.0] - 2026-05-06
+
+### Changed
+
+- **Agent instructions moved to `.github/instructions/qa-framework.instructions.md`** — the
+  framework no longer writes to `.github/copilot-instructions.md`. The new file is a VS Code
+  `*.instructions.md` file with `applyTo: '**'` frontmatter, which Copilot loads automatically.
+  This eliminates the conflict between framework-owned rules and project-owned custom instructions:
+  both files coexist independently and the framework file is freely upgradeable.
+
+### Added
+
+- **`upgrade` step 2b — automatic migration of old `copilot-instructions.md`**:
+  - If the file contains only QA Framework content (any previous version) → the file is deleted.
+  - If the file contains custom instructions and a QA Framework section → the QA section is stripped and the custom content is preserved.
+  - If the file contains no QA Framework content → the file is left untouched.
+  The detection marker is the heading `# QA Framework Instructions`, consistent across all versions.
+
+### Migration
+
+Run `npx qa-framework upgrade`. No manual steps required.
+See `MIGRATION-NOTES.md` — section "Upgrading from a version that used `.github/copilot-instructions.md`".
+
+---
+
 ## [1.6.2] - 2026-05-05
 
 ### Added

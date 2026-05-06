@@ -81,11 +81,47 @@ if (!fs.existsSync(skillsSrc)) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. .github/copilot-instructions.md — overwrite (framework-owned sequencer)
+// 2. .github/instructions/qa-framework.instructions.md — overwrite (framework-owned)
 // ---------------------------------------------------------------------------
-const copilotInstrPath = path.join(githubDir, 'copilot-instructions.md');
+const copilotInstrPath = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
 const copilotContent = buildCopilotInstructions(config);
 forceWrite(copilotInstrPath, copilotContent);
+
+// ---------------------------------------------------------------------------
+// 2b. Migration: strip QA Framework section from old copilot-instructions.md
+//
+// Handles all cases:
+//   A. File has custom instructions + QA section  → keep custom, strip QA section
+//   B. File has ONLY QA section (any version)     → delete the file
+//   C. File does not mention QA Framework         → leave untouched
+//
+// The QA section always starts with "# QA Framework Instructions" across all
+// previous versions, so that heading is the reliable split point.
+// ---------------------------------------------------------------------------
+const oldCopilotPath = path.join(githubDir, 'copilot-instructions.md');
+if (fs.existsSync(oldCopilotPath)) {
+  const oldContent = fs.readFileSync(oldCopilotPath, 'utf8');
+  const qaMarker   = '# QA Framework Instructions';
+  const qaIdx      = oldContent.indexOf(qaMarker);
+
+  if (qaIdx !== -1) {
+    // Extract anything before the QA section, removing any trailing separator
+    const before = oldContent.slice(0, qaIdx).replace(/\s*\n---\s*$/, '').trim();
+
+    if (before.length === 0) {
+      // Case B: file contained only QA Framework content → delete it
+      if (!dryRun) fs.unlinkSync(oldCopilotPath);
+      updated.push(oldCopilotPath);
+      console.log(`  [deleted]  .github/copilot-instructions.md (contained only QA Framework rules — now in .github/instructions/qa-framework.instructions.md)`);
+    } else {
+      // Case A: file had custom content too → write back only the custom part
+      if (!dryRun) fs.writeFileSync(oldCopilotPath, before + '\n', 'utf8');
+      updated.push(oldCopilotPath);
+      console.log(`  [cleaned]  .github/copilot-instructions.md — removed QA Framework section, kept custom instructions`);
+    }
+  }
+  // Case C: no QA marker found → leave untouched (no log noise)
+}
 
 // ---------------------------------------------------------------------------
 // 3. qa/QA-STRUCTURE-GUIDE.md — overwrite (framework doc)
@@ -278,7 +314,10 @@ function copyDirForce(srcDir, destDir) {
 
 function buildCopilotInstructions(cfg) {
   const version = cfg.frameworkVersion ?? '1.0.0';
-  return `# QA Framework Instructions
+  return `---
+applyTo: '**'
+---
+# QA Framework Instructions
 
 This project uses \`@keber/qa-framework\` v${version} for spec-driven automated testing.
 
