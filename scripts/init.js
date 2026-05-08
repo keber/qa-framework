@@ -79,7 +79,7 @@ process.stderr.write(`[qa-framework/init] Using config source: ${configSource}\n
 const topLevelFolders = [
   '00-standards',
   '01-specifications',
-  '02-test-plans',
+  '02-test-plans/sprints',
   '03-test-cases',
   '04-test-data',
   '05-test-execution',
@@ -122,6 +122,21 @@ writeIfMissing(path.join(memoryDir, 'INDEX.md'),
 |---|---|---|
 
 _No memory files yet. Add files to this directory and register them above._
+`);
+
+// --- 03-test-cases README (optional directory marker) ---
+writeIfMissing(path.join(qaRoot, '03-test-cases', 'README.md'),
+`# 03-test-cases/ — Optional Standalone Test Cases
+
+> **v1.7.0+:** The primary location for test cases (with detailed steps) is now
+> \`qa/02-test-plans/sprints/Sprint-{N}/Plan-de-Pruebas-{project}-Sprint-{N}-{module}.md\`.
+>
+> Use this directory only for test cases that are:
+> - Too complex to fit in a table row (multi-scenario, multi-role)
+> - Reused across multiple sprints without change
+> - Required as standalone documents for audit or external review
+>
+> Naming: \`TC-{MODULE}-{SUBMODULE}-{NNN}-{slug}.md\`
 `);
 
 // --- Standards placeholder ---

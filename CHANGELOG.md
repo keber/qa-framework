@@ -33,6 +33,49 @@ has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/gen
 
 ---
 
+## [1.8.0] - 2026-05-07
+
+### Changed
+
+- **Pipeline Stage 3 now produces "Plan de Pruebas"** — a single document per sprint+module
+  that combines test plan context (scope, strategy, preconditions, test data) with a full TC
+  table including numbered steps and expected results. Replaces the previous split between a
+  high-level plan and separate TC-{ID}.md files for most workflows.
+- **Stage 4 (`qa-test-cases`) role redefined** — from "generate TC-{ID}.md files" to
+  "expand steps in Plan de Pruebas table when Stage 3 produced summary-level steps". Standalone
+  `TC-{ID}.md` files are now optional and used only for complex/reusable TCs.
+- **ADO integration prerequisite updated** — `qa-ado-integration` now reads from
+  `Plan-de-Pruebas-{proyecto}-Sprint-{N}-{modulo}.md` (Tabla de Pruebas) instead of
+  `qa/03-test-cases/automated/`. Each module file → one ADO Test Suite; each table row → one
+  ADO Test Case with steps.
+- **`02-test-plans/` restructured** — from flat `automated/` and `manual/` subdirectories to
+  `sprints/Sprint-{N}/` per-sprint structure. Both tracks share the same Plan de Pruebas document.
+
+### Added
+
+- **`templates/test-plan-sprint.md`** — new primary Plan de Pruebas template. Includes header,
+  12 sections, and Tabla de Pruebas with column guide. Uses `{{PLACEHOLDERS}}` throughout.
+- **`skills/qa-test-plan/references/plan-de-pruebas-template.md`** — full template with example
+  table rows, steps writing conventions, priority decision tree, and automation feasibility rules.
+  Replaces `references/priority-and-feasibility.md` (old file kept for reference, now legacy).
+- **`upgrade` Section 6** — non-destructive migration of old `02-test-plans/` structure:
+  moves `automated/` → `sprints/legacy-automated/`, `manual/` → `sprints/legacy-manual/`, and
+  flat `.md` plan files → `sprints/legacy/`. Creates `03-test-cases/README.md` if missing.
+
+### Deprecated
+
+- **`templates/test-plan.md`** — use `templates/test-plan-sprint.md` instead.
+  Old file kept for reference; contains deprecation notice at top.
+- **`02-test-plans/automated/` and `02-test-plans/manual/` subdirectory convention** —
+  replaced by `02-test-plans/sprints/Sprint-{N}/` per-sprint structure.
+
+### Migration
+
+Run `npx qa-framework upgrade`. Section 6 of the upgrade script handles the `02-test-plans/`
+migration non-destructively: existing plan files are moved, not deleted.
+
+---
+
 ## [1.7.2] - 2026-05-06
 
 ### Fixed
