@@ -20,7 +20,14 @@
  *     - qa/07-automation/fixtures/             -> qa/07-automation/e2e/fixtures/
  *     - qa/07-automation/e2e/{module}/         -> qa/07-automation/e2e/tests/{module}/
  *     - Creates integration/ and load/ placeholders *     - Patches playwright.config.ts: testDir '.' -> './tests', adds testIgnore
- *     - Creates tests/helpers/debug/ and tests/seeds/ if absent *
+ *     - Creates tests/helpers/debug/ and tests/seeds/ if absent
+ *
+ *   MIGRATES (v1.6.x -> v1.7.0, non-destructive):
+ *     - qa/02-test-plans/automated/  -> qa/02-test-plans/sprints/legacy-automated/
+ *     - qa/02-test-plans/manual/     -> qa/02-test-plans/sprints/legacy-manual/
+ *     - qa/02-test-plans/*.md        -> qa/02-test-plans/sprints/legacy/
+ *     - Creates qa/02-test-plans/sprints/ if absent
+ *     - Creates qa/03-test-cases/README.md optional marker if absent *
  *   NEVER touches (project-owned):
  *     - qa/01-specifications/       <- Your specs
  *     - qa/02-test-plans/           <- Your test plans
@@ -263,6 +270,80 @@ for (const subdir of ['tests/helpers/debug', 'tests/seeds']) {
     updated.push(subdirPath);
     console.log(`  [created] ${path.relative(cwd, subdirPath)}/`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// 6. Migration v1.6.x -> v1.7.0: restructure qa/02-test-plans/
+//    Safe: only moves files when source exists and destination does NOT.
+//    automated/ -> sprints/legacy-automated/
+//    manual/    -> sprints/legacy-manual/
+//    *.md flat  -> sprints/legacy/
+// ---------------------------------------------------------------------------
+const testPlansDir = path.join(qaRoot, '02-test-plans');
+const sprintsDir   = path.join(testPlansDir, 'sprints');
+
+if (fs.existsSync(testPlansDir)) {
+  const legacySubdirs = ['automated', 'manual'];
+  for (const sub of legacySubdirs) {
+    const oldDir = path.join(testPlansDir, sub);
+    const newDir = path.join(sprintsDir, `legacy-${sub}`);
+    if (fs.existsSync(oldDir) && !fs.existsSync(newDir)) {
+      if (!dryRun) {
+        fs.mkdirSync(sprintsDir, { recursive: true });
+        fs.renameSync(oldDir, newDir);
+      }
+      updated.push(newDir);
+      console.log(`  [migrated] 02-test-plans/${sub}/ -> 02-test-plans/sprints/legacy-${sub}/`);
+    }
+  }
+
+  // Move any .md files sitting flat in 02-test-plans/ (not in sprints/)
+  if (fs.existsSync(testPlansDir)) {
+    const legacyDir = path.join(sprintsDir, 'legacy');
+    for (const entry of fs.readdirSync(testPlansDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+      const oldFile = path.join(testPlansDir, entry.name);
+      const newFile = path.join(legacyDir, entry.name);
+      if (!fs.existsSync(newFile)) {
+        if (!dryRun) {
+          fs.mkdirSync(legacyDir, { recursive: true });
+          fs.renameSync(oldFile, newFile);
+        }
+        updated.push(newFile);
+        console.log(`  [migrated] 02-test-plans/${entry.name} -> 02-test-plans/sprints/legacy/${entry.name}`);
+      } else {
+        warnings.push(`Cannot migrate 02-test-plans/${entry.name} — target already exists. Move manually.`);
+      }
+    }
+  }
+
+  // Ensure sprints/ exists
+  if (!fs.existsSync(sprintsDir)) {
+    if (!dryRun) fs.mkdirSync(sprintsDir, { recursive: true });
+    updated.push(sprintsDir);
+    console.log(`  [created] 02-test-plans/sprints/`);
+  }
+}
+
+// Ensure 03-test-cases/README.md exists (optional marker)
+const testCasesReadme = path.join(qaRoot, '03-test-cases', 'README.md');
+if (!fs.existsSync(testCasesReadme)) {
+  if (!dryRun) {
+    fs.mkdirSync(path.dirname(testCasesReadme), { recursive: true });
+    fs.writeFileSync(testCasesReadme,
+      '# 03-test-cases/ — Optional Standalone Test Cases\n\n' +
+      '> **v1.7.0+:** The primary location for test cases (with detailed steps) is now\n' +
+      '> `qa/02-test-plans/sprints/Sprint-{N}/Plan-de-Pruebas-{project}-Sprint-{N}-{module}.md`.\n' +
+      '>\n' +
+      '> Use this directory only for test cases that are:\n' +
+      '> - Too complex to fit in a table row (multi-scenario, multi-role)\n' +
+      '> - Reused across multiple sprints without change\n' +
+      '> - Required as standalone documents for audit or external review\n' +
+      '>\n' +
+      '> Naming: `TC-{MODULE}-{SUBMODULE}-{NNN}-{slug}.md`\n', 'utf8');
+  }
+  updated.push(testCasesReadme);
+  console.log(`  [created] 03-test-cases/README.md`);
 }
 
 // ---------------------------------------------------------------------------

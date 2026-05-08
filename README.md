@@ -1,7 +1,7 @@
 # qa-framework
 
 > Reusable, installable, agent-oriented QA framework for spec-driven automated testing.
-> Current version: **v1.7.2**
+> Current version: **v1.8.0**
 
 ---
 
@@ -102,8 +102,8 @@ qa-framework/
 ├── skills/                           <- Agent skills (3-layer model; copied to .github/skills/ on init)
 │   ├── qa-module-analysis/           <- Stage 1: analyze a module, produce 6-file spec set
 │   ├── qa-spec-generation/           <- Stage 2: generate/update the 6-file spec set
-│   ├── qa-test-plan/                 <- Stage 3: generate a test plan
-│   ├── qa-test-cases/                <- Stage 4: generate individual TC-{ID}.md files
+│   ├── qa-test-plan/                 <- Stage 3: Plan de Pruebas (plan + TC table with steps)
+│   ├── qa-test-cases/                <- Stage 4: expand steps in Plan de Pruebas table
 │   ├── qa-automation/                <- Stage 5: implement Playwright automation
 │   ├── qa-test-stabilization/        <- Stage 5b: stabilize failing tests
 │   ├── qa-maintenance/               <- Stage 6: update artifacts after app changes
@@ -118,7 +118,8 @@ qa-framework/
 │   │   ├── 03-roles-permissions.md
 │   │   ├── 04-test-data.md
 │   │   └── 05-test-scenarios.md
-│   ├── test-plan.md
+│   ├── test-plan-sprint.md           <- Plan de Pruebas template (v1.7.0+, primary)
+│   ├── test-plan.md                  <- Legacy test plan template (deprecated)
 │   ├── test-case.md
 │   ├── execution-report.md
 │   ├── defect-report.md
@@ -233,12 +234,12 @@ Skills map to the pipeline stages enforced by `.github/instructions/qa-framework
 |---|---|---|---|---|
 | 1 | `qa-module-analysis` | Analyze module, produce 6-file spec set | Both | None |
 | 2 | `qa-spec-generation` | Generate/update 6-file spec set | Both | `00-inventory.md` exists |
-| 3 | `qa-test-plan` | Generate test plan | Both | `05-test-scenarios.md` exists |
-| 4 | `qa-test-cases` | Generate TC-{ID}.md files | Manual | Test plan exists |
+| 3 | `qa-test-plan` | Generate Plan de Pruebas (plan + TC table with steps) | Both | `05-test-scenarios.md` exists |
+| 4 | `qa-test-cases` | Expand steps in Plan de Pruebas table | Both (optional) | Plan de Pruebas exists |
 | 5 | `qa-automation` | Implement Playwright tests | Automation | Specs approved, no PENDING-CODE |
 | 5b | `qa-test-stabilization` | Stabilize failing tests | Automation | Failing tests exist |
 | 6 | `qa-maintenance` | Update artifacts after app changes | Both | Delivered change |
-| - | `qa-ado-integration` | Sync with Azure DevOps Test Plans | Both | ADO enabled in config |
+| - | `qa-ado-integration` | Sync with Azure DevOps Test Plans | Both | Plan de Pruebas with steps exists |
 
 See [docs/skills-architecture.md](docs/skills-architecture.md) for the full design rationale.
 

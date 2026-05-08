@@ -1,3 +1,9 @@
+> **Deprecation notice (v1.7.0):** This template is superseded by `templates/test-plan-sprint.md`,
+> which combines the test plan and detailed test case table (steps included) in a single document
+> organized by sprint and module. Use `test-plan-sprint.md` for all new work.
+>
+> This file is retained for reference only.
+
 # Test Plan — {{MODULE_NAME}}
 
 **Plan ID**: TP-{{MODULE}}-{{VERSION}}
