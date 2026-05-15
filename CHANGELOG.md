@@ -33,6 +33,37 @@ has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/gen
 
 ---
 
+## [1.9.0] - 2026-05-15
+
+### Changed
+
+- **`create-testplan-from-mapping.ps1` refactored** — removed all ADO-specific logic (auth headers,
+  `Invoke-RestMethod` calls, XML step construction). The script now delegates to `New-AdoTestCase`
+  and `Add-AdoTestCaseToSuite` from `@keber/ado-powershell`, keeping `qa-framework` free of
+  ADO implementation details. Requires `@keber/ado-powershell` ≥ 1.3.0.
+- **Script parameters simplified** — `-OrgUrl`, `-ProjectName`, and `-Token` removed from
+  `create-testplan-from-mapping.ps1`. Caller is responsible for loading the ADO session via
+  `. .github/skills/ado-powershell/load.ps1` before invoking the script.
+- **`tc-mapping.json` schema extended** — added optional `steps` (string array) and
+  `expectedResult` (string) fields per test case. When present, steps are sent to ADO as
+  `Microsoft.VSTS.TCM.Steps`; all steps except the last are `ActionStep`, the last is
+  `ValidateStep` with `expectedResult`.
+- **`qa-ado-integration` SKILL.md updated** — Step 3 now specifies exactly how to parse the
+  Tabla de Pruebas columns (`Steps` split on `<br>`, strip numbering prefix) to produce
+  `tc-mapping.json` with steps.
+
+### Added
+
+- **Guard in `create-testplan-from-mapping.ps1`** — fails fast with a clear message if
+  `New-AdoTestCase` is not available (ADO session not loaded).
+
+### Requires
+
+- `@keber/ado-powershell` ≥ **1.3.0** — adds `$ExpectedResult` parameter to `New-AdoTestCase`
+  and `ValidateStep` support in the generated TCM steps XML.
+
+---
+
 ## [1.8.0] - 2026-05-07
 
 ### Changed

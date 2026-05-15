@@ -341,6 +341,40 @@ cd qa/07-automation/e2e && npm install && npx playwright install chromium
 const nextStepsPath = path.join(qaRoot, 'AGENT-NEXT-STEPS.md');
 writeIfMissing(nextStepsPath, nextStepsContent);
 
+// --- Print post-install summary ---
+const playwrightInstalled = fs.existsSync(path.join(cwd, 'node_modules', '@playwright', 'test'));
+const adoQaInstalledFinal = fs.existsSync(path.join(cwd, 'node_modules', '@keber', 'ado-qa'));
+const azureReporterInstalled = fs.existsSync(path.join(cwd, 'node_modules', '@alex_neo', 'playwright-azure-reporter'));
+
+console.log('');
+console.log('  @keber/qa-framework — scaffold complete');
+console.log('  ----------------------------------------');
+console.log('  Installed:');
+console.log('    qa/                    QA directory structure + spec templates');
+console.log('    .github/skills/        QA agent skills (8 stages)');
+console.log('    .github/instructions/  qa-framework.instructions.md');
+console.log('');
+console.log('  Optional integrations:');
+if (playwrightInstalled) {
+  console.log('    [ok] Playwright              @playwright/test');
+} else {
+  console.log('    [ ] Playwright               npm install @playwright/test');
+  console.log('                                 cd qa/07-automation/e2e && npm install && npx playwright install chromium');
+}
+if (adoQaInstalledFinal) {
+  console.log('    [ok] ADO integration         @keber/ado-qa');
+} else {
+  console.log('    [ ] ADO integration          npm install @keber/ado-qa');
+}
+if (azureReporterInstalled) {
+  console.log('    [ok] ADO Playwright reporter (installed)');
+} else {
+  console.log('    [ ] ADO Playwright reporter  npm install @alex_neo/playwright-azure-reporter');
+}
+console.log('');
+console.log('  Next: edit qa/qa-framework.config.json, then read qa/AGENT-NEXT-STEPS.md');
+console.log('');
+
 // -----------------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------------
