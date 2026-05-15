@@ -41,9 +41,19 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Verify ADO session is available
+# Auto-load ADO session if not already active
 if (-not (Get-Command 'New-AdoTestCase' -ErrorAction SilentlyContinue)) {
-    Write-Error "ADO session not loaded. Run: . .github/skills/ado-powershell/load.ps1"
+    $loadScript = Join-Path $PSScriptRoot '..\..\..\node_modules\@keber\ado-powershell\.github\skills\ado-powershell\load.ps1'
+    if (Test-Path $loadScript) {
+        . $loadScript
+    } else {
+        Write-Error "ADO session not loaded and load.ps1 not found. Run: . node_modules\@keber\ado-powershell\.github\skills\ado-powershell\load.ps1"
+        exit 1
+    }
+}
+
+if (-not (Get-Command 'New-AdoTestCase' -ErrorAction SilentlyContinue)) {
+    Write-Error "New-AdoTestCase not available after loading ado-powershell. Check the skill version (requires >= 1.3.0)."
     exit 1
 }
 
@@ -53,40 +63,41 @@ $mapping = Get-Content $MappingFile -Raw | ConvertFrom-Json
 
 $suiteId = if ($SuiteId -gt 0) { $SuiteId } else { $mapping.suiteId }
 
-Write-Host "[create-testplan] Creating $($mapping.testCases.Count) test cases in Plan $PlanId / Suite $suiteId"
+# Support both 'testCases' (canonical) and 'items' (legacy)
+$tcList = if ($mapping.PSObject.Properties['testCases']) { $mapping.testCases } else { $mapping.items }
+
+Write-Host "[create-testplan] Creating $($tcList.Count) test cases in Plan $PlanId / Suite $suiteId"
 
 $results = @()
 
-foreach ($tc in $mapping.testCases) {
+foreach ($tc in $tcList) {
     $steps          = if ($tc.PSObject.Properties['steps'])          { $tc.steps          } else { @() }
     $expectedResult = if ($tc.PSObject.Properties['expectedResult']) { $tc.expectedResult  } else { ''  }
 
-    if ($PSCmdlet.ShouldProcess($tc.localId, "Create ADO Test Case")) {
-        try {
-            $splatArgs = @{
-                Title   = "[$($tc.localId)] $($tc.title)"
-                Confirm = $false
-            }
-            if ($steps.Count -gt 0) {
-                $splatArgs.Steps          = $steps
-                $splatArgs.ExpectedResult = $expectedResult
-            }
-
-            $wi   = New-AdoTestCase @splatArgs
-            $wiId = $wi.id
-            Write-Host "  [CREATED] $($tc.localId) → WI #$wiId"
-
-            Add-AdoTestCaseToSuite -PlanId $PlanId -SuiteId $suiteId -TestCaseIds @($wiId) -Confirm:$false
-
-            $results += [PSCustomObject]@{
-                localId  = $tc.localId
-                adoWiId  = $wiId
-                specFile = $tc.specFile
-                title    = $tc.title
-            }
-        } catch {
-            Write-Warning "  [FAILED] $($tc.localId) — $($_.Exception.Message)"
+    try {
+        $splatArgs = @{
+            Title   = "[$($tc.localId)] $($tc.title)"
+            Confirm = $false
         }
+        if ($steps.Count -gt 0) {
+            $splatArgs.Steps          = $steps
+            $splatArgs.ExpectedResult = $expectedResult
+        }
+
+        $wi   = New-AdoTestCase @splatArgs
+        $wiId = $wi.id
+        Write-Host "  [CREATED] $($tc.localId) -> WI #$wiId"
+
+        Add-AdoTestCaseToSuite -PlanId $PlanId -SuiteId $suiteId -TestCaseIds @($wiId) -Confirm:$false
+
+        $results += [PSCustomObject]@{
+            localId  = $tc.localId
+            adoWiId  = $wiId
+            specFile = $tc.specFile
+            title    = $tc.title
+        }
+    } catch {
+        Write-Warning "  [FAILED] $($tc.localId) -- $($_.Exception.Message)"
     }
 }
 
@@ -94,6 +105,6 @@ foreach ($tc in $mapping.testCases) {
 $outFile = if ($OutputFile) { $OutputFile } else {
     Join-Path (Split-Path $MappingFile) 'ado-ids.json'
 }
-$results | ConvertTo-Json -Depth 5 | Set-Content $outFile
+$results | ConvertTo-Json -Depth 5 | Set-Content $outFile -Encoding UTF8
 Write-Host ""
 Write-Host "[create-testplan] Done. $($results.Count) WIs created. Output: $outFile"
