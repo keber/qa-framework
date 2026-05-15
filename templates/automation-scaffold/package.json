@@ -19,6 +19,6 @@
     "dotenv": "^16.0.0"
   },
   "optionalDependencies": {
-    "@alex_neo/playwright-azure-reporter": "^2.0.0"
+    "@alex_neo/playwright-azure-reporter": "^1.20.0"
   }
 }

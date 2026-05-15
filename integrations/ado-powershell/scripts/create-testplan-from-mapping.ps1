@@ -7,17 +7,16 @@
     corresponding Test Case Work Items in a specified ADO Test Plan/Suite.
     Outputs ado-ids.json with the resulting WI IDs for use by inject-ado-ids.ps1.
 
-.PARAMETER OrgUrl
-    Azure DevOps organization URL (e.g. https://dev.azure.com/your-org).
-
-.PARAMETER ProjectName
-    ADO project name.
+    Requires an active ADO session. Call:
+        . .github/skills/ado-powershell/load.ps1
+    before running this script. The session is initialised automatically by
+    load.ps1 when ADO_ORG, ADO_PROJECT and ADO_PAT env vars are set.
 
 .PARAMETER PlanId
     ADO Test Plan ID.
 
 .PARAMETER SuiteId
-    ADO Test Suite ID. If omitted, uses the plan's root suite.
+    ADO Test Suite ID. If omitted, uses the suiteId from tc-mapping.json.
 
 .PARAMETER MappingFile
     Path to tc-mapping.json input file.
@@ -25,43 +24,33 @@
 .PARAMETER OutputFile
     Path to write ado-ids.json output. Default: ado-ids.json in same dir as MappingFile.
 
-.PARAMETER Token
-    ADO Personal Access Token. Prefer passing via $env:AZURE_TOKEN.
-
 .EXAMPLE
+    . .github/skills/ado-powershell/load.ps1
     .\create-testplan-from-mapping.ps1 `
-        -OrgUrl      "https://dev.azure.com/your-org" `
-        -ProjectName "YourProject" `
         -PlanId      22304 `
-        -MappingFile "qa/08-azure-integration/tc-mapping.json" `
-        -Token       $env:AZURE_TOKEN
+        -MappingFile "qa/08-azure-integration/tc-mapping.json"
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [Parameter(Mandatory)] [string] $OrgUrl,
-    [Parameter(Mandatory)] [string] $ProjectName,
     [Parameter(Mandatory)] [int]    $PlanId,
     [int]                           $SuiteId = 0,
     [Parameter(Mandatory)] [string] $MappingFile,
-    [string]                        $OutputFile = '',
-    [Parameter(Mandatory)] [string] $Token
+    [string]                        $OutputFile = ''
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Build auth header
-$b64   = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$Token"))
-$headers = @{
-    'Authorization' = "Basic $b64"
-    'Content-Type'  = 'application/json'
+# Verify ADO session is available
+if (-not (Get-Command 'New-AdoTestCase' -ErrorAction SilentlyContinue)) {
+    Write-Error "ADO session not loaded. Run: . .github/skills/ado-powershell/load.ps1"
+    exit 1
 }
 
 # Load mapping
 if (-not (Test-Path $MappingFile)) { Write-Error "Not found: $MappingFile"; exit 1 }
 $mapping = Get-Content $MappingFile -Raw | ConvertFrom-Json
 
-$apiBase = "$OrgUrl/$ProjectName/_apis"
 $suiteId = if ($SuiteId -gt 0) { $SuiteId } else { $mapping.suiteId }
 
 Write-Host "[create-testplan] Creating $($mapping.testCases.Count) test cases in Plan $PlanId / Suite $suiteId"
@@ -69,29 +58,25 @@ Write-Host "[create-testplan] Creating $($mapping.testCases.Count) test cases in
 $results = @()
 
 foreach ($tc in $mapping.testCases) {
-    $body = @{
-        op    = 'add'
-        path  = '/fields/System.Title'
-        value = "[$($tc.localId)] $($tc.title)"
-    } | ConvertTo-Json -AsArray
-
-    $createUrl = "$apiBase/wit/workitems/`$Test Case?api-version=7.1"
+    $steps          = if ($tc.PSObject.Properties['steps'])          { $tc.steps          } else { @() }
+    $expectedResult = if ($tc.PSObject.Properties['expectedResult']) { $tc.expectedResult  } else { ''  }
 
     if ($PSCmdlet.ShouldProcess($tc.localId, "Create ADO Test Case")) {
         try {
-            $wi = Invoke-RestMethod `
-                -Method  Patch `
-                -Uri     $createUrl `
-                -Headers ($headers + @{ 'Content-Type' = 'application/json-patch+json' }) `
-                -Body    $body
+            $splatArgs = @{
+                Title   = "[$($tc.localId)] $($tc.title)"
+                Confirm = $false
+            }
+            if ($steps.Count -gt 0) {
+                $splatArgs.Steps          = $steps
+                $splatArgs.ExpectedResult = $expectedResult
+            }
 
+            $wi   = New-AdoTestCase @splatArgs
             $wiId = $wi.id
             Write-Host "  [CREATED] $($tc.localId) → WI #$wiId"
 
-            # Add to suite
-            $suiteUrl = "$apiBase/testplan/Plans/$PlanId/Suites/$suiteId/TestCase?api-version=7.1"
-            $suiteBody = @(@{ workItem = @{ id = $wiId } }) | ConvertTo-Json
-            Invoke-RestMethod -Method Post -Uri $suiteUrl -Headers $headers -Body $suiteBody | Out-Null
+            Add-AdoTestCaseToSuite -PlanId $PlanId -SuiteId $suiteId -TestCaseIds @($wiId) -Confirm:$false
 
             $results += [PSCustomObject]@{
                 localId  = $tc.localId
