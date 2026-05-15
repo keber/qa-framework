@@ -7,8 +7,9 @@ All scripts are parameterized and project-agnostic.
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/inject-ado-ids.ps1` | Prepend ADO Work Item IDs to spec file test titles |
-| `scripts/create-testplan-from-mapping.ps1` | Create ADO Test Cases from a TC mapping JSON file |
+| `scripts/md-to-tc-mapping.ps1` | Parse a Plan-de-Pruebas markdown and generate `tc-mapping.json` |
+| `scripts/create-testplan-from-mapping.ps1` | Create ADO Test Cases from `tc-mapping.json` |
+| `scripts/inject-ado-ids.ps1` | Inject ADO WI IDs into Playwright spec file test titles |
 | `scripts/sync-ado-titles.ps1` | Sync spec file test titles back to ADO WI titles |
 | `pipelines/azure-pipeline-qa.yml` | CI pipeline template for running Playwright + ADO sync |
 
@@ -25,10 +26,18 @@ All scripts are parameterized and project-agnostic.
 # 0. Load the ADO skill (initialises session from env vars)
 . .github/skills/ado-powershell/load.ps1
 
-# 1. Create Test Cases in ADO from tc-mapping.json
-.\scripts\create-testplan-from-mapping.ps1 `
-  -PlanId      22304 `
-  -MappingFile "qa/08-azure-integration/tc-mapping.json"
+# 1. Parse Plan de Pruebas markdown -> tc-mapping.json
+.\node_modules\@keber\qa-framework\integrations\ado-powershell\scripts\md-to-tc-mapping.ps1 `
+  -PlanFile   "qa/02-test-plans/sprints/Sprint-N/Plan-de-Pruebas-MyProject-Sprint-N-MOD-SUB.md" `
+  -SpecFile   "mod/sub.spec.ts" `
+  -OutputFile "qa/08-azure-integration/tc-mapping-e2e-mod-sub.json" `
+  -PlanId     <PLAN_ID> `
+  -SuiteId    <SUITE_ID>
+
+# 2. Create Test Cases in ADO from tc-mapping.json (session already loaded above)
+.\node_modules\@keber\qa-framework\integrations\ado-powershell\scripts\create-testplan-from-mapping.ps1 `
+  -PlanId      <PLAN_ID> `
+  -MappingFile "qa/08-azure-integration/tc-mapping-e2e-mod-sub.json"
 
 # 2. Inject ADO IDs into spec files (idempotent)
 .\scripts\inject-ado-ids.ps1 `
