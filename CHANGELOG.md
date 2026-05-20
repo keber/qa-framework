@@ -33,6 +33,48 @@ has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/gen
 
 ---
 
+## [1.10.0] - 2026-05-19
+
+### Added
+
+- **`integrations/ado-powershell/pipelines/azure-pipeline-qa.yml`** — pipeline template
+  significantly expanded:
+  - New **Stage 3: API Integration Tests** — separate stage for `qa/07-automation/integration`,
+    with its own `PublishTestResults` and `PublishPipelineArtifact` tasks.
+  - **Cross-project repository checkout** via `resources.repositories` block; each stage
+    now performs an explicit `checkout: source`.
+  - **Smoke test step** in the E2E stage — validates `QA_BASE_URL` is reachable via `curl`
+    before running the suite.
+  - **Commented placeholder** for `AzureCLI@2` login task (Playwright Workspaces / Entra ID)
+    in both E2E and API stages, with `PLAYWRIGHT_SERVICE_URL` env var placeholder.
+  - Optional nightly schedule block (commented out).
+  - `PublishPipelineArtifact` tasks for HTML report and trace artifacts in both stages.
+- **`integrations/playwright-azure-reporter/README.md`** — fully rewritten:
+  - Variables split into local (PAT) vs CI/CD (`SYSTEM_ACCESSTOKEN`) sections.
+  - Config snippet updated to use `ADO_ORG`, `ADO_PROJECT`, `orgUrl` constructed from
+    `ADO_ORG`, and `SYSTEM_ACCESSTOKEN ?? AZURE_TOKEN` token fallback.
+  - New **Playwright Workspaces reporter** section (`@azure/playwright` +
+    `playwright.service.config.ts` + Entra ID authentication notes).
+  - Troubleshooting table expanded with pipeline-specific `401` scenario.
+
+### Changed
+
+- **`azure-pipeline-qa.yml`** — variable names aligned with current conventions:
+  `AZURE_TOKEN` / `ADO_ORG_URL` / `ADO_PROJECT_NAME` replaced by `ADO_ORG` / `ADO_PROJECT`;
+  `ADO_PLAN_ID` split into `ADO_E2E_PLAN_ID` / `ADO_API_PLAN_ID`; `SYSTEM_ACCESSTOKEN`
+  replaces PAT for ADO reporter authentication.
+- **`azure-pipeline-qa.yml`** — E2E job `timeoutInMinutes` increased from 60 to 90.
+- **`azure-pipeline-qa.yml`** — trigger reduced to `main` only (removed `qa` and
+  `release/*` branches); trigger rationale documented in comments.
+- **`azure-pipeline-qa.yml`** — E2E test run consolidated from two `@grep`-tag steps
+  (P0 + P1/P2) into a single `--grep-invert "_inspect|_diag"` run with `continueOnError: true`.
+- **`azure-pipeline-qa.yml`** — cache target changed from `~/.cache/ms-playwright` to
+  `node_modules` per workspace; `cacheHitVar` added to both cache tasks.
+- **`azure-pipeline-qa.yml`** — `pool` block moved above `variables` for readability;
+  `ADO_SYNC_DISABLED` variable removed.
+
+---
+
 ## [1.9.1] - 2026-05-15
 
 ### Added
