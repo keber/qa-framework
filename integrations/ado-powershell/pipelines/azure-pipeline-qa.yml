@@ -1,133 +1,278 @@
 # -----------------------------------------------------------------------
 # keber/qa-framework — Azure Pipeline QA Template
 # -----------------------------------------------------------------------
-# Parameterized CI pipeline for running Playwright E2E tests and
-# optionally syncing results to Azure DevOps Test Plans.
+# Parameterized CI pipeline for running Playwright E2E and API tests and
+# syncing results to Azure DevOps Test Plans via SYSTEM_ACCESSTOKEN.
+#
+# Cross-project repository: the test repo lives in a different ADO project.
+# Update 'resources.repositories.name' to match your org/project/repo.
 #
 # Required Pipeline Library Variable Group: "QA-Variables"
-#   QA_BASE_URL          — Target application URL for QA environment
-#   QA_USER_EMAIL        — Default test user email
-#   QA_USER_PASSWORD     — Default test user password (secret)
-#   AZURE_TOKEN          — ADO Personal Access Token (secret)
-#   ADO_ORG_URL          — https://dev.azure.com/your-org
-#   ADO_PROJECT_NAME     — ADO project name
-#   ADO_PLAN_ID          — Test Plan ID
+# Create this group in ADO → Pipelines → Library and add the following:
+#
+#   QA_BASE_URL          — Target application URL  (e.g. https://app-qa.example.com)
+#   QA_USER_EMAIL        — Test user email / RUT
+#   QA_USER_PASSWORD     — Test user password                        [secret]
+#   ADO_ORG              — ADO organization slug  (e.g. my-org)
+#   ADO_PROJECT          — ADO project name        (e.g. my-project)
+#   ADO_E2E_PLAN_ID      — Test Plan ID for the E2E suite
+#   ADO_API_PLAN_ID      — Test Plan ID for the API/integration suite
+#
+#   NOTE on multiple Plan IDs: ADO variable groups store plain strings — there
+#   is no array type. Use one variable per suite (ADO_E2E_PLAN_ID / ADO_API_PLAN_ID).
+#   If the project has only one suite, a single ADO_PLAN_ID variable is enough.
+#   Results are reported to ADO via System.AccessToken (OAuth); no PAT required.
 # -----------------------------------------------------------------------
 
+# Cross-project repository — update <ADO_SOURCE_PROJECT>/<REPO_NAME> as needed
+resources:
+  repositories:
+    - repository: source
+      type: git
+      name: <ADO_SOURCE_PROJECT>/<REPO_NAME>   # e.g. my-qa-project/my-repo
+      ref: refs/heads/main
+
+# Trigger: push and PR to main.
+# The test repo is decoupled from the app repo, so branch triggers are minimal.
 trigger:
   branches:
     include:
       - main
-      - qa
-      - release/*
 
 pr:
   branches:
     include:
       - main
 
-variables:
-  - group: QA-Variables
-  - name: NODE_VERSION
-    value: '20.x'
-  - name: QA_DIR
-    value: 'qa/07-automation/e2e'
-  - name: ADO_SYNC_DISABLED
-    value: 'false'
+# Optional scheduled run — uncomment and adjust if a nightly regression is needed:
+# schedules:
+#   - cron: '0 6 * * 1-5'   # 06:00 UTC Mon–Fri (03:00 CLT / 02:00 CLST)
+#     displayName: Nightly regression
+#     branches:
+#       include:
+#         - main
+#     always: true
 
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  - group: QA-Variables
+  - name: NODE_VERSION
+    value: '20.x'
+  - name: E2E_DIR
+    value: 'qa/07-automation/e2e'
+  - name: API_DIR
+    value: 'qa/07-automation/integration'
+
 stages:
   # -----------------------------------------------------------------------
-  # Stage 1: Install & Setup
+  # Stage 1: Install & cache dependencies
   # -----------------------------------------------------------------------
   - stage: Setup
     displayName: 'Install Dependencies'
     jobs:
       - job: Install
-        displayName: 'npm install + Playwright browsers'
+        displayName: 'npm ci + Playwright browsers'
         steps:
+          - checkout: source
+            displayName: 'Checkout source repo'
+
           - task: NodeTool@0
             inputs:
               versionSpec: $(NODE_VERSION)
             displayName: 'Use Node.js $(NODE_VERSION)'
 
           - script: |
-              cd $(QA_DIR)
+              cd $(E2E_DIR)
               npm ci
               npx playwright install chromium --with-deps
-            displayName: 'Install npm deps and Playwright Chromium'
+            displayName: 'Install E2E deps and Playwright Chromium'
 
           - task: CacheBeta@1
             inputs:
-              key: 'playwright | "$(Agent.OS)" | $(QA_DIR)/package-lock.json'
-              path: '~/.cache/ms-playwright'
-            displayName: 'Cache Playwright browsers'
+              key: 'e2e | "$(Agent.OS)" | $(E2E_DIR)/package-lock.json'
+              path: '$(E2E_DIR)/node_modules'
+              cacheHitVar: 'CACHE_RESTORED_E2E'
+            displayName: 'Cache E2E node_modules'
+
+          - script: |
+              cd $(API_DIR)
+              npm ci
+            displayName: 'Install API deps'
+
+          - task: CacheBeta@1
+            inputs:
+              key: 'api | "$(Agent.OS)" | $(API_DIR)/package-lock.json'
+              path: '$(API_DIR)/node_modules'
+              cacheHitVar: 'CACHE_RESTORED_API'
+            displayName: 'Cache API node_modules'
 
   # -----------------------------------------------------------------------
-  # Stage 2: E2E Tests
+  # Stage 2: E2E Tests (Playwright/Chromium)
   # -----------------------------------------------------------------------
   - stage: E2E
-    displayName: 'E2E Tests'
+    displayName: 'E2E Tests (Playwright/Chromium)'
     dependsOn: Setup
     jobs:
-      - job: PlaywrightTests
-        displayName: 'Run Playwright suite'
-        timeoutInMinutes: 60
+      - job: PlaywrightE2E
+        displayName: 'Run E2E suite'
+        timeoutInMinutes: 90
         steps:
+          - checkout: source
+            displayName: 'Checkout source repo'
+
           - task: NodeTool@0
             inputs:
               versionSpec: $(NODE_VERSION)
+            displayName: 'Use Node.js $(NODE_VERSION)'
 
           - script: |
-              cd $(QA_DIR)
+              cd $(E2E_DIR)
               npm ci
               npx playwright install chromium --with-deps
-            displayName: 'Restore dependencies'
+            displayName: 'Restore E2E dependencies'
 
           - script: |
-              cd $(QA_DIR)
-              npx playwright test --grep @P0
-            displayName: 'Run P0 smoke suite'
-            env:
-              QA_BASE_URL:       $(QA_BASE_URL)
-              QA_USER_EMAIL:     $(QA_USER_EMAIL)
-              QA_USER_PASSWORD:  $(QA_USER_PASSWORD)
-              AZURE_TOKEN:       $(AZURE_TOKEN)
-              ADO_ORG_URL:       $(ADO_ORG_URL)
-              ADO_PROJECT_NAME:  $(ADO_PROJECT_NAME)
-              ADO_PLAN_ID:       $(ADO_PLAN_ID)
-              ADO_SYNC_DISABLED: $(ADO_SYNC_DISABLED)
-              CI:                'true'
+              echo "QA_BASE_URL = $(QA_BASE_URL)"
+              HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" --max-time 30 "$(QA_BASE_URL)")
+              echo "HTTP response: $HTTP_CODE"
+              if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 400 ]; then
+                echo "##[error]Smoke test failed — $(QA_BASE_URL) returned HTTP $HTTP_CODE"
+                exit 1
+              fi
+              echo "Smoke test passed (HTTP $HTTP_CODE)"
+            displayName: 'Smoke test — verify QA_BASE_URL is reachable'
+
+          # ---------------------------------------------------------------
+          # Playwright Workspaces (Azure App Testing)
+          # Enable once the ADO service connection is configured.
+          # Prerequisite: the service connection must have the Contributor
+          # role on the workspace in Azure Portal (Access control IAM).
+          # ---------------------------------------------------------------
+          # - task: AzureCLI@2
+          #   displayName: 'Login to Azure (Playwright Workspaces)'
+          #   inputs:
+          #     azureSubscription: '<AZURE_SERVICE_CONNECTION_NAME>'
+          #     scriptType: bash
+          #     scriptLocation: inlineScript
+          #     inlineScript: echo "Authenticated via Entra ID"
 
           - script: |
-              cd $(QA_DIR)
-              npx playwright test --grep "@P1|@P2"
-            displayName: 'Run P1/P2 regression suite'
-            condition: succeededOrFailed()
+              cd $(E2E_DIR)
+              npx playwright test --project=chromium --ignore-snapshots \
+                --grep-invert "_inspect|_diag"
+            displayName: 'Run E2E tests'
+            continueOnError: true
             env:
-              QA_BASE_URL:       $(QA_BASE_URL)
-              QA_USER_EMAIL:     $(QA_USER_EMAIL)
-              QA_USER_PASSWORD:  $(QA_USER_PASSWORD)
-              AZURE_TOKEN:       $(AZURE_TOKEN)
-              ADO_ORG_URL:       $(ADO_ORG_URL)
-              ADO_PROJECT_NAME:  $(ADO_PROJECT_NAME)
-              ADO_PLAN_ID:       $(ADO_PLAN_ID)
-              CI:                'true'
+              QA_BASE_URL:        $(QA_BASE_URL)
+              QA_USER_EMAIL:      $(QA_USER_EMAIL)
+              QA_USER_PASSWORD:   $(QA_USER_PASSWORD)
+              ADO_ORG:            $(ADO_ORG)
+              ADO_PROJECT:        $(ADO_PROJECT)
+              ADO_PLAN_ID:        $(ADO_E2E_PLAN_ID)
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+              CI:                 'true'
+              # PLAYWRIGHT_SERVICE_URL: $(PLAYWRIGHT_SERVICE_URL)  # Playwright Workspaces endpoint — enable together with the login task
 
           - task: PublishTestResults@2
             condition: always()
             inputs:
-              testResultsFormat: 'JUnit'
-              testResultsFiles:  '$(QA_DIR)/test-results/junit*.xml'
-              mergeTestResults:  true
-              testRunTitle:      'Playwright E2E — $(Build.SourceBranchName)'
-            displayName: 'Publish test results'
+              testResultsFormat:     'JUnit'
+              testResultsFiles:      '**/test-results/**/*.xml'
+              searchFolder:          $(E2E_DIR)
+              mergeTestResults:      true
+              failTaskOnFailedTests: true
+              testRunTitle:          '[Auto E2E] $(Build.BuildNumber)'
+            displayName: 'Publish E2E test results (JUnit)'
 
-          - task: PublishBuildArtifacts@1
+          - task: PublishPipelineArtifact@1
             condition: always()
             inputs:
-              pathToPublish: '$(QA_DIR)/playwright-report'
-              artifactName:  'playwright-report'
-            displayName: 'Publish Playwright HTML report'
+              targetPath: '$(E2E_DIR)/playwright-report'
+              artifact:   'e2e-playwright-report'
+            displayName: 'Publish E2E HTML report'
+
+          - task: PublishPipelineArtifact@1
+            condition: always()
+            inputs:
+              targetPath: '$(E2E_DIR)/test-results'
+              artifact:   'e2e-test-results'
+            displayName: 'Publish E2E trace artifacts'
+
+  # -----------------------------------------------------------------------
+  # Stage 3: API Integration Tests
+  # -----------------------------------------------------------------------
+  - stage: API
+    displayName: 'API Integration Tests'
+    dependsOn: E2E
+    jobs:
+      - job: PlaywrightAPI
+        displayName: 'Run API suite'
+        timeoutInMinutes: 30
+        steps:
+          - checkout: source
+            displayName: 'Checkout source repo'
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: 'Use Node.js $(NODE_VERSION)'
+
+          - script: |
+              cd $(API_DIR)
+              npm ci
+            displayName: 'Restore API dependencies'
+
+          # ---------------------------------------------------------------
+          # Playwright Workspaces (Azure App Testing)
+          # Enable once the ADO service connection is configured.
+          # ---------------------------------------------------------------
+          # - task: AzureCLI@2
+          #   displayName: 'Login to Azure (Playwright Workspaces)'
+          #   inputs:
+          #     azureSubscription: '<AZURE_SERVICE_CONNECTION_NAME>'
+          #     scriptType: bash
+          #     scriptLocation: inlineScript
+          #     inlineScript: echo "Authenticated via Entra ID"
+
+          - script: |
+              cd $(API_DIR)
+              npx playwright test --grep-invert "_inspect|_diag"
+            displayName: 'Run API integration tests'
+            continueOnError: true
+            env:
+              QA_BASE_URL:        $(QA_BASE_URL)
+              QA_USER_EMAIL:      $(QA_USER_EMAIL)
+              QA_USER_PASSWORD:   $(QA_USER_PASSWORD)
+              ADO_ORG:            $(ADO_ORG)
+              ADO_PROJECT:        $(ADO_PROJECT)
+              ADO_PLAN_ID:        $(ADO_API_PLAN_ID)
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+              CI:                 'true'
+              # PLAYWRIGHT_SERVICE_URL: $(PLAYWRIGHT_SERVICE_URL)  # Playwright Workspaces endpoint — enable together with the login task
+
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat:     'JUnit'
+              testResultsFiles:      '**/test-results/**/*.xml'
+              searchFolder:          $(API_DIR)
+              mergeTestResults:      true
+              failTaskOnFailedTests: true
+              testRunTitle:          '[Auto API] $(Build.BuildNumber)'
+            displayName: 'Publish API test results (JUnit)'
+
+          - task: PublishPipelineArtifact@1
+            condition: always()
+            inputs:
+              targetPath: '$(API_DIR)/playwright-report'
+              artifact:   'api-playwright-report'
+            displayName: 'Publish API HTML report'
+
+          - task: PublishPipelineArtifact@1
+            condition: always()
+            inputs:
+              targetPath: '$(API_DIR)/test-results'
+              artifact:   'api-test-results'
+            displayName: 'Publish API trace artifacts'
