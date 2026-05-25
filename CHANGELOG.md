@@ -7,32 +7,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [1.0.0] - 2026-03-04
-
-### Added
-
-- **Framework scaffold** — initial `qa/` directory tree with 9 numbered folders (00–08)
-- **6-file submodule template set** — `00-inventory` through `05-test-scenarios`
-- **Agent instructions** — 7 purpose-specific Markdown instruction files for IDE agents
-- **Standards** — naming conventions, bug report template, test case template, test data guidelines
-- **Automation scaffold** — generalized Playwright `playwright.config.ts`, `global-setup.ts`, `.env.example`, `fixtures/auth.ts`
-- **Optional integrations** — stubs and READMEs for Playwright, `playwright-azure-reporter`, and ADO PowerShell
-- **CLI entry point** — `qa-framework init`, `generate`, `validate` commands
-- **Documentation** — architecture, comparison matrix, generalization decisions, installation guide, usage-with-agent guide, spec-driven philosophy, folder structure guide
-- **Migration notes** — `MIGRATION-NOTES.md` for projects moving from embedded to package-based framework
-
-### Source repositories
-
-This version was bootstrapped from analysis of two existing embedded QA implementations:
-
-- `redacted-repo` (Repo A) — ASP.NET MVC 5 + jQuery + toastr + Sprint-based E2E
-- `redacted-repo` (Repo B) — Blazor WebAssembly + Radzen + full ADO pipeline integration
-
-All project-specific content (URLs, ADO IDs, user credentials, module names, form selectors)
-has been removed or parameterized. See `docs/comparison-matrix.md` and `docs/generalization-decisions.md`.
-
----
-
 ## [1.10.0] - 2026-05-19
 
 ### Added
@@ -300,3 +274,18 @@ See `MIGRATION-NOTES.md` — section "Upgrading from a version that used `.githu
 
 ---
 
+## [1.0.0] - 2026-03-04
+
+### Added
+
+- **Framework scaffold** — initial `qa/` directory tree with 9 numbered folders (00–08)
+- **6-file submodule template set** — `00-inventory` through `05-test-scenarios`
+- **Agent instructions** — 7 purpose-specific Markdown instruction files for IDE agents
+- **Standards** — naming conventions, bug report template, test case template, test data guidelines
+- **Automation scaffold** — generalized Playwright `playwright.config.ts`, `global-setup.ts`, `.env.example`, `fixtures/auth.ts`
+- **Optional integrations** — stubs and READMEs for Playwright, `playwright-azure-reporter`, and ADO PowerShell
+- **CLI entry point** — `qa-framework init`, `generate`, `validate` commands
+- **Documentation** — architecture, comparison matrix, generalization decisions, installation guide, usage-with-agent guide, spec-driven philosophy, folder structure guide
+- **Migration notes** — `MIGRATION-NOTES.md` for projects moving from embedded to package-based framework
+
+---
