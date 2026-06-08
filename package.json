@@ -38,10 +38,9 @@
   "engines": {
     "node": ">=18"
   },
-  "devDependencies": {},
   "peerDependencies": {
-    "@playwright/test": ">=1.40.0",
-    "@keber/ado-qa": ">=1.0.0"
+    "@keber/ado-qa": ">=1.0.0",
+    "@playwright/test": ">=1.40.0"
   },
   "peerDependenciesMeta": {
     "@playwright/test": {

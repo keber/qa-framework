@@ -24,7 +24,15 @@ This project uses `@keber/qa-framework` v{{VERSION}} for spec-driven automated t
 1. Generate the output in `UTF-8` encoding without BOM (`UTF-8`, no signature).
 2. Ensure the raw output is `UTF-8` encoded with no `EF BB BF` bytes at the beginning.
 
-{{ADO_SECTION}}
+## Azure DevOps integration
+
+Before any ADO operation, check if `.github/skills/ado-qa/` exists or if
+`integrations.ado.enabled` is `true` in `qa/qa-framework.config.json`. If either
+condition is met, load `.github/skills/qa-ado-integration/SKILL.md` and use it for
+all ADO interactions (work items, test plans, test cases, bugs, etc.).
+
+> To enable Azure DevOps integration run: `npm install github:keber/ado-qa`
+
 ## QA Pipeline
 
 Stages must run in order. Never start a stage unless its prerequisite is met.
