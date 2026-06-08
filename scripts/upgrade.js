@@ -93,8 +93,7 @@ if (!fs.existsSync(skillsSrc)) {
 const copilotInstrPath = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
 const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.instructions.md');
 const copilotContent = fs.readFileSync(instrTemplatePath, 'utf8')
-  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0')
-  .replace('{{ADO_SECTION}}', '');
+  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
 forceWrite(copilotInstrPath, copilotContent);
 
 // ---------------------------------------------------------------------------

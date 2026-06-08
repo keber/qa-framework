@@ -272,37 +272,9 @@ if (fs.existsSync(structureGuideSrc)) {
 const githubDir         = path.join(cwd, '.github');
 const copilotInstrPath  = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
 
-// Detect whether the ado-qa skill is available (installed or already copied)
-const adoQaInstalled = fs.existsSync(path.join(cwd, 'node_modules', '@keber', 'ado-qa'))
-                    || fs.existsSync(path.join(cwd, 'node_modules', 'ado-qa'));
-const adoSkillReady  = fs.existsSync(path.join(cwd, '.github', 'skills', 'ado-qa'));
-const adoAvailable   = adoQaInstalled || adoSkillReady;
-
-const adoSection = adoAvailable
-  ? `## Azure DevOps integration (ado-qa)
-
-The \`ado-qa\` skill is installed. Load it in PowerShell before any ADO operation:
-\`\`\`powershell
-. .github/skills/ado-qa/load.ps1
-\`\`\`
-Refer to \`qa/00-guides/AGENT-INSTRUCTIONS-ADO-INTEGRATION.md\` for the full ADO workflow.
-
-`
-  : `## Azure DevOps integration (not installed)
-
-> ⚠️ **Agent note:** \`ado-qa\` is not installed in this project.
-> To enable Azure DevOps integration (query Work Items, Test Plans, create bugs, etc.) run:
-> \`\`\`bash
-> npm install github:keber/ado-qa
-> \`\`\`
-> This will automatically copy the ADO skills to \`.github/skills/\` via postinstall.
-
-`;
-
 const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.instructions.md');
 const copilotInstrContent = fs.readFileSync(instrTemplatePath, 'utf8')
-  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0')
-  .replace('{{ADO_SECTION}}', adoSection);
+  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
 writeIfMissing(copilotInstrPath, copilotInstrContent);
 
 // --- AGENT-NEXT-STEPS.md — readable by the agent after install ---
