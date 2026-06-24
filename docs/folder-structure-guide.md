@@ -260,9 +260,15 @@ Each skill folder contains:
 ├── README.md
 ├── open/
 │   └── DEF-{NNN}-{slug}.md
+├── disputed/
+│   └── DEF-{NNN}-{slug}.md
 └── resolved/
     └── DEF-{NNN}-{slug}.md
 ```
+
+- `open/` - confirmed defect, fix pending
+- `disputed/` - QA has evidence but business or dev team disputes the expected behavior; pending functional decision
+- `resolved/` - closed by fix or formal decision
 
 **Decision guide**:
 - ADO enabled → use ADO Work Items. `06-defects/` contains lightweight references only
