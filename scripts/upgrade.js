@@ -421,6 +421,27 @@ behavior or won't fix).
 }
 
 // ---------------------------------------------------------------------------
+// 8. Seed qa/memory/ template files if missing (added in v1.11.0)
+//    Safe: only creates files that do not exist. Never overwrites user content.
+// ---------------------------------------------------------------------------
+const memoryDir = path.join(qaRoot, 'memory');
+if (fs.existsSync(memoryDir)) {
+  const memorySrc = path.resolve(__dirname, '..', 'templates', 'memory');
+  for (const file of ['ci-pipeline-findings.md', 'e2e-stabilization-patterns.md', 'data-volatility-strategies.md']) {
+    const dest = path.join(memoryDir, file);
+    if (!fs.existsSync(dest)) {
+      if (!dryRun) {
+        fs.copyFileSync(path.join(memorySrc, file), dest);
+      }
+      updated.push(dest);
+      console.log(`  [created] memory/${file}`);
+    } else {
+      skipped.push(dest);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log('\n--- Results ---');
