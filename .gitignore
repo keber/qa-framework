@@ -1,2 +1,6 @@
 external-references/
+external-references*
 qa/
+temp/
+meta/
+.github/skills
