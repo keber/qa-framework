@@ -84,6 +84,7 @@ const topLevelFolders = [
   '04-test-data',
   '05-test-execution',
   '06-defects/open',
+  '06-defects/disputed',
   '06-defects/resolved',
   '07-automation/e2e/tests',
   '07-automation/e2e/tests/helpers/debug',
@@ -97,6 +98,18 @@ for (const folder of topLevelFolders) {
   fs.mkdirSync(fullPath, { recursive: true });
   console.log(`  [created] ${path.relative(cwd, fullPath)}/`);
 }
+
+// --- 06-defects/disputed/README.md ---
+writeIfMissing(path.join(qaRoot, '06-defects', 'disputed', 'README.md'),
+`# 06-defects/disputed/
+
+Use this folder for defects where QA has reproducible evidence but the business or
+development team disputes whether the observed behavior is actually a defect.
+
+A defect stays here while the functional decision is pending. Once the team reaches
+a formal conclusion, move the file to open/ (confirmed defect) or resolved/ (accepted
+behavior or won't fix).
+`);
 
 // --- qa/README.md ---
 const qaReadmeTemplate = path.resolve(__dirname, '..', 'templates', 'qa-readme.md');
@@ -317,15 +330,21 @@ Edit \`qa/qa-framework.config.json\` and add your project modules under the \`"m
 npm install @keber/ado-qa
 \`\`\`
 
-**Playwright automation:**
+**Playwright E2E automation:**
 \`\`\`bash
 npm install @playwright/test
 cd qa/07-automation/e2e && npm install && npx playwright install chromium
 \`\`\`
 
+**Playwright API/integration automation:**
+\`\`\`bash
+cd qa/07-automation/integration && npm install
+\`\`\`
+
 ### 3. Credentials
-- Copy \`qa/07-automation/e2e/.env.example\` → \`qa/07-automation/e2e/.env\` and fill in credentials
-- Add \`qa/07-automation/e2e/.env\` and \`qa/07-automation/e2e/.auth/\` to \`.gitignore\`
+- Copy \`qa/07-automation/e2e/.env.example\` -> \`qa/07-automation/e2e/.env\` and fill in credentials
+- Copy \`qa/07-automation/integration/.env.example\` -> \`qa/07-automation/integration/.env\` and fill in credentials
+- Add both \`.env\` files and both \`.auth/\` folders to \`.gitignore\`
 `;
 const nextStepsPath = path.join(qaRoot, 'AGENT-NEXT-STEPS.md');
 writeIfMissing(nextStepsPath, nextStepsContent);
