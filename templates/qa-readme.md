@@ -2,6 +2,7 @@
 
 > Framework: `@keber/qa-framework` v{VERSION}
 > Language: {LANGUAGE} | Base URL: `{QA_BASE_URL}`
+> ADO Project: `{ADO_ORG} / {ADO_PROJECT}` _(optional — remove line if not using Azure DevOps)_
 
 ---
 
@@ -47,11 +48,31 @@ npx playwright test --last-failed
 
 ---
 
+## Last Run
+
+| Suite | Date | Pass | Fail | Skip | CI Link |
+|---|---|---|---|---|---|
+| E2E | — | — | — | — | — |
+| API | — | — | — | — | — |
+
+> Update this table after each significant run. The CI Link can be an ADO TestRun URL, a
+> GitHub Actions run URL, or a path to a local report file.
+
 ## Last Execution
 
 | Date | Suite | Pass | Skip | Fail | Duration | Report |
 |---|---|---|---|---|---|---|
 | — | — | — | — | — | — | — |
+
+## Flaky Tests
+
+> Mark known flaky tests with this inline annotation directly in the table or spec file.
+> Format: `[flaky] <test-id-or-name> - <root cause> - last seen <YYYY-MM-DD>`
+>
+> Example:
+> `[flaky] TC-MOD-012 - timing issue on slow CI agents - last seen 2026-01-15`
+>
+> Remove the annotation once the test has been stable for 2+ consecutive CI runs.
 
 ---
 
