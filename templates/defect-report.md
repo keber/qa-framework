@@ -6,7 +6,7 @@
 | Title | {{Short title (max 80 chars)}} |
 | Severity | Critical / High / Medium / Low |
 | Priority | P0 / P1 / P2 / P3 |
-| Status | Open / In Progress / Resolved / Closed |
+| Status | Open / In Progress / Disputed / Resolved / Closed |
 | Assigned to | {{Developer or "Unassigned"}} |
 | Module | {{Module name}} |
 | Submodule | {{Submodule name}} |

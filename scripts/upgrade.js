@@ -379,6 +379,48 @@ if (!fs.existsSync(testCasesReadme)) {
 }
 
 // ---------------------------------------------------------------------------
+// 7. Ensure 06-defects/disputed/ exists (added in v1.11.0)
+//    Safe: only creates if missing. Never touches existing files.
+// ---------------------------------------------------------------------------
+const defectsDir   = path.join(qaRoot, '06-defects');
+const disputedDir  = path.join(defectsDir, 'disputed');
+const disputedReadme = path.join(disputedDir, 'README.md');
+
+if (fs.existsSync(defectsDir) && !fs.existsSync(disputedDir)) {
+  if (!dryRun) {
+    fs.mkdirSync(disputedDir, { recursive: true });
+    fs.writeFileSync(disputedReadme,
+`# 06-defects/disputed/
+
+Use this folder for defects where QA has reproducible evidence but the business or
+development team disputes whether the observed behavior is actually a defect.
+
+A defect stays here while the functional decision is pending. Once the team reaches
+a formal conclusion, move the file to open/ (confirmed defect) or resolved/ (accepted
+behavior or won't fix).
+`, 'utf8');
+  }
+  updated.push(disputedDir);
+  console.log(`  [created] 06-defects/disputed/`);
+  console.log(`  [created] 06-defects/disputed/README.md`);
+} else if (!fs.existsSync(disputedReadme) && fs.existsSync(disputedDir)) {
+  if (!dryRun) {
+    fs.writeFileSync(disputedReadme,
+`# 06-defects/disputed/
+
+Use this folder for defects where QA has reproducible evidence but the business or
+development team disputes whether the observed behavior is actually a defect.
+
+A defect stays here while the functional decision is pending. Once the team reaches
+a formal conclusion, move the file to open/ (confirmed defect) or resolved/ (accepted
+behavior or won't fix).
+`, 'utf8');
+  }
+  updated.push(disputedReadme);
+  console.log(`  [created] 06-defects/disputed/README.md`);
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log('\n--- Results ---');
