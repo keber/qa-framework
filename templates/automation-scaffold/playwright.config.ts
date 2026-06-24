@@ -94,6 +94,28 @@ export default defineConfig({
     },
   ],
 
+  // ------ Parallel 2-user variant ------
+  // Uncomment and replace the single chromium project above to run two parallel
+  // workers with separate credentials. Also set QA_USER2_EMAIL and
+  // QA_USER2_PASSWORD in .env.
+  //
+  // {
+  //   name: 'chromium-user1',
+  //   use: {
+  //     ...devices['Desktop Chrome'],
+  //     storageState: '.auth/user-1.json',
+  //   },
+  //   dependencies: ['setup'],
+  // },
+  // {
+  //   name: 'chromium-user2',
+  //   use: {
+  //     ...devices['Desktop Chrome'],
+  //     storageState: '.auth/user-2.json',
+  //   },
+  //   dependencies: ['setup'],
+  // },
+
   // ------ Output directories ------
   outputDir:         'test-results/',
   snapshotPathTemplate: '{testDir}/__snapshots__/{testFilePath}/{arg}{ext}',
