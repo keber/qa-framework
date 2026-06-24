@@ -7,6 +7,62 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.11.0] - 2026-06-24
+
+### Added
+
+- **`templates/automation-scaffold/fixtures/base.ts`** — new fixture with TTL-aware session
+  refresh. Replaces the plain `@playwright/test` import in long-running suites where the
+  server-side session may expire before the suite finishes.
+- **`templates/automation-scaffold/global-setup.ts`** — hardened login flow:
+  - `resolveVar()` with source logging (`param` / `env:KEY` / `default`)
+  - Login retry loop (up to 3 attempts) with crash-page detection and recovery
+  - `resolveAuthUsers()` — derives which users to authenticate from `QA_AUTH_USER` env var
+    or from configured `storageState` paths in `playwright.config.ts`
+  - `dismissOnboardingFlow()` — configurable via `QA_DISMISS_ONBOARDING_LABELS`
+    (comma-separated button labels); no-op by default
+  - Support for a second test user (`.auth/user-2.json`) via `QA_USER2_EMAIL` /
+    `QA_USER2_PASSWORD`
+- **`templates/automation-scaffold/playwright.config.ts`** — exports `SESSION_TTL_MS`
+  (default 2 h, overridable via `QA_SESSION_TTL_MS`); commented-out parallel 2-user variant
+  (`chromium-user1` / `chromium-user2`).
+- **`templates/automation-scaffold/.env.example`** — new variables: `QA_SESSION_TTL_MS`,
+  `QA_AUTH_USER`, `QA_USER2_EMAIL`, `QA_USER2_PASSWORD`, `QA_DISMISS_ONBOARDING_LABELS`,
+  `PLAYWRIGHT_SERVICE_URL`.
+- **`templates/integration-scaffold/`** — new scaffold for API testing with Playwright
+  `APIRequestContext`. Includes `package.json`, `playwright.config.ts`, `global-setup.ts`
+  (token-based or browser-login auth), `tests/example.spec.ts`, `README.md`, `.env.example`.
+  Deployed to `qa/07-automation/integration/` on `init` and `upgrade`.
+- **`templates/memory/`** — three semi-guided operational memory templates:
+  `ci-pipeline-findings.md`, `e2e-stabilization-patterns.md`, `data-volatility-strategies.md`.
+  Seeded into `qa/memory/` on `init` and `upgrade`.
+- **`qa/06-defects/disputed/`** — third defect state for cases where QA has evidence but the
+  business or dev team disputes the expected behavior. Created on `init` and `upgrade`.
+- **`integrations/ado-powershell/pipelines/azure-pipeline-qa.yml`** — operational hardening:
+  - `suiteFilter` pipeline parameter (default `all`); auto-overridden to `all` on scheduled runs
+  - Bash array (`GREP_ARGS`) for safe grep pattern expansion with bracket characters
+  - `PublishTestResults@2` scoped to exact XML path instead of `**/*.xml`
+  - `publishRunAttachments: false` on both E2E and API stages
+  - Artifact names suffixed with `$(System.JobAttempt)` to prevent collision on retries
+  - `QA_AUTH_USER` documented as commented example for the 2-job parallel model
+- **`integrations/playwright/README.md`** — new section: Visual AI helper optional pattern.
+- **`templates/qa-readme.md`** — new fields: `ADO Project`, `Last Run` summary table,
+  `Flaky Tests` inline annotation convention.
+
+### Changed
+
+- **`scripts/init.js`** — `fixtures/base.ts` added to e2e scaffold copy list; integration
+  scaffold replaces the `integration/README.md` placeholder; memory template files seeded
+  from `templates/memory/` via `fs.readFileSync`.
+- **`scripts/upgrade.js`** — integration scaffold, `disputed/` defect folder, and memory
+  templates are all seeded idempotently on upgrade for existing projects.
+- **`docs/folder-structure-guide.md`** — `06-defects/` updated to document `disputed/`.
+- **`templates/defect-report.md`** — `Status` field extended with `Disputed` value.
+- **`qa/memory/INDEX.md`** template updated to pre-populate rows for the three new memory
+  template files.
+
+---
+
 ## [1.10.0] - 2026-05-19
 
 ### Added
