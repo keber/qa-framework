@@ -133,9 +133,16 @@ writeIfMissing(path.join(memoryDir, 'INDEX.md'),
 
 | File | Topic | When to load |
 |---|---|---|
-
-_No memory files yet. Add files to this directory and register them above._
+| \`ci-pipeline-findings.md\` | CI pipeline issues, root causes, applied fixes, failure triage categories | Diagnosing CI failures; reviewing pipeline changes |
+| \`e2e-stabilization-patterns.md\` | Flakiness patterns, crash-recovery techniques, strict-mode conflicts, reference timeouts | Investigating intermittent failures; refactoring fragile specs |
+| \`data-volatility-strategies.md\` | Strategies for handling volatile test data (filter values, row counts, search inputs) | Fixing hardcoded-data failures; choosing an assertion resilience approach |
 `);
+
+// --- qa/memory template files ---
+const memorySrc = path.resolve(__dirname, '..', 'templates', 'memory');
+for (const file of ['ci-pipeline-findings.md', 'e2e-stabilization-patterns.md', 'data-volatility-strategies.md']) {
+  writeIfMissing(path.join(memoryDir, file), fs.readFileSync(path.join(memorySrc, file), 'utf8'));
+}
 
 // --- 03-test-cases README (optional directory marker) ---
 writeIfMissing(path.join(qaRoot, '03-test-cases', 'README.md'),
