@@ -174,6 +174,22 @@ for (const file of scaffoldFiles) {
   }
 }
 
+// 5a.1. Ensure the refreshed fixtures scaffold exists.
+const scaffoldFixturesDir = path.join(e2eDir, 'fixtures');
+const fixtureFiles = ['auth.ts', 'test-helpers.ts', 'base.ts'];
+for (const file of fixtureFiles) {
+  const oldPath = path.join(automationDir, 'fixtures', file);
+  const newPath = path.join(scaffoldFixturesDir, file);
+  if (fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
+    if (!dryRun) {
+      fs.mkdirSync(scaffoldFixturesDir, { recursive: true });
+      fs.renameSync(oldPath, newPath);
+    }
+    updated.push(newPath);
+    console.log(`  [migrated] fixtures/${file} -> e2e/fixtures/${file}`);
+  }
+}
+
 // 5b. fixtures/: 07-automation/fixtures/ -> 07-automation/e2e/fixtures/
 const oldFixturesDir = path.join(automationDir, 'fixtures');
 const newFixturesDir = path.join(e2eDir, 'fixtures');
@@ -210,17 +226,34 @@ if (fs.existsSync(e2eDir)) {
   }
 }
 
-// 5d. Create integration/ and load/ placeholders if missing.
-const integrationReadme = path.join(automationDir, 'integration', 'README.md');
-const loadReadme        = path.join(automationDir, 'load', 'README.md');
+// 5d. Create integration scaffold if missing (uses template; existing files are never overwritten).
+const integrationDir      = path.join(automationDir, 'integration');
+const integrationScaffold = path.resolve(__dirname, '..', 'templates', 'integration-scaffold');
+const integrationReadme   = path.join(integrationDir, 'README.md');
+const loadReadme          = path.join(automationDir, 'load', 'README.md');
 if (!fs.existsSync(integrationReadme)) {
   if (!dryRun) {
-    fs.mkdirSync(path.dirname(integrationReadme), { recursive: true });
-    fs.writeFileSync(integrationReadme,
-      '# Integration Tests\n\n> Placeholder for API/integration tests (k6, JMeter, Azure Load Testing, etc.).\n> Each tool gets its own subdirectory.\n', 'utf8');
+    fs.mkdirSync(integrationDir, { recursive: true });
+    for (const file of ['package.json', 'playwright.config.ts', 'global-setup.ts', 'README.md', '.env.example']) {
+      const dest = path.join(integrationDir, file);
+      if (!fs.existsSync(dest)) {
+        fs.copyFileSync(path.join(integrationScaffold, file), dest);
+        updated.push(dest);
+        console.log(`  [created] ${path.relative(cwd, dest)}`);
+      }
+    }
+    const integrationTestsDir = path.join(integrationDir, 'tests');
+    fs.mkdirSync(integrationTestsDir, { recursive: true });
+    const exampleSpec = path.join(integrationTestsDir, 'example.spec.ts');
+    if (!fs.existsSync(exampleSpec)) {
+      fs.copyFileSync(path.join(integrationScaffold, 'tests', 'example.spec.ts'), exampleSpec);
+      updated.push(exampleSpec);
+      console.log(`  [created] ${path.relative(cwd, exampleSpec)}`);
+    }
+  } else {
+    updated.push(integrationReadme);
+    console.log(`  [created] ${path.relative(cwd, integrationReadme)}`);
   }
-  updated.push(integrationReadme);
-  console.log(`  [created] ${path.relative(cwd, integrationReadme)}`);
 }
 if (!fs.existsSync(loadReadme)) {
   if (!dryRun) {

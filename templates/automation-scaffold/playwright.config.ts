@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+export const SESSION_TTL_MS = Number(process.env.QA_SESSION_TTL_MS ?? 2 * 60 * 60 * 1000);
+
 // -------------------------------------------------------------------
 // Validate required environment variables at config load time
 // -------------------------------------------------------------------

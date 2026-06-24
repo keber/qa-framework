@@ -227,7 +227,7 @@ for (const file of ['playwright.config.ts', 'global-setup.ts', '.env.example', '
 }
 const fixturesDir = path.join(e2eScaffoldDir, 'fixtures');
 fs.mkdirSync(fixturesDir, { recursive: true });
-for (const file of ['auth.ts', 'test-helpers.ts']) {
+for (const file of ['auth.ts', 'test-helpers.ts', 'base.ts']) {
   const dest = path.join(fixturesDir, file);
   if (!fs.existsSync(dest)) {
     fs.copyFileSync(path.join(scaffoldSrc, 'fixtures', file), dest);
@@ -235,9 +235,26 @@ for (const file of ['auth.ts', 'test-helpers.ts']) {
   }
 }
 
-// --- Integration + Load test placeholders ---
-writeIfMissing(path.join(automationDir, 'integration', 'README.md'),
-`# Integration Tests\n\n> Placeholder for API/integration tests (k6, JMeter, Azure Load Testing, etc.).\n> Each tool gets its own subdirectory.\n`);
+// --- Integration scaffold (lives in 07-automation/integration/) ---
+const integrationDir      = path.join(automationDir, 'integration');
+const integrationScaffold = path.resolve(__dirname, '..', 'templates', 'integration-scaffold');
+fs.mkdirSync(integrationDir, { recursive: true });
+for (const file of ['package.json', 'playwright.config.ts', 'global-setup.ts', 'README.md', '.env.example']) {
+  const dest = path.join(integrationDir, file);
+  if (!fs.existsSync(dest)) {
+    fs.copyFileSync(path.join(integrationScaffold, file), dest);
+    console.log(`  [created] ${path.relative(cwd, dest)}`);
+  }
+}
+const integrationTestsDir = path.join(integrationDir, 'tests');
+fs.mkdirSync(integrationTestsDir, { recursive: true });
+const exampleSpec = path.join(integrationTestsDir, 'example.spec.ts');
+if (!fs.existsSync(exampleSpec)) {
+  fs.copyFileSync(path.join(integrationScaffold, 'tests', 'example.spec.ts'), exampleSpec);
+  console.log(`  [created] ${path.relative(cwd, exampleSpec)}`);
+}
+
+// --- Load test placeholder ---
 writeIfMissing(path.join(automationDir, 'load', 'README.md'),
 `# Load Tests\n\n> Placeholder for load and performance tests.\n> Each tool gets its own subdirectory (e.g. k6/, jmeter/).\n`);
 
