@@ -47,7 +47,7 @@ const warnings = [];
 // -----------------------------------------------------------------------
 const requiredFolders = [
   '00-standards',
-  '05-test-plans',
+  '05-test-execution',
   '06-defects',
   '07-automation',
 ];
@@ -71,7 +71,7 @@ const SPEC_FILES = [
 ];
 
 const SKIP_DIRS = new Set([
-  '00-guides', '00-standards', '05-test-plans',
+  '00-guides', '00-standards', '05-test-execution',
   '06-defects', '07-automation', '08-azure-integration',
 ]);
 
