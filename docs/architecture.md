@@ -2,8 +2,8 @@
 
 ## Framework Architecture
 
-**Version**: 1.6.0  
-**Date**: 2026-04-29
+**Version**: 1.11.4  
+**Date**: 2026-07-08
 
 ---
 
@@ -84,7 +84,7 @@
 │  ├── 08-azure-integration/       <- optional ADO integration                │
 │  └── memory/                     <- agent learnings (project-maintained)    │
 │                                                                             │
-│  .github/copilot-instructions.md <- generated (framework-owned)            │
+│  .github/instructions/qa-framework.instructions.md <- generated (framework) │
 │  .github/skills/                 <- copied from package (framework-owned)  │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

@@ -365,7 +365,7 @@ The `AGENT-NEXT-STEPS.md` is the agent's task queue for the current sprint. It i
 **Design principles (SRP + KISS)**:
 - Contains **one active sprint only** — no history, no completed checklists
 - Three sections maximum: module status table, active sprint checklist, context references
-- Does not repeat standing instructions already in `copilot-instructions.md`
+- Does not repeat standing instructions already in `qa-framework.instructions.md`
 - Detailed environment notes and patterns belong in `qa/memory/`, referenced from here
 
 When a sprint completes, the agent **moves** the completed checklist to `qa/README.md → ## Sprint History` and **deletes** that section from this file.

@@ -61,7 +61,7 @@ Optional (any time after Stage 4):
 |---|---|---|
 | `qa-module-analysis` | Stage 1 process (4 phases) | `exploration-checklist.md`, `spec-file-formats.md` |
 | `qa-spec-generation` | Stage 2 rules + anti-patterns | `spec-file-formats.md` (shared with qa-module-analysis) |
-| `qa-test-plan` | Stage 3 — priority + feasibility rules | `priority-and-feasibility.md` (includes full template) |
+| `qa-test-plan` | Stage 3 — Plan de Pruebas generation | `plan-de-pruebas-template.md` (includes priority + feasibility rules) |
 | `qa-test-cases` | Stage 4 — TC document rules | `test-case-template.md` |
 | `qa-automation` | Stage 5 — patterns + completion checklist | `patterns.md`, `config-checklist.md` |
 | `qa-test-stabilization` | Stage 5b — 8 steps + confidence scoring | `classification-protocol.md` (includes report template) |

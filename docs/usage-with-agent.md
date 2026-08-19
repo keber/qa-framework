@@ -46,7 +46,7 @@ This framework is designed so that an IDE agent (such as GitHub Copilot in VS Co
 
 ### Option A — Workspace instructions file (recommended)
 
-`init` generates `.github/copilot-instructions.md` automatically. It contains the full
+`init` generates `.github/instructions/qa-framework.instructions.md` automatically. It contains the full
 pipeline sequencer with 11 agent behavior rules, the QA pipeline table, and ADO detection.
 No manual setup needed.
 

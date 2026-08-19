@@ -21,7 +21,8 @@
     "postinstall": "node scripts/init.js --skip-if-exists",
     "init": "node scripts/cli.js init",
     "generate": "node scripts/cli.js generate",
-    "validate": "node scripts/cli.js validate"
+    "validate": "node scripts/cli.js validate",
+    "version": "node scripts/sync-version.js && git add README.md .github/copilot-instructions.md"
   },
   "files": [
     "agent-instructions/",
