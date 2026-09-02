@@ -24,7 +24,7 @@ This project uses `@keber/qa-framework` v{{VERSION}} for spec-driven automated t
 ## Azure DevOps integration
 
 Before any ADO operation, check if `.github/skills/ado-qa/` exists or if
-`integrations.ado.enabled` is `true` in `qa/qa-framework.config.json`. If either
+`integrations.azureDevOps.enabled` is `true` in `qa/qa-framework.config.json`. If either
 condition is met, run `/qa-ado-integration` (see `.claude/commands/`), which loads
 `.github/skills/qa-ado-integration/SKILL.md`, and use it for all ADO interactions
 (work items, test plans, test cases, bugs, etc.).
