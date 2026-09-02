@@ -15,6 +15,9 @@
 const fs   = require('fs');
 const path = require('path');
 
+const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
+const { AGENT_NAMES, isSprintCycleEnabled, buildAgentContent, agentFileName } = require('./lib/claude-agents');
+
 // --- Parse args ---
 const args            = process.argv.slice(2);
 const configFlag      = args.indexOf('--config');
@@ -314,6 +317,32 @@ const copilotInstrContent = fs.readFileSync(instrTemplatePath, 'utf8')
   .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
 writeIfMissing(copilotInstrPath, copilotInstrContent);
 
+// --- .claude/commands/qa-*.md - thin wrappers pointing at .github/skills/ ---
+const claudeCommandsDest = path.join(cwd, '.claude', 'commands');
+fs.mkdirSync(claudeCommandsDest, { recursive: true });
+for (const skillName of discoverSkillNames(skillsSrc)) {
+  writeIfMissing(path.join(claudeCommandsDest, commandFileName(skillName)), buildCommandContent(skillName));
+}
+
+// --- .claude/rules/qa-framework.md - always-loaded rules (Claude Code equivalent of applyTo: '**') ---
+const claudeRulesPath  = path.join(cwd, '.claude', 'rules', 'qa-framework.md');
+const rulesTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.rules.md');
+const claudeRulesContent = fs.readFileSync(rulesTemplatePath, 'utf8')
+  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
+writeIfMissing(claudeRulesPath, claudeRulesContent);
+
+// --- .claude/agents/qa-*.md - optional ANALISIS/PLAN sprint-cycle mode (Claude Code only) ---
+// Gated by integrations.azureDevOps.sprintCycle.enabled. No .github/ equivalent: Claude
+// Code subagents with per-agent tools/model frontmatter have no Copilot counterpart.
+if (isSprintCycleEnabled(config)) {
+  const templatesDir = path.resolve(__dirname, '..', 'templates');
+  const claudeAgentsDest = path.join(cwd, '.claude', 'agents');
+  fs.mkdirSync(claudeAgentsDest, { recursive: true });
+  for (const agentName of AGENT_NAMES) {
+    writeIfMissing(path.join(claudeAgentsDest, agentFileName(agentName)), buildAgentContent(agentName, templatesDir, config));
+  }
+}
+
 // --- AGENT-NEXT-STEPS.md — readable by the agent after install ---
 const nextStepsContent = `# ✅ @keber/qa-framework installed successfully
 
@@ -324,6 +353,7 @@ const nextStepsContent = `# ✅ @keber/qa-framework installed successfully
 
 - \`qa/\` folder structure with spec templates and agent instructions
 - \`.github/instructions/qa-framework.instructions.md\` with QA agent behavior rules (framework-owned, safe to upgrade)
+- \`.claude/rules/qa-framework.md\` and \`.claude/commands/qa-*.md\` - equivalent Claude Code artifacts (framework-owned, safe to upgrade)
 
 ## Required next steps
 
@@ -368,6 +398,11 @@ console.log('  Installed:');
 console.log('    qa/                    QA directory structure + spec templates');
 console.log('    .github/skills/        QA agent skills (8 stages)');
 console.log('    .github/instructions/  qa-framework.instructions.md');
+console.log('    .claude/commands/      qa-*.md (Claude Code slash commands)');
+console.log('    .claude/rules/         qa-framework.md (Claude Code always-loaded rules)');
+if (isSprintCycleEnabled(config)) {
+  console.log('    .claude/agents/        qa-analisis/qa-plan/qa-asesoria/qa-informe-resultados.md (ANALISIS/PLAN mode)');
+}
 console.log('');
 console.log('  Optional integrations:');
 if (playwrightInstalled) {

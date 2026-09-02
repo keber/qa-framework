@@ -69,7 +69,14 @@
       "variableGroup": "{{ADO_VARIABLE_GROUP}}",
       "pipelineFile": "qa/08-azure-integration/pipelines/azure-pipeline-qa.yml",
       "moduleRegistry": "qa/08-azure-integration/module-registry.json",
-      "reporterPackage": "@alex_neo/playwright-azure-reporter"
+      "reporterPackage": "@alex_neo/playwright-azure-reporter",
+      "sprintCycle": {
+        "enabled": false,
+        "sprintDurationDays": 8,
+        "manualTestingTimeboxDays": 2,
+        "dateFormat": "dd-mm-aaaa",
+        "timezone": "America/Santiago"
+      }
     }
   },
 

@@ -1,0 +1,49 @@
+schema: spec-driven
+
+context: |
+  Project: qa-framework (@keber/qa-framework)
+  Tech stack: Node.js (>=18) npm package, CommonJS, no framework/bundler.
+  Type: CLI/library authoring tool. main=scripts/index.js, bin=scripts/cli.js.
+  Purpose: scaffolds a QA methodology (qa/ directory, skills, templates, agent
+  instructions) into consumer projects via `npm install` postinstall hook.
+  Architecture: scripts/ (CLI commands: init, generate, validate, upgrade,
+  sync-version), skills/ (8 domain SKILL.md files copied into consumer
+  projects), templates/ (spec/test-case/defect/instructions templates),
+  integrations/ (optional Playwright, ADO PowerShell, playwright-azure-reporter).
+  Testing: No automated test suite detected in this repo (no test script in
+  package.json, no jest/vitest/mocha config, no *.test.js files at repo scope).
+  Validation is currently manual via `npm run validate` (scripts/validate.js)
+  and the postinstall smoke-path (`--skip-if-exists`).
+  Style: CommonJS scripts, Markdown-first artifacts (SKILL.md, templates),
+  UTF-8 no-BOM encoding required per .github/copilot-instructions.md
+  formatting rules (no em-dash/en-dash/ellipsis/smart quotes/arrows in
+  generated content).
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes (this package is consumed via
+      npm install by other repos; breaking changes to skills/ or scripts/
+      affect all consumer projects on next upgrade).
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Consider impact on the install/upgrade flow (postinstall, --skip-if-exists)
+      and on consumer projects' .github/skills for any change to skills/ or scripts/
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns (CommonJS, scripts/ CLI structure)
+    - Preserve UTF-8 no-BOM encoding and the banned-character rules from
+      .github/copilot-instructions.md for any generated content
+    tdd: false           # No test runner detected; TDD not enforceable yet
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas

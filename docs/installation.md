@@ -157,6 +157,34 @@ Edit `qa/qa-framework.config.json` (or `qa-framework.config.json` at project roo
 Use environment variables:
 
 - `ADO_PAT` — Personal Access Token
+
+#### Optional: ANALISIS/PLAN agent mode (Claude Code only)
+
+Gated by `integrations.azureDevOps.sprintCycle.enabled`. When `true`, `init`/`upgrade`
+generate four Claude Code subagents (`.claude/agents/qa-analisis.md`, `qa-plan.md`,
+`qa-asesoria.md`, `qa-informe-resultados.md`) for a sprint-centric manual testing
+workflow parallel to the 6-stage pipeline. See
+[docs/usage-with-agent.md](usage-with-agent.md) for details.
+
+```json
+{
+  "integrations": {
+    "azureDevOps": {
+      "enabled": true,
+      "sprintCycle": {
+        "enabled": true,
+        "sprintDurationDays": 8,
+        "manualTestingTimeboxDays": 2,
+        "dateFormat": "dd-mm-aaaa",
+        "timezone": "America/Santiago"
+      }
+    }
+  }
+}
+```
+
+All `sprintCycle` fields are optional; omitted fields fall back to neutral framework
+defaults (8-day sprint, 2-day manual testing timebox, `dd-mm-aaaa`, `America/Santiago`).
 - `ADO_PLAN_ID` — Test Plan ID (can also go in `module-registry.json`)
 - `ADO_SUITE_ID` — Suite ID
 

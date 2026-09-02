@@ -1,12 +1,14 @@
 # docs/usage-with-agent.md
 
-## Using `qa-framework` with an IDE Agent (GitHub Copilot)
+## Using `qa-framework` with an IDE Agent (GitHub Copilot or Claude Code)
 
 ---
 
 ## Overview
 
-This framework is designed so that an IDE agent (such as GitHub Copilot in VS Code) can:
+`init` and `upgrade` always generate artifacts for both GitHub Copilot and Claude Code
+in parallel - there is no agent detection. This framework is designed so that either
+IDE agent can:
 
 1. Understand the QA structure by reading the agent instruction files
 2. Navigate the `qa/` directory predictably
@@ -42,7 +44,7 @@ This framework is designed so that an IDE agent (such as GitHub Copilot in VS Co
 
 ---
 
-## Setting Up Agent Instructions in VS Code
+## Setting Up Agent Instructions in VS Code (GitHub Copilot)
 
 ### Option A — Workspace instructions file (recommended)
 
@@ -72,6 +74,77 @@ For each major QA task, ask the agent to load the relevant skill:
 Load the qa-automation skill (.github/skills/qa-automation/SKILL.md) and implement
 tests for the submodule {name}
 ```
+
+---
+
+## Setting Up Agent Instructions in Claude Code
+
+`init` and `upgrade` generate two Claude-Code-native artifacts automatically, no manual
+setup needed:
+
+- `.claude/rules/qa-framework.md` - the Claude Code equivalent of the Copilot
+  `.instructions.md` file. It has no frontmatter, which means it loads unconditionally in
+  every session (the same effect as `applyTo: '**'`). It contains the same 11 agent
+  behavior rules and pipeline table as the Copilot instructions, with every skill
+  reference expressed as a `/qa-{name}` slash command instead of "load this file".
+- `.claude/commands/qa-{name}.md` - one thin wrapper per skill, generated dynamically
+  from whatever folders exist under `.github/skills/` at install/upgrade time. Each
+  wrapper is a single instruction: `Read the full skill at .github/skills/qa-{name}/SKILL.md
+  FIRST, then follow its instructions exactly`, plus the stage prerequisite. There is zero
+  duplication of skill content and therefore zero drift - if a skill is updated, every
+  command that points to it picks up the change with no regeneration needed.
+
+### Using a command
+
+In a Claude Code session, invoke the pipeline stage directly:
+
+```
+/qa-module-analysis
+```
+
+Claude reads `.github/skills/qa-module-analysis/SKILL.md` and follows it exactly, the
+same way the Copilot pipeline table routes to that file.
+
+### Regenerating after an upgrade
+
+```bash
+npx qa-framework upgrade
+```
+
+This refreshes both `.claude/commands/qa-*.md` and `.claude/rules/qa-framework.md` the
+same safe way it refreshes the Copilot artifacts (framework-owned, always overwritten
+with the current version; nothing else under `.claude/` is touched).
+
+---
+
+## Optional: ANALISIS/PLAN Mode (Claude Code only, ADO-gated)
+
+Some teams run a sprint-centric manual testing workflow in parallel with the 6-stage
+pipeline: an analysis document, a test plan trace-linked to Azure DevOps work items,
+ad-hoc QA advisory chat, and a sprint closing results report. This mode is:
+
+- **Optional** - off by default.
+- **Gated** by `integrations.azureDevOps.sprintCycle.enabled` in
+  `qa/qa-framework.config.json` (it requires Azure DevOps enabled, since three of the
+  four agents depend on ADO work items or an ADO-generated execution report).
+- **Claude Code only, by design, not by omission.** Each agent is a Claude Code subagent
+  with its own `tools`/`model` frontmatter (e.g. `qa-asesoria` intentionally has no
+  `Write`/`Bash`). GitHub Copilot has no equivalent primitive, so no `.github/` artifact
+  is generated for this mode.
+
+When enabled, `init`/`upgrade` generate four subagents under `.claude/agents/`:
+
+| Agent | Purpose |
+|---|---|
+| `qa-analisis.md` | Analysis document: test universe, automation feasibility, P0-P3 prioritization, excluded universe, traceability matrix |
+| `qa-plan.md` | Default mode: executive summary + a trace-linked test case table, executable within the configured manual-testing timebox |
+| `qa-asesoria.md` | Chat-only QA advisory (no `Write`/`Bash`) - answers point questions, redirects to `qa-plan`/`qa-analisis` when a full document is actually needed |
+| `qa-informe-resultados.md` | Narrative sprint closing report built from an execution report already produced by the `qa-ado-integration` skill; updates incrementally, never overwrites prior sections |
+
+Sprint duration, manual-testing timebox, date format, and timezone are parameterized
+from `integrations.azureDevOps.sprintCycle` (with neutral defaults - 8-day sprint,
+2-day timebox, `dd-mm-aaaa`, `America/Santiago` - when a field is omitted). See
+[docs/installation.md](installation.md) for the config shape.
 
 ---
 
@@ -124,7 +197,7 @@ tests for the submodule {name}
 
 ### DO
 
-- Read `qa/AGENT-NEXT-STEPS.md` at the start of each conversation (auto-enforced by copilot-instructions.md)
+- Read `qa/AGENT-NEXT-STEPS.md` at the start of each conversation (auto-enforced by `.github/instructions/qa-framework.instructions.md` for Copilot, or `.claude/rules/qa-framework.md` for Claude Code)
 - Load the relevant skill from `.github/skills/` before starting any QA task
 - Save all artifacts in the exact path specified by `qa/QA-STRUCTURE-GUIDE.md`
 - Use TC-ID, RN-ID, FL-ID naming consistently
@@ -181,7 +254,8 @@ This performs:
 ## Continuing from a Previous Session
 
 The agent reads `qa/AGENT-NEXT-STEPS.md` automatically at the start of every conversation
-(enforced by `.github/copilot-instructions.md` rule 0). For additional context:
+(enforced by rule 0 in `.github/instructions/qa-framework.instructions.md` for Copilot,
+or `.claude/rules/qa-framework.md` for Claude Code). For additional context:
 
 ```
 "Read qa/README.md and qa/memory/INDEX.md, then tell me where we left off."

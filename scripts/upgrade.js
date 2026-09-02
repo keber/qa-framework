@@ -46,6 +46,9 @@
 const fs   = require('fs');
 const path = require('path');
 
+const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
+const { AGENT_NAMES, isSprintCycleEnabled, buildAgentContent, agentFileName } = require('./lib/claude-agents');
+
 const args   = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 
@@ -95,6 +98,33 @@ const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framewo
 const copilotContent = fs.readFileSync(instrTemplatePath, 'utf8')
   .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
 forceWrite(copilotInstrPath, copilotContent);
+
+// ---------------------------------------------------------------------------
+// 2a. .claude/commands/qa-*.md and .claude/rules/qa-framework.md - overwrite (framework-owned)
+// ---------------------------------------------------------------------------
+const claudeCommandsDest = path.join(cwd, '.claude', 'commands');
+for (const skillName of discoverSkillNames(skillsSrc)) {
+  forceWrite(path.join(claudeCommandsDest, commandFileName(skillName)), buildCommandContent(skillName));
+}
+
+const claudeRulesPath   = path.join(cwd, '.claude', 'rules', 'qa-framework.md');
+const rulesTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.rules.md');
+const claudeRulesContent = fs.readFileSync(rulesTemplatePath, 'utf8')
+  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
+forceWrite(claudeRulesPath, claudeRulesContent);
+
+// ---------------------------------------------------------------------------
+// 2c. .claude/agents/qa-*.md - optional ANALISIS/PLAN sprint-cycle mode (Claude Code only)
+//     Gated by integrations.azureDevOps.sprintCycle.enabled. Framework-owned when the
+//     flag is on; never generated (and never deleted if it was hand-authored) otherwise.
+// ---------------------------------------------------------------------------
+if (isSprintCycleEnabled(config)) {
+  const templatesDir = path.resolve(__dirname, '..', 'templates');
+  const claudeAgentsDest = path.join(cwd, '.claude', 'agents');
+  for (const agentName of AGENT_NAMES) {
+    forceWrite(path.join(claudeAgentsDest, agentFileName(agentName)), buildAgentContent(agentName, templatesDir, config));
+  }
+}
 
 // ---------------------------------------------------------------------------
 // 2b. Migration: strip QA Framework section from old copilot-instructions.md
