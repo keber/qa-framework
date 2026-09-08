@@ -12,7 +12,7 @@ each pattern to the decoupled package approach.
 
 ---
 
-## Pattern A — Repo A style (redacted-repo-web)
+## Pattern A - Repo A style (redacted-repo-web)
 
 ### Characteristics
 
@@ -61,7 +61,7 @@ each pattern to the decoupled package approach.
 
 4. **Move existing spec files** (no structural changes needed):
    ```
-   qa/07-automation/e2e/          ← keep your existing .spec.ts files here
+   qa/07-automation/e2e/          <- keep your existing .spec.ts files here
    ```
 
 5. **Add missing standard folders**:
@@ -70,7 +70,7 @@ each pattern to the decoupled package approach.
    ```
    Copy the standards templates:
    - `node_modules/keber/qa-framework/templates/defect-report.md`
-     → `qa/00-standards/bug-report-template.md`
+     -> `qa/00-standards/bug-report-template.md`
 
 6. **Update `package.json` in `qa/07-automation/`**:
    Replace the existing `gmoindustrial-qa-e2e` package name with your project name.
@@ -89,7 +89,7 @@ each pattern to the decoupled package approach.
 
 ---
 
-## Pattern B — Repo B style (redacted-repo)
+## Pattern B - Repo B style (redacted-repo)
 
 ### Characteristics
 
@@ -97,7 +97,7 @@ each pattern to the decoupled package approach.
 - Has `00-standards/` with naming-conventions, bug-template, TC-template, test-data-guidelines
 - Has `08-azure-integration/` with playwright-azure-reporter, inject-ado-ids.ps1, module-registry.json
 - Multi-module structure: 4 modules × 17+ submodules
-- Full ADO integration: Plans 22304/22794/22875, WI IDs 22957–23034
+- Full ADO integration: Plans 22304/22794/22875, WI IDs 22957-23034
 - Login: email-based auth
 
 ### Migration steps
@@ -133,15 +133,15 @@ each pattern to the decoupled package approach.
    }
    ```
 
-3. **Keep existing `00-standards/` files** — they are compliant with the framework.
+3. **Keep existing `00-standards/` files** - they are compliant with the framework.
    The framework's `templates/defect-report.md` is a generalization of the existing
    bug-report template; no changes required.
 
 4. **Keep existing `08-azure-integration/` files**:
-   - `module-registry.json` — compatible as-is
+   - `module-registry.json` - compatible as-is
    - Replace `inject-ado-ids.ps1` with the generalized version from
      `node_modules/keber/qa-framework/integrations/ado-powershell/scripts/inject-ado-ids.ps1`
-     (optional — existing script continues to work)
+     (optional - existing script continues to work)
 
 5. **Verify `.gitignore`** contains:
    ```
@@ -164,10 +164,10 @@ each pattern to the decoupled package approach.
 - **TC IDs**: The framework uses `[TC-MODULE-SUB-NNN]` format. Existing TCs with different
   formats (e.g., plain numbers like `[TC-001]`) can be migrated by renaming at the next
   spec refresh cycle; no immediate change required.
-- **ADO WI IDs**: Already injected IDs (`[22957]` prefixes) are compatible — the reporter
+- **ADO WI IDs**: Already injected IDs (`[22957]` prefixes) are compatible - the reporter
   reads the numeric prefix regardless of what follows.
 - **storageState files**: Existing `.auth/*.json` files are compatible with the scaffold's
-  `global-setup.ts` — no migration needed.
+  `global-setup.ts` - no migration needed.
 - **Package name**: The automation sub-package (`gmoindustrial-qa-e2e` or similar) is a
   private local package; renaming is optional cosmetic change.
 
