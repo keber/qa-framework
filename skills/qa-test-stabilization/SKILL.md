@@ -39,6 +39,14 @@ npx playwright test {file}.spec.ts --project={project} --reporter=list
 ```
 Do not trust CI-only failures until reproduced, or classify immediately as Category H (CI environment).
 
+Any finding produced by a standalone script - Node + Playwright run outside the project's test
+runner, such as an ad-hoc diagnosis script - must be confirmed through `npx playwright test` before
+it decides anything about a defect's status. A standalone script and the official suite have
+produced opposite, independently reproducible results for the same scenario: a polling diagnostic
+saw a toast 4/4 times while the official suite saw none, 6/6 across two runs. The defect had already
+been closed on the standalone evidence and had to be reopened. Standalone output is diagnostic
+input, never a verdict.
+
 ### Step 2 — Classify each failure
 
 Use the classification protocol: `references/classification-protocol.md`
@@ -72,7 +80,9 @@ spec. If the spec says the condition should hold and the app violates it →
 the original assertion was *correct* and the app is broken → use `test.fail()` 
 + open a defect. Do NOT invert the assertion.  
 A test flipped from failing to passing by inverting its assertion is masking 
-a defect - which is worse than a failing test.
+a defect - which is worse than a failing test.  
+The confirmation that the app violates the spec must come from the official 
+suite, not from an isolated or standalone script.
 
 ### Step 4 — Confidence scoring
 
@@ -123,6 +133,7 @@ Required sections:
 | Spec is ground truth | Never change spec to match wrong behavior |
 | Unresolvable → skip | With PENDING-CODE annotation |
 | Report required | Every stabilization session produces a report |
+| Official suite is source of truth | Only `npx playwright test`, run with the project's real config and fixtures, determines a test's or a defect's status. Standalone diagnostic scripts provide complementary evidence only - never grounds to close a defect or flip a `test.fail()` |
 
 ---
 
