@@ -87,7 +87,27 @@ async function setupWithBrowserLogin(): Promise<void> {
 
     await page.locator(emailSelector).waitFor({ state: 'visible', timeout: 30_000 });
     await page.locator(emailSelector).fill(email);
-    await page.locator(passwordSelector).fill(password);
+    // Trace safety: Playwright records fill() argument values in traces, so a project
+    // that enables trace/video capture would persist the plaintext password in its
+    // artifacts. Setting the value through evaluate() keeps it out of the trace.
+    // Do not "simplify" this back to fill().
+    // The input/change events are required because assigning .value directly does
+    // not notify SPA frameworks (Blazor/Radzen bind on those events).
+    // evaluate() has no auto-wait, so the explicit waitFor replaces the one that
+    // locator().fill() performed implicitly.
+    await page.locator(passwordSelector).waitFor({ state: 'visible', timeout: 30_000 });
+    await page.evaluate(
+      ([selector, pwd]) => {
+        const input = document.querySelector(selector) as HTMLInputElement | null;
+        if (!input) {
+          throw new Error(`[qa-framework] Password input not found for selector: ${selector}`);
+        }
+        input.value = pwd;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      },
+      [passwordSelector, password] as const
+    );
     await page.locator(submitSelector).click();
     await page.waitForSelector(successSelector, { timeout: 60_000 });
 
