@@ -22,6 +22,7 @@
     "init": "node scripts/cli.js init",
     "generate": "node scripts/cli.js generate",
     "validate": "node scripts/cli.js validate",
+    "check-accents": "node scripts/check-spanish-accents.js",
     "test": "node --test \"test/**/*.test.js\"",
     "version": "node scripts/sync-version.js && git add README.md .github/copilot-instructions.md"
   },
