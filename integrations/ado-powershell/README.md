@@ -1,4 +1,4 @@
-# Integration — ADO PowerShell Scripts
+# Integration - ADO PowerShell Scripts
 
 PowerShell scripts for Azure DevOps Test Plan management.
 All scripts are parameterized and project-agnostic.

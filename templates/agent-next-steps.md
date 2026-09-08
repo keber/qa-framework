@@ -1,6 +1,6 @@
-# AGENT-NEXT-STEPS — {PROJECT_NAME}
+# AGENT-NEXT-STEPS - {PROJECT_NAME}
 
-> **Sprint activo: Sprint {N} — {SPRINT_NAME}**
+> **Sprint activo: Sprint {N} - {SPRINT_NAME}**
 > Lee este archivo primero. Lee los archivos referenciados solo cuando la tarea lo requiera.
 
 ---
@@ -11,11 +11,11 @@
 |---|---|---|---|---|
 | {MODULE_NAME} / {SUBMODULE_NAME} | ✅ | ✅ | ⬜ | Sprint {N} activo |
 
-> Actualizar esta tabla cuando un sprint se complete. Historial de sprints completados → `qa/README.md ## Sprint History`.
+> Actualizar esta tabla cuando un sprint se complete. Historial de sprints completados -> `qa/README.md ## Sprint History`.
 
 ---
 
-## Sprint {N} — Tareas pendientes
+## Sprint {N} - Tareas pendientes
 
 - [ ] {Tarea 1}
 - [ ] {Tarea 2}
@@ -25,28 +25,28 @@
 
 **Precondiciones**: {Dependencias de datos o módulos previos, si aplica}
 
-**Notas específicas**: {Quirks del DOM, rutas, selectores problemáticos conocidos — o eliminar esta línea}
-→ Si las notas son extensas, guardarlas en `qa/memory/{sprint-name}-discovery.md` y referenciar aquí.
+**Notas específicas**: {Quirks del DOM, rutas, selectores problemáticos conocidos - o eliminar esta línea}
+-> Si las notas son extensas, guardarlas en `qa/memory/{sprint-name}-discovery.md` y referenciar aquí.
 
 ---
 
 ## Contexto obligatorio antes de codificar
 
-- Patrones del proyecto: `qa/memory/INDEX.md` → cargar solo los archivos relevantes
+- Patrones del proyecto: `qa/memory/INDEX.md` -> cargar solo los archivos relevantes
 - Referencia de estilo: `qa/07-automation/e2e/tests/{module}/` (leer suite existente más reciente)
 
 ---
 
-## Sprints siguientes (solo referencia — sin checklists)
+## Sprints siguientes (solo referencia - sin checklists)
 
-- **Sprint {N+1}**: {Descripción breve — qué módulo/submódulo}
+- **Sprint {N+1}**: {Descripción breve - qué módulo/submódulo}
 - **Sprint {N+2}**: {Descripción breve}
 
 ---
 
 <!-- ═══════════════════════════════════════════════════════════════════
   REGLAS DE MANTENIMIENTO DE ESTE ARCHIVO (para el agente)
-  ——————————————————————————————————————————————————————————————————
+  ------------------------------------------------------------------
   1. MÁXIMO UN SPRINT ACTIVO. Cuando un sprint se completa:
        a. Mover su checklist al README.md bajo ## Sprint History
        b. Borrar esa sección de este archivo

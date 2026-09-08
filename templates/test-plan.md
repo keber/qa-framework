@@ -4,12 +4,12 @@
 >
 > This file is retained for reference only.
 
-# Test Plan — {{MODULE_NAME}}
+# Test Plan - {{MODULE_NAME}}
 
 **Plan ID**: TP-{{MODULE}}-{{VERSION}}
 **Module**: {{MODULE_NAME}}
 **Sprint / Release**: Sprint {{NNN}}
-**Prepared by**: (agent output — reviewed by human)
+**Prepared by**: (agent output - reviewed by human)
 **Date**: YYYY-MM-DD
 **ADO Test Plan**: #{ADO_PLAN_ID} (if ADO enabled)
 
@@ -74,7 +74,7 @@
 
 | Scenario | Feasible? | Reason if not |
 |----------|-----------|---------------|
-| Happy path create | Yes | — |
+| Happy path create | Yes | - |
 | Export to PDF | No | Requires visual validation |
 | Third-party OAuth | No | External system |
 

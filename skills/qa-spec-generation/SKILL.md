@@ -10,10 +10,10 @@ description: >
 
 # QA Skill: Specification Generation (Stage 2 of 6)
 
-**Stage**: 2 — Specification Generation  
+**Stage**: 2 - Specification Generation  
 **Prerequisite**: `00-inventory.md` must exist (Stage 1 complete)  
 **Output**: Complete 6-file spec set under `qa/01-specifications/module-{name}/submodule-{name}/`  
-**Next stage**: Stage 3 — Test Plan (`qa-test-plan`)
+**Next stage**: Stage 3 - Test Plan (`qa-test-plan`)
 
 > **Pipeline rule**: Do not generate specs for features marked `PENDING-CODE` in the inventory.
 > Do not create TCs without having observed or been given the behavior being tested.
@@ -41,8 +41,8 @@ Generate or update each file following the formats in `../qa-module-analysis/ref
 
 ### `01-business-rules.md`
 - Format: `RN-{MODULE}-{NNN}` with type, trigger, behavior, error message (exact UI text)
-- **Rule sources**: every required field → 1 RN; every unique constraint → 1 RN; every state transition → 1 RN; every role restriction → 1 RN
-- Minimum 5 rules per submodule; typical 8–15
+- **Rule sources**: every required field -> 1 RN; every unique constraint -> 1 RN; every state transition -> 1 RN; every role restriction -> 1 RN
+- Minimum 5 rules per submodule; typical 8-15
 
 ### `02-workflows.md`
 - Format: `FL-{MODULE}-{NNN}` with actor, trigger, precondition, ASCII/Mermaid flow diagram, postcondition
@@ -61,7 +61,7 @@ Generate or update each file following the formats in `../qa-module-analysis/ref
 ### `05-test-scenarios.md`
 - Summary table at top (total TCs by priority and type)
 - TC format: `TC-{MODULE}-{SUBMODULE}-{NNN}` with priority, type, origin, automation feasibility, preconditions, steps, expected result
-- **Target**: 50–85 TCs per submodule
+- **Target**: 50-85 TCs per submodule
 - **Mandatory coverage categories** (≥1 TC each where applicable):
   - Access: unauthenticated user; role without permission
   - Happy path: primary workflow end-to-end

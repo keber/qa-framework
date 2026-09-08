@@ -106,7 +106,7 @@
 Create at: `qa/03-test-cases/automated/{module}-index.md`
 
 ```markdown
-# TC Index — {Module Display Name}
+# TC Index - {Module Display Name}
 
 | TC ID | Title | Priority | Feasibility | Spec reference |
 |-------|-------|----------|-------------|---------------|
@@ -133,10 +133,10 @@ Create at: `qa/03-test-cases/automated/{module}-index.md`
 ### Defect links
 
 When skipping a step due to a bug:  
-✅ `Step 4 — SKIPPED: DEF-001 (ADO #21944). Switch defaults to OFF. Re-enable after fix.`
+✅ `Step 4 - SKIPPED: DEF-001 (ADO #21944). Switch defaults to OFF. Re-enable after fix.`
 
 ### TC isolation
 
-- Each TC is fully independent — no TC depends on state from a prior TC
+- Each TC is fully independent - no TC depends on state from a prior TC
 - All required data is provisioned in preconditions or `beforeAll`
-- CRUD TCs cover: create → verify → update → verify → delete → verify
+- CRUD TCs cover: create -> verify -> update -> verify -> delete -> verify

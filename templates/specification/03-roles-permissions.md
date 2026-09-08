@@ -1,4 +1,4 @@
-# Roles and Permissions — {{MODULE_NAME}}: {{SUBMODULE_NAME}}
+# Roles and Permissions - {{MODULE_NAME}}: {{SUBMODULE_NAME}}
 
 > **Module code**: {{MODULE_CODE}} | **Submodule code**: {{SUBMODULE_CODE}}  
 > **Last updated**: YYYY-MM-DD

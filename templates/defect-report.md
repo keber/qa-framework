@@ -1,4 +1,4 @@
-# Bug Report — DEF-{{PREFIX}}-{{NNN}}: {{Short Title}}
+# Bug Report - DEF-{{PREFIX}}-{{NNN}}: {{Short Title}}
 
 | Field | Value |
 |-------|-------|

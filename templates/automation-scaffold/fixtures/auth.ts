@@ -10,11 +10,11 @@
  *   await loginAs(page, 'admin');
  *
  * Alternatively, use storageState via global-setup.ts (recommended for
- * performance — avoids repeating the login flow on every test).
+ * performance - avoids repeating the login flow on every test).
  * Use loginAs() only in tests that need to validate the login flow itself
  * or switch users mid-test.
  *
- * Supported roles are driven by env vars — see .env.example.
+ * Supported roles are driven by env vars - see .env.example.
  */
 
 import { Page } from '@playwright/test';
@@ -26,7 +26,7 @@ interface LoginConfig {
   password:  string;
 }
 
-/** Map role name → credentials from environment variables */
+/** Map role name -> credentials from environment variables */
 function getCredentials(role: QARole): LoginConfig {
   switch (role) {
     case 'admin':
@@ -58,7 +58,7 @@ export async function loginAs(page: Page, role: QARole = 'default'): Promise<voi
   if (!email || !password) {
     throw new Error(
       `[qa-framework/auth] Missing credentials for role "${role}". ` +
-      `Check your .env file — expected ${role.toUpperCase()}_EMAIL and ${role.toUpperCase()}_PASSWORD.`
+      `Check your .env file - expected ${role.toUpperCase()}_EMAIL and ${role.toUpperCase()}_PASSWORD.`
     );
   }
 

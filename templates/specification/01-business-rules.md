@@ -1,4 +1,4 @@
-# Business Rules — {{MODULE_NAME}}: {{SUBMODULE_NAME}}
+# Business Rules - {{MODULE_NAME}}: {{SUBMODULE_NAME}}
 
 > **Module code**: {{MODULE_CODE}} | **Submodule code**: {{SUBMODULE_CODE}}  
 > **Last updated**: YYYY-MM-DD
@@ -32,7 +32,7 @@
 - **Type**: Access Control
 - **Trigger**: When user with role {{role}} navigates to {{URL}}
 - **Behavior**: {{redirect / error / empty page}}
-- **Notes**: —
+- **Notes**: -
 
 ---
 
@@ -42,7 +42,7 @@
 - **Trigger**: When {{action}} is performed on a record with status {{STATUS_A}}
 - **Behavior**: Record transitions from {{STATUS_A}} to {{STATUS_B}}
 - **Invalid state**: Attempting this action on status {{STATUS_C}} results in {{error}}
-- **Notes**: —
+- **Notes**: -
 
 ---
 
@@ -51,7 +51,7 @@
 - **Type**: Calculation
 - **Trigger**: When {{field}} or {{field}} changes
 - **Behavior**: {{calculated_field}} = {{formula}}
-- **Notes**: —
+- **Notes**: -
 
 ---
 
@@ -59,9 +59,9 @@
 
 - **Type**: Integration
 - **Trigger**: When {{action}} completes successfully
-- **Behavior**: {{external system}} is notified/called — {{what happens}}
+- **Behavior**: {{external system}} is notified/called - {{what happens}}
 - **Fallback**: {{what happens if external system fails}}
-- **Notes**: —
+- **Notes**: -
 
 ---
 

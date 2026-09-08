@@ -11,14 +11,14 @@
  *   - Reference the matching storageState in playwright.config.ts projects[].
  *
  * Environment variables required:
- *   QA_BASE_URL           — Base URL of the application under test
- *   QA_USER_EMAIL         — Default QA user email (or username/RUT)
- *   QA_USER_PASSWORD      — Default QA user password
- *   QA_LOGIN_PATH         — Relative path to the login page (default: /login)
- *   QA_LOGIN_EMAIL_SELECTOR    — CSS selector for the username/email input
- *   QA_LOGIN_PASSWORD_SELECTOR — CSS selector for the password input
- *   QA_LOGIN_SUBMIT_SELECTOR   — CSS selector for the submit button
- *   QA_LOGIN_SUCCESS_SELECTOR  — CSS selector that confirms successful login
+ *   QA_BASE_URL           - Base URL of the application under test
+ *   QA_USER_EMAIL         - Default QA user email (or username/RUT)
+ *   QA_USER_PASSWORD      - Default QA user password
+ *   QA_LOGIN_PATH         - Relative path to the login page (default: /login)
+ *   QA_LOGIN_EMAIL_SELECTOR    - CSS selector for the username/email input
+ *   QA_LOGIN_PASSWORD_SELECTOR - CSS selector for the password input
+ *   QA_LOGIN_SUBMIT_SELECTOR   - CSS selector for the submit button
+ *   QA_LOGIN_SUCCESS_SELECTOR  - CSS selector that confirms successful login
  *
  * See .env.example for all supported variables.
  */
