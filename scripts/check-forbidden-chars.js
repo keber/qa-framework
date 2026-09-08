@@ -33,7 +33,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const EXTENSIONS = ['.md', '.js', '.ts'];
+const EXTENSIONS = ['.md', '.js', '.ts', '.ps1'];
 
 // Code point -> { name, replacement }. Arrows are handled by range below.
 const FORBIDDEN = {
