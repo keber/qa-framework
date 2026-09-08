@@ -96,9 +96,9 @@ if (fs.existsSync(qaRoot)) {
 
       // Strict: automation spec must exist
       if (strict) {
-        const specTs = path.join(qaRoot, '07-automation', 'e2e', moduleDir, `${subDir}.spec.ts`);
+        const specTs = path.join(qaRoot, '07-automation', 'e2e', 'tests', moduleDir, `${subDir}.spec.ts`);
         if (!fs.existsSync(specTs)) {
-          warnings.push(`[STRICT] No automation spec found: qa/07-automation/e2e/${moduleDir}/${subDir}.spec.ts`);
+          warnings.push(`[STRICT] No automation spec found: qa/07-automation/e2e/tests/${moduleDir}/${subDir}.spec.ts`);
         }
       }
     }
