@@ -1,4 +1,4 @@
-# Suppliers — Inventory
+# Suppliers - Inventory
 
 **Module**: Suppliers (SUP)
 **Submodule**: Create / Edit / List

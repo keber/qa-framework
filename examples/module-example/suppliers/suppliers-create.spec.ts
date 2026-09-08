@@ -15,16 +15,16 @@
 
 import { test, expect } from '@playwright/test';
 
-// EXEC_IDX: unique per minute-window — prevents data collisions between runs
+// EXEC_IDX: unique per minute-window - prevents data collisions between runs
 const EXEC_IDX = Math.floor(Date.now() / 60_000) % 100_000;
 
 test.describe('Suppliers > Create @P0', () => {
 
   /**
-   * [TC-SUP-CR-001] Create supplier — happy path @P0
+   * [TC-SUP-CR-001] Create supplier - happy path @P0
    * Verifies the complete create flow for a valid supplier.
    */
-  test('[TC-SUP-CR-001] Create supplier — happy path @P0', async ({ page }) => {
+  test('[TC-SUP-CR-001] Create supplier - happy path @P0', async ({ page }) => {
     const supplierName = `QA-Supplier-${EXEC_IDX}`;
     const supplierRut  = `${EXEC_IDX}-K`;
     const supplierEmail = `qa-supplier-${EXEC_IDX}@example.com`;
@@ -57,10 +57,10 @@ test.describe('Suppliers > Create @P0', () => {
   });
 
   /**
-   * [TC-SUP-CR-002] Create supplier — required fields validation @P0
+   * [TC-SUP-CR-002] Create supplier - required fields validation @P0
    * Verifies that the form prevents submission when required fields are empty.
    */
-  test('[TC-SUP-CR-002] Create supplier — required fields validation @P0', async ({ page }) => {
+  test('[TC-SUP-CR-002] Create supplier - required fields validation @P0', async ({ page }) => {
     await page.goto('/suppliers');
     await page.locator('button:has-text("New Supplier")').click();
     await expect(page.locator('.supplier-modal')).toBeVisible();
@@ -79,12 +79,12 @@ test.describe('Suppliers > Create @P0', () => {
   });
 
   /**
-   * [TC-SUP-CR-003] Create supplier — duplicate RUT rejected @P0
+   * [TC-SUP-CR-003] Create supplier - duplicate RUT rejected @P0
    *
-   * NOTE: test.skip active — DEF-001: Duplicate RUT check not enforced server-side.
+   * NOTE: test.skip active - DEF-001: Duplicate RUT check not enforced server-side.
    *       Reactivate when ADO #99001 is resolved.
    */
-  test('[TC-SUP-CR-003] Create supplier — duplicate RUT rejected @P0', async ({ page }) => {
+  test('[TC-SUP-CR-003] Create supplier - duplicate RUT rejected @P0', async ({ page }) => {
     test.skip(true,
       'DEF-001: Duplicate RUT validation not enforced. Reactivate when ADO #99001 is resolved.'
     );

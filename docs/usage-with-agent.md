@@ -46,7 +46,7 @@ IDE agent can:
 
 ## Setting Up Agent Instructions in VS Code (GitHub Copilot)
 
-### Option A — Workspace instructions file (recommended)
+### Option A - Workspace instructions file (recommended)
 
 `init` generates `.github/instructions/qa-framework.instructions.md` automatically. It contains the full
 pipeline sequencer with 11 agent behavior rules, the QA pipeline table, and ADO detection.
@@ -58,7 +58,7 @@ To regenerate after an upgrade:
 npx qa-framework upgrade
 ```
 
-### Option B — Reference skills directly in the agent conversation
+### Option B - Reference skills directly in the agent conversation
 
 Paste a skill path into the Copilot chat:
 
@@ -66,7 +66,7 @@ Paste a skill path into the Copilot chat:
 Read .github/skills/qa-module-analysis/SKILL.md and analyze the module at {URL}
 ```
 
-### Option C — Individual task prompts
+### Option C - Individual task prompts
 
 For each major QA task, ask the agent to load the relevant skill:
 
