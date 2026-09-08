@@ -129,7 +129,7 @@ if (fs.existsSync(qaReadmeTemplate)) {
 // --- qa/memory/INDEX.md ---
 const memoryDir = path.join(qaRoot, 'memory');
 writeIfMissing(path.join(memoryDir, 'INDEX.md'),
-`# Memory Index — ${config.project?.displayName ?? config.project?.name ?? 'Project'}
+`# Memory Index - ${config.project?.displayName ?? config.project?.name ?? 'Project'}
 
 > The agent reads this file first before loading any memory file.
 > Add a row here whenever you create or update a file in this directory.
@@ -149,7 +149,7 @@ for (const file of ['ci-pipeline-findings.md', 'e2e-stabilization-patterns.md', 
 
 // --- 03-test-cases README (optional directory marker) ---
 writeIfMissing(path.join(qaRoot, '03-test-cases', 'README.md'),
-`# 03-test-cases/ — Optional Standalone Test Cases
+`# 03-test-cases/ - Optional Standalone Test Cases
 
 > **v1.7.0+:** The primary location for test cases (with detailed steps) is now
 > \`qa/02-test-plans/sprints/Sprint-{N}/Plan-de-Pruebas-{project}-Sprint-{N}-{module}.md\`.
@@ -286,7 +286,7 @@ const adoDir = path.join(qaRoot, '08-azure-integration');
 writeIfMissing(path.join(adoDir, 'README.md'), `# ADO Integration\n\nSee keber/qa-framework integrations/ado-powershell/ for setup instructions.\n`);
 writeIfMissing(path.join(adoDir, 'module-registry.json'), JSON.stringify({ modules: [] }, null, 2));
 
-// --- Skills → .github/skills/ ---
+// --- Skills -> .github/skills/ ---
 const skillsSrc = path.resolve(__dirname, '..', 'skills');
 const skillsDest = path.join(cwd, '.github', 'skills');
 fs.mkdirSync(skillsDest, { recursive: true });
@@ -301,7 +301,7 @@ if (fs.existsSync(skillsSrc)) {
   }
 }
 
-// --- QA structure guide → qa/QA-STRUCTURE-GUIDE.md ---
+// --- QA structure guide -> qa/QA-STRUCTURE-GUIDE.md ---
 const structureGuideSrc  = path.resolve(__dirname, '..', 'docs', 'folder-structure-guide.md');
 const structureGuideDest = path.join(qaRoot, 'QA-STRUCTURE-GUIDE.md');
 if (fs.existsSync(structureGuideSrc)) {
@@ -343,7 +343,7 @@ if (isSprintCycleEnabled(config)) {
   }
 }
 
-// --- AGENT-NEXT-STEPS.md — readable by the agent after install ---
+// --- AGENT-NEXT-STEPS.md - readable by the agent after install ---
 const nextStepsContent = `# ✅ @keber/qa-framework installed successfully
 
 > This file was generated automatically by the postinstall script.
@@ -392,7 +392,7 @@ const adoQaInstalledFinal = fs.existsSync(path.join(cwd, 'node_modules', '@keber
 const azureReporterInstalled = fs.existsSync(path.join(cwd, 'node_modules', '@alex_neo', 'playwright-azure-reporter'));
 
 console.log('');
-console.log('  @keber/qa-framework — scaffold complete');
+console.log('  @keber/qa-framework - scaffold complete');
 console.log('  ----------------------------------------');
 console.log('  Installed:');
 console.log('    qa/                    QA directory structure + spec templates');

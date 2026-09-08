@@ -23,6 +23,7 @@
     "generate": "node scripts/cli.js generate",
     "validate": "node scripts/cli.js validate",
     "check-accents": "node scripts/check-spanish-accents.js",
+    "check-chars": "node scripts/check-forbidden-chars.js",
     "test": "node --test \"test/**/*.test.js\"",
     "version": "node scripts/sync-version.js && git add README.md .github/copilot-instructions.md"
   },
