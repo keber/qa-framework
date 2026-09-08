@@ -1,8 +1,8 @@
-# Bug Report — DEF-{{NNN}}: {{Short Title}}
+# Bug Report — DEF-{{PREFIX}}-{{NNN}}: {{Short Title}}
 
 | Field | Value |
 |-------|-------|
-| Bug ID | DEF-{{NNN}} |
+| Bug ID | DEF-{{PREFIX}}-{{NNN}} |
 | Title | {{Short title (max 80 chars)}} |
 | Severity | Critical / High / Medium / Low |
 | Priority | P0 / P1 / P2 / P3 |
@@ -76,7 +76,7 @@
 **Test skip command added**:
 ```typescript
 test.skip(true,
-  'DEF-{{NNN}}: {{description}}. Reactivate when ADO #{{WI_ID}} is resolved.'
+  'DEF-{{PREFIX}}-{{NNN}}: {{description}}. Reactivate when ADO #{{WI_ID}} is resolved.'
 );
 ```
 

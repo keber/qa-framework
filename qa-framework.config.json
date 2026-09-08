@@ -27,7 +27,7 @@
     "testCaseIdPattern": "TC-{MODULE}-{SUBMODULE}-{NUM}",
     "businessRuleIdPattern": "RN-{MODULE}-{NUM}",
     "workflowIdPattern": "FL-{MODULE}-{NUM}",
-    "defectIdPattern": "DEF-{NUM}",
+    "defectIdPattern": "DEF-{PREFIX}-{NUM}",
     "testNamingPattern": "[{ID}] {title} @{priority}",
     "timestampFormat": "YYYY-MM-DD_HH-MM-SS",
     "tcPriorityLevels": ["P0", "P1", "P2", "P3"]
