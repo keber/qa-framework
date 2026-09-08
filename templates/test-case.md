@@ -1,4 +1,4 @@
-# Test Case — TC-{{MODULE}}-{{SUB}}-{{NNN}}: {{Title}}
+# Test Case - TC-{{MODULE}}-{{SUB}}-{{NNN}}: {{Title}}
 
 | Field | Value |
 |-------|-------|
@@ -11,8 +11,8 @@
 | Type | Functional / Integration / Regression / Smoke |
 | Execution | Manual / Automated / Both |
 | Automation file | `qa/07-automation/e2e/{{module}}/{{submodule}}.spec.ts` (if automated) |
-| Preconditions | {{List required setup — see 04-test-data.md}} |
-| Author | (agent output — reviewed by human) |
+| Preconditions | {{List required setup - see 04-test-data.md}} |
+| Author | (agent output - reviewed by human) |
 | Last updated | YYYY-MM-DD |
 
 ---

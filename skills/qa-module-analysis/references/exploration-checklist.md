@@ -63,9 +63,9 @@ For each configured test user role:
 
 ```
 Execute the primary happy path with appropriate test data
-Record each step (clickable element → navigation result → system state change)
+Record each step (clickable element -> navigation result -> system state change)
 Identify branch points (e.g., approve vs reject)
-Record state transitions (pending → approved → rejected)
+Record state transitions (pending -> approved -> rejected)
 ```
 
 ---
@@ -100,7 +100,7 @@ After completing all submodule files:
 ## Session Summary Template
 
 ```markdown
-# Session Summary — {YYYY-MM-DD}
+# Session Summary - {YYYY-MM-DD}
 
 ## Module analyzed
 {module-name} ({module-code})

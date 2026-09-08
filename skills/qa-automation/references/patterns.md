@@ -30,9 +30,9 @@ test.describe('{Feature Suite Name}', () => {
   });
 
   test.skip(
-    '[TC-{MODULE}-{SUB}-003] {TC title} @P1 — DEF-{NNN}: {description}. Reactivate when {ADO WI or DEF ID} is resolved.',
+    '[TC-{MODULE}-{SUB}-003] {TC title} @P1 - DEF-{NNN}: {description}. Reactivate when {ADO WI or DEF ID} is resolved.',
     async ({ page }) => {
-      // Write test as if bug is fixed — documents expected behavior
+      // Write test as if bug is fixed - documents expected behavior
     }
   );
 
@@ -41,7 +41,7 @@ test.describe('{Feature Suite Name}', () => {
 
 ---
 
-## Pattern 1: EXEC_IDX — Unique Test Data
+## Pattern 1: EXEC_IDX - Unique Test Data
 
 ```typescript
 const EXEC_IDX = Math.floor(Date.now() / 60_000) % 100_000;
@@ -70,7 +70,7 @@ export default async function globalSetup() {
 
   await page.goto(process.env.QA_BASE_URL + process.env.QA_LOGIN_PATH);
   await page.fill(process.env.QA_LOGIN_EMAIL_SELECTOR, process.env.QA_USER_EMAIL);
-  // Use evaluate() for password — excluded from traces
+  // Use evaluate() for password - excluded from traces
   await page.evaluate(
     ([sel, pwd]) => { (document.querySelector(sel) as HTMLInputElement).value = pwd; },
     [process.env.QA_LOGIN_PASSWORD_SELECTOR, process.env.QA_USER_PASSWORD]
@@ -83,23 +83,23 @@ export default async function globalSetup() {
 }
 ```
 
-For multiple roles: run login sequence **sequentially** (not in parallel — apps often reject concurrent sessions).
+For multiple roles: run login sequence **sequentially** (not in parallel - apps often reject concurrent sessions).
 
 ---
 
 ## Pattern 3: Fast-Fail for Status Checks
 
 ```typescript
-// BAD — hangs silently for full test timeout
+// BAD - hangs silently for full test timeout
 const status = await page.locator('.status-badge').textContent();
 
-// GOOD — fails fast if element not available
+// GOOD - fails fast if element not available
 const status = await page.locator('.status-badge').textContent({ timeout: 3_000 });
 ```
 
 ---
 
-## Pattern 4: Email Validation — 3-Layer Strategy
+## Pattern 4: Email Validation - 3-Layer Strategy
 
 ```typescript
 // Layer 1: HTTP route interception
@@ -168,7 +168,7 @@ await page.evaluate(
 ## Pattern 8: afterAll Cleanup for Data-Mutating Tests
 
 When a test assigns, creates, or modifies persistent data (e.g., assigning a role, linking a record),
-always implement `afterAll` cleanup — otherwise the second run finds a different state and fails.
+always implement `afterAll` cleanup - otherwise the second run finds a different state and fails.
 
 ```typescript
 afterAll(async () => {
@@ -184,11 +184,11 @@ afterAll(async () => {
 ```
 
 Rule: if beforeAll sets up a fixture by reading state from the API, afterAll must restore that same state.
-Design cleanup from the start — retrofitting it costs as many runs as the test itself.
+Design cleanup from the start - retrofitting it costs as many runs as the test itself.
 
 ---
 
-### Pattern 9: Debug Screenshots — Path-bound Artifacts
+### Pattern 9: Debug Screenshots - Path-bound Artifacts
 
 Screenshots MUST always be saved to `agentSettings.screenshotPath` defined in `qa/qa-framework.config.json`. Never save to the workspace root or any ad-hoc path.
 
@@ -196,23 +196,23 @@ Screenshots MUST always be saved to `agentSettings.screenshotPath` defined in `q
 // Read screenshotPath from config or use default
 const DIAG_DIR = 'qa/07-automation/e2e/diagnosis';
 
-// On test failure — capture state for diagnosis:
+// On test failure - capture state for diagnosis:
 await page.screenshot({ path: `${DIAG_DIR}/${SUBMODULE}-${tcId}-fail-${Date.now()}.png` });
 
 // In beforeAll for warm-up verification:
 await page.screenshot({ path: `${DIAG_DIR}/{submodule}-warmup.png` });
 
-// In inspection scripts (_inspect-*.js) — always use the same dir:
+// In inspection scripts (_inspect-*.js) - always use the same dir:
 await page.screenshot({ path: `${DIAG_DIR}/_inspect-${SUBMODULE}.png`, fullPage: true });
 ```
 
 Naming convention: {submodule}-{context}-{optional-timestamp}.png
 When to capture:
 
-* End of beforeAll warmup — confirms the app state before tests run
-* Inside catch blocks in beforeAll/beforeEach — documents the failure condition
-* Inside inspection scripts — captures the rendered UI state at each navigation step
-* Never inside individual test() bodies — Playwright's built-in trace (--trace on) already captures this
+* End of beforeAll warmup - confirms the app state before tests run
+* Inside catch blocks in beforeAll/beforeEach - documents the failure condition
+* Inside inspection scripts - captures the rendered UI state at each navigation step
+* Never inside individual test() bodies - Playwright's built-in trace (--trace on) already captures this
 * Enforcement: The diagnosis/ folder is gitignored. Screenshots are local-only artifacts, never committed to the repo.
 
 ---
@@ -222,11 +222,11 @@ When to capture:
 Create `COVERAGE-MAPPING.md` in the test directory after automation is complete:
 
 ```markdown
-# Coverage Mapping — {Module}
+# Coverage Mapping - {Module}
 
 | TC ID | Title | Spec file | Playwright spec | Status |
 |-------|-------|-----------|----------------|--------|
 | TC-MOD-SUB-001 | {title} | 05-test-scenarios.md | tests/{module}/{file}.spec.ts | ✅ Automated |
-| TC-MOD-SUB-002 | {title} | 05-test-scenarios.md | — | ⛔ BLOCKED-PERMISSIONS |
-| TC-MOD-SUB-003 | {title} | 05-test-scenarios.md | — | 🔲 PENDING-CODE |
+| TC-MOD-SUB-002 | {title} | 05-test-scenarios.md | - | ⛔ BLOCKED-PERMISSIONS |
+| TC-MOD-SUB-003 | {title} | 05-test-scenarios.md | - | 🔲 PENDING-CODE |
 ```

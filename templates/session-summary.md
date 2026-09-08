@@ -1,4 +1,4 @@
-# Session Summary — {{SESSION_TITLE}}
+# Session Summary - {{SESSION_TITLE}}
 
 **Date**: YYYY-MM-DD
 **Session type**: Module Analysis / Spec Generation / Test Plan / Automation / ADO Sync / Maintenance
@@ -44,7 +44,7 @@
 
 | DEF-ID | Title | Severity | File opened? |
 |--------|-------|----------|--------------|
-| DEF-{{NNN}} | {{title}} | {{severity}} | Yes — `qa/06-defects/open/DEF-{{NNN}}.md` |
+| DEF-{{NNN}} | {{title}} | {{severity}} | Yes - `qa/06-defects/open/DEF-{{NNN}}.md` |
 
 ---
 

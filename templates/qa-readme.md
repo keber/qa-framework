@@ -1,8 +1,8 @@
-# QA — {PROJECT_DISPLAY_NAME}
+# QA - {PROJECT_DISPLAY_NAME}
 
 > Framework: `@keber/qa-framework` v{VERSION}
 > Language: {LANGUAGE} | Base URL: `{QA_BASE_URL}`
-> ADO Project: `{ADO_ORG} / {ADO_PROJECT}` _(optional — remove line if not using Azure DevOps)_
+> ADO Project: `{ADO_ORG} / {ADO_PROJECT}` _(optional - remove line if not using Azure DevOps)_
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Module | Submodule | TCs Total | TCs Automated | Plan | ADO Suite | Status | Last Run |
 |---|---|---|---|---|---|---|---|
-| {MODULE_NAME} | {SUBMODULE_NAME} | — | — | ⬜ | — | 🔲 Not started | — |
+| {MODULE_NAME} | {SUBMODULE_NAME} | - | - | ⬜ | - | 🔲 Not started | - |
 
 **Legend**: ✅ Done · ⚠️ Partial · 🔲 Not started · ⛔ Blocked
 
@@ -44,7 +44,7 @@ npx playwright test --last-failed
 
 | ID | Description | Affects | Opened | Status |
 |---|---|---|---|---|
-| — | No active blockers | — | — | — |
+| - | No active blockers | - | - | - |
 
 ---
 
@@ -52,8 +52,8 @@ npx playwright test --last-failed
 
 | Suite | Date | Pass | Fail | Skip | CI Link |
 |---|---|---|---|---|---|
-| E2E | — | — | — | — | — |
-| API | — | — | — | — | — |
+| E2E | - | - | - | - | - |
+| API | - | - | - | - | - |
 
 > Update this table after each significant run. The CI Link can be an ADO TestRun URL, a
 > GitHub Actions run URL, or a path to a local report file.
@@ -62,7 +62,7 @@ npx playwright test --last-failed
 
 | Date | Suite | Pass | Skip | Fail | Duration | Report |
 |---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — |
+| - | - | - | - | - | - | - |
 
 ## Flaky Tests
 
@@ -81,7 +81,7 @@ npx playwright test --last-failed
 <!-- Completed sprint checklists are moved here from AGENT-NEXT-STEPS.md -->
 <!-- Format per sprint: -->
 <!--
-### Sprint N — {SPRINT_NAME} ({YYYY-MM-DD})
+### Sprint N - {SPRINT_NAME} ({YYYY-MM-DD})
 
 **Submodules**: {list}
 **TCs automated**: {N} P0 + {M} P1

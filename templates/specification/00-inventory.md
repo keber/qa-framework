@@ -1,4 +1,4 @@
-# MODULE: {{MODULE_NAME}} — Submodule: {{SUBMODULE_NAME}}
+# MODULE: {{MODULE_NAME}} - Submodule: {{SUBMODULE_NAME}}
 
 > **Template version**: 1.0 | Replace all `{{...}}` with actual values before committing.
 
@@ -18,7 +18,7 @@
 
 | Level | Label | URL |
 |-------|-------|-----|
-| 1 | {{TOP_MENU}} | — |
+| 1 | {{TOP_MENU}} | - |
 | 2 | {{SUBMENU}} | `{{URL}}` |
 
 ---
@@ -71,7 +71,7 @@
 | Submodule | Relationship | Notes |
 |-----------|-------------|-------|
 | {{submodule}} | Provides data to this module | Dropdown populated from {{API}} |
-| {{submodule}} | Depends on data from this module | — |
+| {{submodule}} | Depends on data from this module | - |
 
 ---
 

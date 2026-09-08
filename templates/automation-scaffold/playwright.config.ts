@@ -26,7 +26,7 @@ for (const key of required) {
 //   token:                   process.env.SYSTEM_ACCESSTOKEN ?? process.env.ADO_PAT,
 //   planId:                  Number(process.env.ADO_PLAN_ID),
 //   projectName:             process.env.ADO_PROJECT!,
-//   testRunTitle:            `[Auto] Sprint {{NNN}} — ${new Date().toISOString().slice(0, 10)}`,
+//   testRunTitle:            `[Auto] Sprint {{NNN}} - ${new Date().toISOString().slice(0, 10)}`,
 //   publishTestResultsMode:  'testRun' as const,
 //   uploadAttachments:       true,
 //   attachmentsType:         ['screenshot', 'video', 'trace'] as const,
