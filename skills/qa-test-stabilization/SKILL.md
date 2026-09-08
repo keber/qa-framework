@@ -100,6 +100,24 @@ If a failure cannot be fixed without application code change:
 - Add `test.skip(true, 'PENDING-CODE: {ADO item or description}')` annotation
 - Update `qa/01-specifications/{module}/05-test-scenarios.md` with `PENDING-CODE` note
 
+**BLOCKING - before creating any defect file under `qa/06-defects/open/`:**
+
+1. Search the project's known-issues record for this module. Where a defect tracker is integrated,
+   that means the tracker's already-filed items; where the project keeps a local known-issues file,
+   search that too. Use the symptom, not the TC ID - the same defect reaches different TCs.
+2. Record the search inside the defect file itself: source consulted, terms searched, matches found
+   (or "none"). A defect file without that section is not ready to be filed.
+3. If a match exists in an open state: do **not** create a new defect. Reference the existing item
+   in the test's `test.fail()` / `test.skip()` note instead.
+4. If a match exists in a closed state: this is a regression, not a new defect. File it as such and
+   say which item it reopens - a defect closed three times and refiled as new each time reads as
+   three unrelated bugs.
+5. Only with no match, create a new defect using the project's `defectIdPattern`.
+
+This gate exists because it was skipped: four defects were filed in one session without it, and a
+later manual check found one of them sharing its exact symptom with three already-closed tracker
+items.
+
 ### Step 6 — Update spec if behavior changed (Category E)
 
 Follow `qa-maintenance` skill for mid-sprint spec updates. Do not change spec to match wrong behavior.

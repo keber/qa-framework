@@ -18,6 +18,20 @@
 
 ---
 
+## Known-issues check
+
+> Filled in **before** this file is created. See the blocking step in the
+> `qa-test-stabilization` skill. A defect filed without this section is not ready.
+
+| Field | Value |
+|-------|-------|
+| Source consulted | {{tracker query / known-issues file / both}} |
+| Terms searched | {{symptom terms, not the TC ID}} |
+| Matches found | {{item IDs and their state, or "none"}} |
+| Classification | New defect / Regression of {{ID}} / Duplicate of {{ID}} |
+
+---
+
 ## Description
 
 {{1-2 sentences describing what the bug is and where it occurs}}
