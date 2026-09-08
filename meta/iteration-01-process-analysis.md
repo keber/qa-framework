@@ -1,9 +1,9 @@
-# Framework Iteration 01 — Process Analysis & Design Findings
+# Framework Iteration 01 - Process Analysis & Design Findings
 
 **Document type**: Meta-analysis / Framework retrospective
 **Date**: 2026-03-05
 **Framework version reviewed**: 1.0.0
-**Status**: Draft — for use as input to framework iteration 2
+**Status**: Draft - for use as input to framework iteration 2
 
 ---
 
@@ -36,10 +36,10 @@ receiving new sprint-driven features.
    at runtime due to selector hallucination, flow assumption failures, and timing issues.
 
 5. Intermediate artifacts are **load-bearing for agents** even when redundant for humans, but
-   only when each artifact adds a genuine transformation — not a restatement. Some current
+   only when each artifact adds a genuine transformation - not a restatement. Some current
    artifacts (test-plan.md vs 05-test-scenarios.md) are close to restatements.
 
-### Current state — pros and cons
+### Current state - pros and cons
 
 | Pros | Cons |
 |------|------|
@@ -64,7 +64,7 @@ receiving new sprint-driven features.
 
 ## Detailed Analysis
 
-### 1. The Pipeline Model Is Correct — The Input Model Is Not
+### 1. The Pipeline Model Is Correct - The Input Model Is Not
 
 The framework correctly identifies the pipeline as a transformation chain from application to
 ADO test run. The stage outputs are well-defined and the intermediate artifact chain is sound.
@@ -112,18 +112,18 @@ Mode B (planning-driven) has a built-in temporal problem that the framework curr
 
 ```mermaid
 timeline
-    title Sprint lifecycle — information availability
+    title Sprint lifecycle - information availability
     Sprint Planning : WIs created
                     : Brief written
                     : Test plan intent (aspirational)
-                    : ADO TCs → Design status
+                    : ADO TCs -> Design status
     Development sprint : Feature built
                        : Selectors unknown to QA
                        : Steps are hypotheses
     QA Release : App deployed to QA env
                : Selectors now observable
                : Flows verifiable
-               : ADO TCs can become → Ready
+               : ADO TCs can become -> Ready
     Test Execution : CI runs
                    : ADO results published
 ```
@@ -154,13 +154,13 @@ The actual operational flow currently practiced is:
 
 ```
 Agent generates .spec.ts files
-         ↓
+         v
 A significant fraction don't run (selector issues, flow failures, timing, auth)
-         ↓
+         v
 Manual triage + PROMPT_Exhaustive_test_revision applied
-         ↓
+         v
 Iterative fix loop until ≥90% pass
-         ↓
+         v
 Committed tests
 ```
 
@@ -202,7 +202,7 @@ The agent needs:
 - At minimum, one successful manual navigation of each flow to be automated
 
 If any of these are absent, the agent should produce **spec stubs** with `test.todo()` markers
-and stop — not generate full tests that will fail at runtime and require a separate recovery loop.
+and stop - not generate full tests that will fail at runtime and require a separate recovery loop.
 
 ```mermaid
 flowchart LR
@@ -221,24 +221,24 @@ flowchart LR
 
 ---
 
-### 5. Intermediate Artifacts — When Redundancy Is Justified
+### 5. Intermediate Artifacts - When Redundancy Is Justified
 
 The discussion established a useful distinction:
 
 **Justified redundancy** (each file extracts a different abstraction from the same observations):
 ```
-00-inventory.md     → what exists (elements, endpoints)
-01-business-rules.md → why it works that way (constraints, logic)
-02-workflows.md     → how users move through it (sequences)
-03-roles-permissions.md → who can do what
-04-test-data.md     → what data is needed to test it
-05-test-scenarios.md → what should be tested
+00-inventory.md     -> what exists (elements, endpoints)
+01-business-rules.md -> why it works that way (constraints, logic)
+02-workflows.md     -> how users move through it (sequences)
+03-roles-permissions.md -> who can do what
+04-test-data.md     -> what data is needed to test it
+05-test-scenarios.md -> what should be tested
 ```
 
 **Questionable redundancy** (restatement with metadata reordering):
 ```
-05-test-scenarios.md → lists TCs with priority
-test-plan.md        → reorganizes same TCs with risk/feasibility added
+05-test-scenarios.md -> lists TCs with priority
+test-plan.md        -> reorganizes same TCs with risk/feasibility added
 ```
 
 For agent-driven workflows, all intermediate outputs serve as **resumption points** that protect
@@ -256,7 +256,7 @@ Ground truth (inventory + scenarios) requires human review on every app change. 
 Currently, to determine where a module stands in the pipeline, an agent or human must read
 multiple files and infer the state. There is no single authoritative signal.
 
-This creates a continuity problem across sessions — `session-summary.md` captures what happened
+This creates a continuity problem across sessions - `session-summary.md` captures what happened
 in one session, but not the stage-level status of the module globally.
 
 A lightweight **module status tracker** would solve this. It could be as simple as a table in
@@ -266,19 +266,19 @@ a `qa/00-standards/pipeline-status.md` file, or a structured field at the top of
 Example structure:
 
 ```markdown
-## Pipeline status — [Module > Submodule]
+## Pipeline status - [Module > Submodule]
 
 | Stage | Status | Last updated | Artifact |
 |-------|--------|-------------|---------|
 | 0 Bootstrap | ✅ Done | 2026-01-10 | qa-framework.config.json |
 | 1 Discovery | ✅ Done | 2026-02-15 | suppliers/00-inventory.md |
 | 2 Planning (intent) | ✅ Done | 2026-02-20 | 05-test-plans/suppliers-intent.md |
-| 2 Planning (concrete) | ⏳ Pending QA release | — | — |
-| 3 Automation | ⏳ Blocked by Stage 2 concrete | — | — |
-| 3.5 Stabilization | ⏳ Not started | — | — |
-| 4 ADO Wiring | ⏳ Not started | — | — |
-| 5 Execution | ⏳ Not started | — | — |
-| 6 Review | ⏳ Not started | — | — |
+| 2 Planning (concrete) | ⏳ Pending QA release | - | - |
+| 3 Automation | ⏳ Blocked by Stage 2 concrete | - | - |
+| 3.5 Stabilization | ⏳ Not started | - | - |
+| 4 ADO Wiring | ⏳ Not started | - | - |
+| 5 Execution | ⏳ Not started | - | - |
+| 6 Review | ⏳ Not started | - | - |
 ```
 
 ---
@@ -290,7 +290,7 @@ Example structure:
 
 ---
 
-### Step 1 — Define two entry modes in the framework root documentation
+### Step 1 - Define two entry modes in the framework root documentation
 
 **Target files**: `README.md`, `docs/architecture.md`
 
@@ -303,23 +303,23 @@ pipeline diagram in `docs/architecture.md` to show two entry arrows.
 
 ---
 
-### Step 2 — Create `agent-instructions/00-sprint-intake.md`
+### Step 2 - Create `agent-instructions/00-sprint-intake.md`
 
 This is the Mode B equivalent of `00-module-analysis.md`. It must define:
 - **Input**: sprint WI IDs, meeting brief or transcription summary, ADO plan ID
 - **Process**: extract scope, map WIs to submodules, infer general test steps from acceptance criteria
 - **Output**: populated 6-file spec set (with `test-plan-intent.md` instead of full concrete spec)
-- **Explicit limitation**: selectors and exact steps are placeholders until QA release — replace
+- **Explicit limitation**: selectors and exact steps are placeholders until QA release - replace
   with `TODO: verify after QA release` comments in any selector-level content
 - **ADO action**: create Test Cases with status `Design`, NOT `Ready`
 
 ---
 
-### Step 3 — Split `templates/test-plan.md` into two variants
+### Step 3 - Split `templates/test-plan.md` into two variants
 
 Create:
-- `templates/test-plan-intent.md` — planning-time version; general steps; acceptance criteria focus
-- `templates/test-plan-concrete.md` — post-release version; exact selectors; observable steps; data shapes
+- `templates/test-plan-intent.md` - planning-time version; general steps; acceptance criteria focus
+- `templates/test-plan-concrete.md` - post-release version; exact selectors; observable steps; data shapes
 
 Add a header field to each:
 ```markdown
@@ -334,7 +334,7 @@ Update `agent-instructions/02-test-plan-generation.md` to:
 
 ---
 
-### Step 4 — Create `agent-instructions/04b-test-stabilization.md`
+### Step 4 - Create `agent-instructions/04b-test-stabilization.md`
 
 Promote the content of `references/PROMPT_Exhaustive_test_revision` into a formal agent
 instruction file. The file must define:
@@ -344,7 +344,7 @@ instruction file. The file must define:
 - **Process**:
   1. Run full suite; capture output
   2. Classify each failure by root cause (selector / flow / timing / auth / data)
-  3. Fix in priority order: auth → flow → selector → timing → data
+  3. Fix in priority order: auth -> flow -> selector -> timing -> data
   4. Re-run after each fix class; do not fix all at once
   5. Iterate until pass rate ≥90% or all remaining failures are documented with `test.skip()` + DEF reference
 - **Exit criterion**: ≥90% pass rate; every skip has a DEF reference; no silent failures
@@ -353,7 +353,7 @@ instruction file. The file must define:
 
 ---
 
-### Step 5 — Add prerequisite check to `agent-instructions/04-automation-generation.md`
+### Step 5 - Add prerequisite check to `agent-instructions/04-automation-generation.md`
 
 At the top of the file, before any generation instructions, add a **Prerequisites Gate** section:
 
@@ -368,29 +368,29 @@ Check all of the following before generating any `.spec.ts` content:
 - [ ] At least one target flow has been manually traced in the browser
 
 If ANY prerequisite is unmet:
-- Generate stub `.spec.ts` files with `test.todo('TODO: verify after QA release — [step description]')`
+- Generate stub `.spec.ts` files with `test.todo('TODO: verify after QA release - [step description]')`
 - Add a `## Blocked` section to `session-summary.md` listing what is missing
 - Do NOT generate full assertion-level tests
 ```
 
 ---
 
-### Step 6 — Add pipeline state tracker to `templates/session-summary.md`
+### Step 6 - Add pipeline state tracker to `templates/session-summary.md`
 
 Add a `## Pipeline Status` table to the session summary template (see example in section 6 of
 this document). The table must be updated at the end of every session by the agent. This makes
-resumption unambiguous — any agent starting a new session reads this table and knows exactly
+resumption unambiguous - any agent starting a new session reads this table and knows exactly
 which stage to enter.
 
 ---
 
-### Step 7 — Clarify ground truth vs derived artifacts in `docs/spec-driven-philosophy.md`
+### Step 7 - Clarify ground truth vs derived artifacts in `docs/spec-driven-philosophy.md`
 
 Add a section `## Artifact Types: Ground Truth vs Derived` that defines:
 
-- **Ground truth**: `00-inventory.md`, `05-test-scenarios.md` — must be manually reviewed on
+- **Ground truth**: `00-inventory.md`, `05-test-scenarios.md` - must be manually reviewed on
   every app change; these are the source of correctness for all downstream artifacts
-- **Derived**: `test-plan.md`, `execution-report.md`, `COVERAGE-MAPPING.md` — regenerable on
+- **Derived**: `test-plan.md`, `execution-report.md`, `COVERAGE-MAPPING.md` - regenerable on
   demand; should not be manually maintained between sprints; flag when stale
 
 Add a **staleness rule**: if the app has been updated and `00-inventory.md` has not been
@@ -399,7 +399,7 @@ execution cycle.
 
 ---
 
-### Step 8 — Add generation quality constraint to `agent-instructions/04-automation-generation.md`
+### Step 8 - Add generation quality constraint to `agent-instructions/04-automation-generation.md`
 
 After the prerequisites gate, add a **Generation Strategy** section:
 

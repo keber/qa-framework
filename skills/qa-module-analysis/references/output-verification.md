@@ -25,7 +25,7 @@ rg -c '[áéíóúÁÉÍÓÚñÑüÜ]' <file>
 
 # 2. Forbidden characters - must return nothing.
 #    em-dash, en-dash, ellipsis, smart quotes, arrows.
-rg -n $'[–—‘’“”…←-⇿]' <file>
+rg -n $'[\u2013\u2014\u2018\u2019\u201c\u201d\u2026\u2190-\u21ff]' <file>
 
 # 3. No BOM - must not print EF BB BF.
 head -c3 <file> | od -An -tx1
