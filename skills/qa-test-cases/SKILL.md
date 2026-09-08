@@ -77,6 +77,7 @@ Before marking stage complete:
 - [ ] Every Resultado Esperado is measurable
 - [ ] No blank cells in Confirma column (Task ID or `N/A`)
 - [ ] Standalone TC files (if created) are cross-referenced in the table
+- [ ] Output verification run and the counts reported (see `../qa-module-analysis/references/output-verification.md`) - report the command output, never a compliance claim
 
 ---
 

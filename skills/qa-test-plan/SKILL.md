@@ -119,3 +119,4 @@ Each row in the table is one test case. Columns:
 - [ ] Resultado Esperado is measurable (specific text/state, not "works correctly")
 - [ ] Matriz de Trazabilidad covers all Tasks mentioned in the table
 - [ ] `Confirma` column has no blank cells (must be Task ID or `N/A`)
+- [ ] Output verification run and the counts reported (see `../qa-module-analysis/references/output-verification.md`) - report the command output, never a compliance claim

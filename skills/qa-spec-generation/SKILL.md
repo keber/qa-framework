@@ -86,6 +86,12 @@ Full format templates: `../qa-module-analysis/references/spec-file-formats.md`
 
 ---
 
+## Quality gates before marking complete
+
+- [ ] Output verification run and the counts reported (see `../qa-module-analysis/references/output-verification.md`) - report the command output, never a compliance claim
+
+---
+
 ## Outputs
 
 - 6 spec files per submodule in `qa/01-specifications/module-{name}/submodule-{name}/`

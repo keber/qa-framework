@@ -85,6 +85,7 @@ Completeness checklist before closing the stage:
 - [ ] All TC IDs are unique across the module
 - [ ] Module README updated with submodule table and TC counts
 - [ ] `qa/README.md` module status row updated
+- [ ] Output verification run and the counts reported (see `references/output-verification.md`) - report the command output, never a compliance claim
 
 ---
 
