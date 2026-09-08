@@ -41,7 +41,7 @@ description: >
 For each in-scope submodule, read `05-test-scenarios.md` and aggregate:
 - Total TC count by priority (P0/P1/P2/P3)
 - TC count by type: Manual / Automatizado / Ambos
-- TCs marked `BLOCKED-PERMISSIONS` or `PENDING-CODE` → include in table but mark type as `Bloqueado`
+- TCs marked `BLOCKED-PERMISSIONS`, `PENDING-CODE`, or `PENDING-BROWSER` → include in table but mark type as `Bloqueado`
 
 ### Step 2 — Apply priority rules
 

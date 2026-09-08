@@ -114,7 +114,7 @@ After completing all submodule files:
 - {path/to/file.md}
 
 ## Blockers
-- {any features marked PENDING-CODE or BLOCKED-PERMISSIONS}
+- {any features marked PENDING-CODE, PENDING-BROWSER, or BLOCKED-PERMISSIONS}
 
 ## Next steps
 - {what remains before automation can begin}

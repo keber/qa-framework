@@ -16,7 +16,7 @@
 | Submodule | {Submodule display name} |
 | Priority | P0 / P1 / P2 / P3 |
 | Type | Functional / Negative / Regression / Security / Integration |
-| Origin | UI-OBSERVED / PENDING-CODE / BLOCKED-PERMISSIONS |
+| Origin | UI-OBSERVED / PENDING-BROWSER / PENDING-CODE / BLOCKED-PERMISSIONS |
 | Observation date | YYYY-MM-DD |
 | Automatable | Yes / Partial / No |
 | Playwright file | (fill when automation is written) |

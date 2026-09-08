@@ -71,7 +71,7 @@ Produce 6 files per submodule. File formats and templates: `references/spec-file
 | `04-test-data.md` | Prerequisites, data shapes per scenario, EXEC_IDX pattern |
 | `05-test-scenarios.md` | TC table: 50–85 TCs per submodule, all mandatory coverage categories |
 
-TC target: **50–85 per submodule**. Mark origin as `UI-OBSERVED`, `PENDING-CODE`, or `BLOCKED-PERMISSIONS`.
+TC target: **50–85 per submodule**. Mark origin as `UI-OBSERVED` (element and behavior both confirmed this session), `PENDING-BROWSER` (element observed but the behavior could not be exercised end-to-end this session, e.g. a disabled control or an unmet precondition), `PENDING-CODE` (feature not present or not reachable in this environment), or `BLOCKED-PERMISSIONS` (blocked by role/access, not by feature absence).
 
 ---
 
