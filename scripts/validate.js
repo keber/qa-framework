@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * scripts/validate.js — Validate qa/ folder structure and conventions
+ * scripts/validate.js - Validate qa/ folder structure and conventions
  *
  * Usage:
  *   qa-framework validate
@@ -147,7 +147,7 @@ for (const f of specFiles) {
 // -----------------------------------------------------------------------
 console.log('');
 if (errors.length === 0 && warnings.length === 0) {
-  console.log('✅ Validation passed — no issues found.');
+  console.log('✅ Validation passed - no issues found.');
   process.exit(0);
 }
 

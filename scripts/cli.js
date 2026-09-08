@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * scripts/cli.js — keber/qa-framework CLI entry point
+ * scripts/cli.js - keber/qa-framework CLI entry point
  *
  * Usage:
  *   npx keber/qa-framework <command> [options]
