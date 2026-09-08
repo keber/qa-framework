@@ -31,7 +31,7 @@ description: >
 
 ## File Generation Rules
 
-Generate or update each file following the formats in `references/spec-file-formats.md`.
+Generate or update each file following the formats in `../qa-module-analysis/references/spec-file-formats.md` (shared reference, not duplicated per skill).
 
 ### `00-inventory.md`
 - Header block: module/submodule codes, primary URL, status, last updated date
@@ -70,7 +70,7 @@ Generate or update each file following the formats in `references/spec-file-form
   - Export/download (if feature exists)
   - Pagination/search (if feature exists)
 
-Full format templates: `references/spec-file-formats.md`
+Full format templates: `../qa-module-analysis/references/spec-file-formats.md`
 
 ---
 
