@@ -118,7 +118,27 @@ Red flags that require review before proceeding:
 - Assertions inside an `if (condition)` that only execute on the happy path
 - A test that starts passing after a refactor without a clear spec justification
 
-### Step 5 — Module Completion Checklist
+### Step 5 — Static Check, Smoke Run & Completion Checklist
+
+Two gates run **before** the checklist below. Both must come back clean.
+
+**Gate 1 - static check.** From the automation root (`qa/07-automation/e2e`):
+
+```
+npx tsc --noEmit
+```
+
+Must exit 0. Do not proceed with pending TypeScript errors.
+
+**Gate 2 - smoke run.** Run every new or modified spec at least once against the official runner:
+
+```
+npx playwright test {spec} --project={module} --reporter=list
+```
+
+The goal is to surface reference, import and syntax errors that only appear at execution time - a variable used but never declared passes every review and fails only when the line runs. A full green suite is Stage 5b's job, not this gate's: a test that fails on a real assertion has still cleared Gate 2.
+
+Only when both gates are clean, continue:
 
 Before marking the submodule as ✅ Automation Complete:
 - [ ] All P0 TCs passing in CI
@@ -127,6 +147,8 @@ Before marking the submodule as ✅ Automation Complete:
 - [ ] `playwright.config.ts` project includes submodule tag
 - [ ] `qa/README.md` automation status updated
 - [ ] AGENT-NEXT-STEPS.md active sprint updated (remove completed items)
+- [ ] `npx tsc --noEmit` run, exit 0
+- [ ] New/modified specs run at least once via `npx playwright test` (smoke)
 
 ---
 
