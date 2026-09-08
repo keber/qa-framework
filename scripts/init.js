@@ -201,7 +201,7 @@ for (const mod of modules) {
 
   for (const sub of submodules) {
     const subKey = sub.key ?? sub.name.toLowerCase().replace(/\s+/g, '-');
-    const subDir = path.join(qaRoot, moduleKey, subKey);
+    const subDir = path.join(qaRoot, '01-specifications', moduleKey, subKey);
     fs.mkdirSync(subDir, { recursive: true });
 
     for (const specFile of SPEC_FILES) {
