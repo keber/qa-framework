@@ -33,7 +33,10 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const EXTENSIONS = ['.md', '.js', '.ts', '.ps1'];
+// '.example' covers .env.example, which ships to consuming projects like any other
+// template. A BOM or an em-dash there is not cosmetic: some .env parsers read the
+// first key as ﻿QA_BASE_URL and silently fail to find it.
+const EXTENSIONS = ['.md', '.js', '.ts', '.ps1', '.example'];
 
 // Code point -> { name, replacement }. Arrows are handled by range below.
 const FORBIDDEN = {
