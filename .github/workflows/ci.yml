@@ -22,4 +22,15 @@ jobs:
 
       - run: npm test
 
-      - run: npm run validate
+      # validate checks a scaffolded qa/ tree. This repo's own qa/ is gitignored,
+      # so it never exists on the runner - validating it here checked nothing.
+      # Scaffold a throwaway project instead: that exercises the real contract,
+      # which is that what init.js generates passes validate.js.
+      - name: Scaffold a project and validate it
+        run: |
+          set -e
+          scaffold="$(mktemp -d)"
+          cd "$scaffold"
+          node "$GITHUB_WORKSPACE/scripts/init.js"
+          node "$GITHUB_WORKSPACE/scripts/validate.js"
+          node "$GITHUB_WORKSPACE/scripts/validate.js" --strict
