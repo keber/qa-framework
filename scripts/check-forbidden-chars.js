@@ -110,11 +110,18 @@ function scanFile(file) {
   return scanText(fs.readFileSync(file, 'utf8'), file);
 }
 
+// Archived copies of content this framework shipped in an earlier release. Their bytes
+// are the point: test/upgrade.test.js matches them against SHIPPED_SCAFFOLD_HASHES to
+// prove a real legacy installation is recognised as pristine. Rewriting a character in
+// one of them changes its hash and silently voids that proof, so they are read-only
+// history rather than authored content and the rule does not apply to them.
+const SKIP_DIRS = new Set(['node_modules', '.git', 'legacy-v1.11.3']);
+
 function collect(target) {
   const stat = fs.statSync(target);
   if (stat.isFile()) return EXTENSIONS.includes(path.extname(target)) ? [target] : [];
   return fs.readdirSync(target).flatMap((entry) => {
-    if (entry === 'node_modules' || entry === '.git') return [];
+    if (SKIP_DIRS.has(entry)) return [];
     return collect(path.join(target, entry));
   });
 }

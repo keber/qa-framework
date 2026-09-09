@@ -15,6 +15,22 @@ const UPGRADE_PATH = path.join(REPO_ROOT, 'scripts', 'upgrade.js');
 const AUTOMATION_SRC  = path.join(REPO_ROOT, 'templates', 'automation-scaffold');
 const INTEGRATION_SRC = path.join(REPO_ROOT, 'templates', 'integration-scaffold');
 
+// Byte-for-byte copies of the automation scaffold as it shipped in v1.11.3, committed
+// as static fixtures. They used to be recovered with `git show v1.11.3:...`, which made
+// the suite depend on repository history: it broke under the shallow clone that
+// actions/checkout performs (no tags fetched), inside an `npm pack` tarball (no .git)
+// and in any exported copy of the tree. Nothing here needs git any more.
+const LEGACY_SRC = path.join(__dirname, 'fixtures', 'legacy-v1.11.3');
+
+const LEGACY_SCAFFOLD_FILES = [
+  'playwright.config.ts',
+  'global-setup.ts',
+  '.env.example',
+  'fixtures/auth.ts',
+  'fixtures/base.ts',
+  'fixtures/test-helpers.ts',
+];
+
 const LANE_SCRIPTS = ['lane-config.js', 'lane-lock.js', 'global-setup-guards.js'];
 
 function run(script, args, cwd) {
@@ -54,39 +70,71 @@ function snapshot(dir) {
   return out;
 }
 
+/** Normalised content hash - must mirror scaffoldHash() in scripts/upgrade.js. */
+function scaffoldHash(content) {
+  return crypto
+    .createHash('sha256')
+    .update(content.replace(/^﻿/, '').replace(/\r\n/g, '\n'), 'utf8')
+    .digest('hex');
+}
+
+/** The SHIPPED_SCAFFOLD_HASHES table as scripts/upgrade.js declares it. */
+function shippedScaffoldHashes() {
+  const source = fs.readFileSync(UPGRADE_PATH, 'utf8');
+  const match = source.match(/const SHIPPED_SCAFFOLD_HASHES = (\{[\s\S]*?\n\});/);
+  assert.ok(match, 'SHIPPED_SCAFFOLD_HASHES not found in scripts/upgrade.js');
+  // The literal holds only strings and arrays; parsing it keeps the fixture guard
+  // honest without exporting production internals purely for the tests.
+  return new Function(`return ${match[1]};`)();
+}
+
 /**
  * Build a project that looks like a v1.11.3 installation: init it with the current
- * templates, then overwrite the scaffold files with the versions git shipped at
- * v1.11.3 and delete everything v1.12.0 introduced.
+ * templates, then overwrite the scaffold files with the versions shipped at v1.11.3
+ * (from test/fixtures/legacy-v1.11.3/) and delete everything v1.12.0 introduced.
  */
 function makeLegacyProject() {
   const root = tmpProject();
   const init = runInit(root);
   assert.equal(init.status, 0, init.stderr);
 
-  for (const rel of [
-    'playwright.config.ts',
-    'global-setup.ts',
-    '.env.example',
-    'fixtures/auth.ts',
-    'fixtures/base.ts',
-    'fixtures/test-helpers.ts',
-  ]) {
-    const shipped = spawnSync(
-      'git',
-      ['show', `v1.11.3:templates/automation-scaffold/${rel}`],
-      { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
-    );
-    assert.equal(shipped.status, 0, `git show failed for ${rel}: ${shipped.stderr}`);
+  for (const rel of LEGACY_SCAFFOLD_FILES) {
+    const src = path.join(LEGACY_SRC, ...rel.split('/'));
+    assert.ok(fs.existsSync(src), `missing legacy fixture: ${src}`);
     const dest = path.join(e2e(root), ...rel.split('/'));
     fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.writeFileSync(dest, shipped.stdout, 'utf8');
+    fs.copyFileSync(src, dest);
   }
 
   // v1.12.0 introduced the lane scripts; a v1.11.3 project has none.
   fs.rmSync(path.join(e2e(root), 'scripts'), { recursive: true, force: true });
   return root;
 }
+
+test('fixtures: every legacy v1.11.3 file is pristine-but-outdated for upgrade.js', () => {
+  // Guards what makeLegacyProject() silently assumes. Without this, a fixture that
+  // drifted out of SHIPPED_SCAFFOLD_HASHES would turn every "pristine file is
+  // refreshed" test into a vacuous "user-owned file is kept" test.
+  const table = shippedScaffoldHashes();
+  for (const rel of LEGACY_SCAFFOLD_FILES) {
+    const key = `automation-scaffold/${rel}`;
+    const legacy = scaffoldHash(fs.readFileSync(path.join(LEGACY_SRC, ...rel.split('/')), 'utf8'));
+    const current = scaffoldHash(
+      fs.readFileSync(path.join(AUTOMATION_SRC, ...rel.split('/')), 'utf8')
+    );
+    assert.ok(
+      Array.isArray(table[key]) && table[key].includes(legacy),
+      `${key}: fixture hash ${legacy} is not in SHIPPED_SCAFFOLD_HASHES, so upgrade.js ` +
+        'would treat it as user-owned and the refresh tests would prove nothing'
+    );
+    assert.notEqual(
+      legacy,
+      current,
+      `${key}: fixture is identical to the current template, so "refreshed to v1.12.0" ` +
+        'would pass without the upgrade doing anything'
+    );
+  }
+});
 
 test('upgrade: a pristine v1.11.3 project receives the whole v1.12.0 lane group', () => {
   const root = makeLegacyProject();
