@@ -42,6 +42,20 @@
     }
   ],
 
+  "parallelLanes": {
+    "enabled": false,
+    "lanes": [
+      {
+        "id": "1",
+        "account": "QA_USER",
+        "storageState": ".auth/user-default.json",
+        "mcpNamespace": null,
+        "runnerProject": "chromium",
+        "capabilities": []
+      }
+    ]
+  },
+
   "integrations": {
     "playwright": {
       "enabled": false,
