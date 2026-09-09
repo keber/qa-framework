@@ -27,7 +27,37 @@
  *     - qa/02-test-plans/manual/     -> qa/02-test-plans/sprints/legacy-manual/
  *     - qa/02-test-plans/*.md        -> qa/02-test-plans/sprints/legacy/
  *     - Creates qa/02-test-plans/sprints/ if absent
- *     - Creates qa/03-test-cases/README.md optional marker if absent *
+ *     - Creates qa/03-test-cases/README.md optional marker if absent
+ *
+ *   MIGRATES (v1.11.x -> v1.12.0, lane-aware automation scaffold):
+ *     Installs the lane scaffold only where it cannot break working user code.
+ *     A file counts as framework-owned ("pristine") when its normalised sha256
+ *     matches one this framework actually shipped; otherwise it is user-owned.
+ *
+ *     ATOMIC GROUP (all installed, or none - config/global-setup require() the scripts):
+ *       - qa/07-automation/e2e/scripts/lane-config.js         (new in v1.12.0)
+ *       - qa/07-automation/e2e/scripts/lane-lock.js           (new in v1.12.0)
+ *       - qa/07-automation/e2e/scripts/global-setup-guards.js (new in v1.12.0)
+ *       - qa/07-automation/e2e/playwright.config.ts
+ *       - qa/07-automation/e2e/global-setup.ts
+ *       If any member is user-owned the whole group is skipped with a warning and
+ *       the upgrade continues; the project keeps its working setup rather than
+ *       being left half-migrated.
+ *
+ *     PER FILE (leaf modules - a mixed state is still coherent):
+ *       - qa/07-automation/e2e/fixtures/{auth,base,test-helpers}.ts
+ *       - qa/07-automation/integration/{playwright.config.ts,global-setup.ts}
+ *       - .env.example in both scaffolds (reference template only; your .env
+ *         is never touched)
+ *       Pristine -> overwritten. User-owned -> kept, with a warning.
+ *
+ *     REPORTS only (never patched):
+ *       - .fill(password) in any .ts under e2e/ or integration/ - leaks the
+ *         password into Playwright traces. See "Pattern 7" in
+ *         .github/skills/qa-automation/references/patterns.md. Not auto-fixed:
+ *         the surrounding code differs per project and a bad rewrite of a
+ *         working login is worse than the finding.
+ *
  *   NEVER touches (project-owned):
  *     - qa/01-specifications/       <- Your specs
  *     - qa/02-test-plans/           <- Your test plans
@@ -72,6 +102,52 @@ const qaRoot     = path.join(cwd, 'qa');
 const githubDir  = path.join(cwd, '.github');
 const skillsDest = path.join(githubDir, 'skills');
 const skillsSrc  = path.resolve(__dirname, '..', 'skills');
+
+// Normalised sha256 of every version of these scaffold files that this framework has
+// shipped (v1.8.0 through v1.11.3). A project file matching one of these was written
+// by the framework and never edited, so v1.12.0 may safely replace it. Anything else
+// is user-owned. Regenerate by hashing `git show <tag>:templates/<key>` for each tag.
+//
+// Deliberately hash-based rather than version-based: the frameworkVersion recorded in
+// real installations is unreliable (observed values include 1.1.3 and 1.0.0, neither
+// of which corresponds to a released scaffold).
+const SHIPPED_SCAFFOLD_HASHES = {
+  'automation-scaffold/playwright.config.ts': [
+    '948635c118553e293447930ba3dcff9155446718554dd3bbcffac2720baebba1',
+    'f145fda0a7215942b5431a779188609f8958e51a048b161ede605576efba3ef8',
+  ],
+  'automation-scaffold/global-setup.ts': [
+    '077580914881ee71ac082d47579dc4cffa01e8348b0744fced6b8de2863e0bd1',
+    '7b3e7ca54929e525055d19ba8cd9643de722c7092c67b1a2e273072dd712ec7a',
+  ],
+  'automation-scaffold/.env.example': [
+    '18fab7c165085a4a585a6911b42c49b97177265d46261c8362c3508a7436c65c',
+    '29dc3a97e42350fbe7a16681837ba8db2a539574f8aa86fe269204bc3081bff9',
+  ],
+  'automation-scaffold/fixtures/auth.ts': [
+    'a856df26d80d521a0ad349879096698191ed6a2f919fac96d85980ab1d435c3e',
+  ],
+  'automation-scaffold/fixtures/base.ts': [
+    '7c52ea17fad732825e327af59a7f0f3bf53db166f7191932ae51c97fd2825a39',
+  ],
+  'automation-scaffold/fixtures/test-helpers.ts': [
+    'e2298972dea50e7df54265a7a94a232c0ff35c969f1b8778929079cfa2a1a541',
+  ],
+  // Introduced in v1.12.0 - never shipped before, so an existing copy in a project is
+  // always user-authored (two live installations hand-wrote their own lane-lock.js).
+  'automation-scaffold/scripts/lane-config.js': [],
+  'automation-scaffold/scripts/lane-lock.js': [],
+  'automation-scaffold/scripts/global-setup-guards.js': [],
+  'integration-scaffold/playwright.config.ts': [
+    '7276ed4fda85f80e37381257bc559f4bb48055d359858f69f6b838f3671a9e2d',
+  ],
+  'integration-scaffold/global-setup.ts': [
+    'f63f9588c4746a16e46345d1d4b781f2905b652481d563cfc075d9d8c8481bde',
+  ],
+  'integration-scaffold/.env.example': [
+    '671461d7dc9883505cec314aefa1129a336b6a03b31a0eb2eb2ede2adda7c4ac',
+  ],
+};
 
 const updated  = [];
 const skipped  = [];
@@ -471,6 +547,146 @@ if (fs.existsSync(memoryDir)) {
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// 9. Migration v1.11.x -> v1.12.0: lane-aware automation scaffold
+//
+//    v1.12.0 rewrote the automation scaffold around a lane table: playwright.config.ts
+//    and global-setup.ts now require() three CommonJS helpers under e2e/scripts/.
+//    init.js installs those for NEW projects only, so existing installations never
+//    receive them. This section carries them across.
+//
+//    Classification per file (the governing rule is: never break working user code):
+//
+//      a) Lane scripts (scripts/lane-config.js, lane-lock.js, global-setup-guards.js)
+//         plus playwright.config.ts and global-setup.ts form ONE ATOMIC GROUP,
+//         because config/global-setup require() the scripts by path. Installing a
+//         subset yields a project where Playwright cannot start at all. The group is
+//         installed only when EVERY member is either absent or provably pristine;
+//         otherwise the whole group is skipped with a warning and the rest of the
+//         upgrade continues. This is a coherent skip, not an abort: the project keeps
+//         the working setup it already had, so it is never left half-migrated.
+//
+//      b) fixtures/{auth,base,test-helpers}.ts are per-file. They are leaf modules -
+//         nothing in the scaffold require()s them by path - so a mixed state is
+//         still coherent.
+//
+//      c) .env.example is a reference template, never live config (the real file is
+//         .env, which this migration never touches). Overwritten when pristine.
+//
+//    "Pristine" means the file's normalised sha256 matches a hash this framework
+//    actually shipped in some earlier release (SHIPPED_SCAFFOLD_HASHES). Anything
+//    else is user-owned and is only ever warned about. The project's recorded
+//    frameworkVersion is deliberately NOT used: live installations report values
+//    like 1.1.3 and 1.0.0 that do not correspond to any real scaffold release.
+//
+//    Files that stay user-owned are additionally scanned for the trace-safety
+//    defect (.fill(password) leaks the password into Playwright traces). That is
+//    reported with file and line only - never patched, because the surrounding
+//    shapes differ per project (passwordSelector vs PASSWORD_SEL) and a bad regex
+//    edit to a working login is exactly the breakage this section must avoid.
+// ---------------------------------------------------------------------------
+const AUTOMATION_LANE_SCRIPTS = ['lane-config.js', 'lane-lock.js', 'global-setup-guards.js'];
+const AUTOMATION_FIXTURES     = ['auth.ts', 'base.ts', 'test-helpers.ts'];
+
+// A bare e2e/ directory is not evidence of an automation setup: section 5 above
+// creates e2e/tests/{helpers/debug,seeds}/ unconditionally. Only migrate a project
+// that actually has a scaffold, i.e. one of the files this migration would replace.
+const hasAutomationScaffold = ['playwright.config.ts', 'global-setup.ts', 'package.json']
+  .some((f) => fs.existsSync(path.join(e2eDir, f)));
+
+if (hasAutomationScaffold) {
+  const scaffoldSrc = path.resolve(__dirname, '..', 'templates', 'automation-scaffold');
+
+  // --- (a) the atomic lane group -------------------------------------------
+  const groupMembers = [
+    ...AUTOMATION_LANE_SCRIPTS.map((f) => ({
+      rel: `scripts/${f}`,
+      src: path.join(scaffoldSrc, 'scripts', f),
+      dest: path.join(e2eDir, 'scripts', f),
+      key: `automation-scaffold/scripts/${f}`,
+    })),
+    ...['playwright.config.ts', 'global-setup.ts'].map((f) => ({
+      rel: f,
+      src: path.join(scaffoldSrc, f),
+      dest: path.join(e2eDir, f),
+      key: `automation-scaffold/${f}`,
+    })),
+  ];
+
+  const blockers = groupMembers.filter((m) => fs.existsSync(m.dest) && !isPristine(m.dest, m.key));
+
+  if (blockers.length === 0) {
+    for (const m of groupMembers) {
+      forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
+      console.log(`  [updated]  e2e/${m.rel}`);
+    }
+  } else {
+    warnings.push(
+      `Lane-aware automation scaffold (v1.12.0) NOT installed - these files are user-owned:\n` +
+        blockers.map((m) => `      e2e/${m.rel}`).join('\n') +
+        `\n    playwright.config.ts and global-setup.ts require() e2e/scripts/*.js, so the\n` +
+        `    group is installed all-or-nothing. Your current setup is left working and\n` +
+        `    untouched. To adopt lanes, merge these by hand from:\n` +
+        `      node_modules/@keber/qa-framework/templates/automation-scaffold/`
+    );
+    for (const m of groupMembers) skipped.push(m.dest);
+  }
+
+  // --- (b) fixtures, per file ----------------------------------------------
+  for (const file of AUTOMATION_FIXTURES) {
+    const dest = path.join(e2eDir, 'fixtures', file);
+    const key  = `automation-scaffold/fixtures/${file}`;
+    if (!fs.existsSync(dest) || isPristine(dest, key)) {
+      forceWrite(dest, fs.readFileSync(path.join(scaffoldSrc, 'fixtures', file), 'utf8'));
+      console.log(`  [updated]  e2e/fixtures/${file}`);
+    } else {
+      skipped.push(dest);
+      warnings.push(
+        `e2e/fixtures/${file} is user-owned - kept as is (v1.12.0 version not applied).`
+      );
+    }
+  }
+
+  // --- (c) .env.example ------------------------------------------------------
+  upgradeReferenceEnvExample(
+    path.join(e2eDir, '.env.example'),
+    path.join(scaffoldSrc, '.env.example'),
+    'automation-scaffold/.env.example',
+    'e2e/.env.example'
+  );
+
+  // --- trace safety on everything left user-owned ---------------------------
+  reportTraceSafety(e2eDir);
+}
+
+// --- integration scaffold: no lane coupling, so purely per-file -------------
+// Same reasoning as above: require a real scaffold file, not just the folder.
+const hasIntegrationScaffold = ['playwright.config.ts', 'global-setup.ts', 'package.json']
+  .some((f) => fs.existsSync(path.join(integrationDir, f)));
+
+if (hasIntegrationScaffold) {
+  const integrationSrc = path.resolve(__dirname, '..', 'templates', 'integration-scaffold');
+  for (const file of ['playwright.config.ts', 'global-setup.ts']) {
+    const dest = path.join(integrationDir, file);
+    const key  = `integration-scaffold/${file}`;
+    if (!fs.existsSync(dest) || isPristine(dest, key)) {
+      forceWrite(dest, fs.readFileSync(path.join(integrationSrc, file), 'utf8'));
+      console.log(`  [updated]  integration/${file}`);
+    } else {
+      skipped.push(dest);
+      warnings.push(`integration/${file} is user-owned - kept as is (v1.12.0 version not applied).`);
+    }
+  }
+  upgradeReferenceEnvExample(
+    path.join(integrationDir, '.env.example'),
+    path.join(integrationSrc, '.env.example'),
+    'integration-scaffold/.env.example',
+    'integration/.env.example'
+  );
+  reportTraceSafety(integrationDir);
+}
+
 // ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
@@ -521,3 +737,93 @@ function copyDirForce(srcDir, destDir) {
   }
 }
 
+
+// Normalised content hash: strips a UTF-8 BOM and CRLF so that a file which only
+// differs by line endings or a BOM (both of which tooling rewrites silently) is
+// still recognised as the framework's own output.
+function scaffoldHash(content) {
+  const normalised = content.replace(/^﻿/, '').replace(/\r\n/g, '\n');
+  return require('crypto').createHash('sha256').update(normalised, 'utf8').digest('hex');
+}
+
+// A file is "pristine" when its content is byte-identical (after normalisation) to
+// something this framework actually shipped. A key with no recorded hashes - a file
+// introduced in the current release - can never be pristine, so an existing copy is
+// always treated as user-owned.
+function isPristine(filePath, key) {
+  let content;
+  try {
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch {
+    return false;
+  }
+  const hash = scaffoldHash(content);
+
+  // Already identical to what this release ships: nothing to do, and certainly not a
+  // user edit. Computed rather than tabulated so the table never goes stale on release.
+  try {
+    const current = path.resolve(__dirname, '..', 'templates', ...key.split('/'));
+    if (fs.existsSync(current) && scaffoldHash(fs.readFileSync(current, 'utf8')) === hash) return true;
+  } catch {
+    /* fall through to the historical table */
+  }
+
+  const known = SHIPPED_SCAFFOLD_HASHES[key];
+  return Boolean(known) && known.includes(hash);
+}
+
+// .env.example is a reference template, never live configuration - the real values
+// live in .env, which is never touched here. Overwrite it when pristine; when the
+// user has edited it, keep theirs and say so.
+function upgradeReferenceEnvExample(dest, src, key, label) {
+  if (!fs.existsSync(src)) return;
+  if (!fs.existsSync(dest) || isPristine(dest, key)) {
+    forceWrite(dest, fs.readFileSync(src, 'utf8'));
+    console.log(`  [updated]  ${label}`);
+  } else {
+    skipped.push(dest);
+    warnings.push(
+      `${label} is user-owned - kept as is. New v1.12.0 keys may be missing; compare against\n` +
+        `    node_modules/@keber/qa-framework/templates/${key}`
+    );
+  }
+}
+
+// Trace safety (see skills/qa-automation/references/patterns.md, "Pattern 7"):
+// page.locator(...).fill(password) records the password in the Playwright trace.
+// Report location only. The surrounding code differs per project, so an automated
+// rewrite of a working login is more dangerous than the finding itself.
+function reportTraceSafety(rootDir) {
+  const offenders = [];
+  const FILL_PASSWORD = /\.fill\(\s*(?:password|pwd|[A-Za-z_$]*(?:[Pp]ass(?:word)?|PASSWORD)[A-Za-z_$]*)\s*\)/;
+
+  (function walk(dir) {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (/\.ts$/.test(entry.name)) {
+        const lines = fs.readFileSync(full, 'utf8').split(/\r?\n/);
+        lines.forEach((line, i) => {
+          if (FILL_PASSWORD.test(line)) offenders.push(`${path.relative(cwd, full)}:${i + 1}`);
+        });
+      }
+    }
+  })(rootDir);
+
+  if (offenders.length) {
+    warnings.push(
+      `Trace safety: the password is written with .fill(), which stores it in the\n` +
+        `    Playwright trace. Replace with the page.evaluate() form ("Pattern 7" in\n` +
+        `    .github/skills/qa-automation/references/patterns.md):\n` +
+        offenders.map((o) => `      ${o}`).join('\n')
+    );
+  }
+}
