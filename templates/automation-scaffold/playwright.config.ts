@@ -1,6 +1,21 @@
 import { defineConfig, devices } from '@playwright/test';
 import * as dotenv from 'dotenv';
-dotenv.config();
+import * as fs from 'fs';
+
+// Least privilege: this config only needs a handful of non-secret values, so it reads
+// them with dotenv.parse(), which returns a plain object and never touches process.env.
+// dotenv.config() would inject the WHOLE .env - every QA account password and ADO token
+// living in it - into a process that has no use for them, where any dependency, crash
+// dump or child process inherits them. Do not "simplify" this back to config().
+const ENV_KEYS = ['QA_SESSION_TTL_MS', 'QA_BASE_URL'] as const;
+if (fs.existsSync('.env')) {
+  const parsed = dotenv.parse(fs.readFileSync('.env'));
+  for (const key of ENV_KEYS) {
+    if (process.env[key] === undefined && parsed[key] !== undefined) {
+      process.env[key] = parsed[key];
+    }
+  }
+}
 
 export const SESSION_TTL_MS = Number(process.env.QA_SESSION_TTL_MS ?? 2 * 60 * 60 * 1000);
 

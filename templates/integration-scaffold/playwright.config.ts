@@ -14,8 +14,22 @@
 
 import { defineConfig } from '@playwright/test';
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
 
-dotenv.config();
+// Least privilege: read only the keys this config actually uses. dotenv.parse() returns
+// a plain object without touching process.env, so the other secrets in .env - the other
+// QA accounts, ADO tokens - are never loaded into a process that has no use for them.
+// QA_USER_PASSWORD is included because the credentials check below reads it; its value
+// is only tested for presence, never logged. Do not "simplify" this back to config().
+const ENV_KEYS = ['QA_BASE_URL', 'QA_API_TOKEN', 'QA_USER_EMAIL', 'QA_USER_PASSWORD'] as const;
+if (fs.existsSync('.env')) {
+  const parsed = dotenv.parse(fs.readFileSync('.env'));
+  for (const key of ENV_KEYS) {
+    if (process.env[key] === undefined && parsed[key] !== undefined) {
+      process.env[key] = parsed[key];
+    }
+  }
+}
 
 const required = ['QA_BASE_URL'];
 for (const key of required) {
