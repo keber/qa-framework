@@ -1,4 +1,4 @@
-# Test Data — {{MODULE_NAME}}: {{SUBMODULE_NAME}}
+# Test Data - {{MODULE_NAME}}: {{SUBMODULE_NAME}}
 
 > **Module code**: {{MODULE_CODE}} | **Submodule code**: {{SUBMODULE_CODE}}  
 > **Last updated**: YYYY-MM-DD
@@ -23,13 +23,13 @@ The following data must exist in the QA environment before tests run:
 
 ## Data Shapes for Key Scenarios
 
-### Scenario: Happy path — create record
+### Scenario: Happy path - create record
 
 | Field | Value / Rule |
 |-------|-------------|
-| {{name-field}} | `Test-{EXEC_IDX}` — unique per run via EXEC_IDX pattern |
+| {{name-field}} | `Test-{EXEC_IDX}` - unique per run via EXEC_IDX pattern |
 | {{select-field}} | Any valid option (first option is acceptable) |
-| {{date-field}} | `${2120 + (EXEC_IDX % 10)}-01-01` — future date, collision-resistant |
+| {{date-field}} | `${2120 + (EXEC_IDX % 10)}-01-01` - future date, collision-resistant |
 | User | `{{Role 1}}`, credentials from `QA_USER_{{ROLE1_UPPER}}_EMAIL` |
 
 ### Scenario: Required field validation
@@ -49,7 +49,7 @@ The following data must exist in the QA environment before tests run:
 
 **Expected**: System error message: "{{exact duplicate error text}}"
 
-### Scenario: State transition — {{action}}
+### Scenario: State transition - {{action}}
 
 | Field | Value |
 |-------|-------|
@@ -82,8 +82,8 @@ const testDate = `${year}-${month}-${day}`;
 
 ## Data Isolation Rules
 
-1. Each test creates its own data — no shared mutable state between tests
-2. `beforeAll` creates records for the entire suite — provision ≥ N records for N consuming tests
+1. Each test creates its own data - no shared mutable state between tests
+2. `beforeAll` creates records for the entire suite - provision ≥ N records for N consuming tests
 3. No test teardown required when EXEC_IDX-based names are used (future-dated records do not collide across runs)
 4. If a test modifies shared data (approve/reject), it must create its own record in `beforeAll`
 
@@ -93,7 +93,7 @@ const testDate = `${year}-${month}-${day}`;
 
 | Item | Reason for retirement | Replaced by |
 |------|-----------------------|-------------|
-| {{item}} | Real employee data — PII risk | EXEC_IDX-generated test record |
+| {{item}} | Real employee data - PII risk | EXEC_IDX-generated test record |
 
 ---
 

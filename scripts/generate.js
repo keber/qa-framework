@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * scripts/generate.js — Generate a qa artifact from a template
+ * scripts/generate.js - Generate a qa artifact from a template
  *
  * Usage:
  *   qa-framework generate <artifact> [options]
@@ -39,7 +39,7 @@ const outputDir     = getArg('--output')    ? path.resolve(process.cwd(), getArg
 const templateDir = path.resolve(__dirname, '..', 'templates');
 
 const ARTIFACTS = {
-  spec:             null,    // special — copies all 6 files
+  spec:             null,    // special - copies all 6 files
   'test-plan':      path.join(templateDir, 'test-plan.md'),
   'test-case':      path.join(templateDir, 'test-case.md'),
   'execution-report': path.join(templateDir, 'execution-report.md'),

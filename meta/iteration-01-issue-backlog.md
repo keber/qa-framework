@@ -1,10 +1,10 @@
-# Framework Iteration 01 — Pre-Release Issue Backlog
+# Framework Iteration 01 - Pre-Release Issue Backlog
 
 **Document type**: Pre-release defect and design gap registry
 **Date**: 2026-03-05
 **Framework version**: 1.0.0 (unreleased)
 **Source**: Code-level review of all agent-instructions/, scripts/, templates/, and docs/ files
-**Status**: Open — must be addressed before v1.0.0 release unless explicitly deferred
+**Status**: Open - must be addressed before v1.0.0 release unless explicitly deferred
 
 > Items in this list are independent from the pipeline and entry-mode gaps documented in
 > `iteration-01-process-analysis.md`. Both documents together constitute the full known
@@ -26,7 +26,7 @@
 
 ---
 
-### ISSUE-01 — Spec path is inconsistent across three files
+### ISSUE-01 - Spec path is inconsistent across three files
 
 **Severity**: 🔴 Critical
 **Affects**: `agent-instructions/04-automation-generation.md`, `scripts/init.js`, `scripts/validate.js`
@@ -49,7 +49,7 @@ path.
 #### Fix instructions
 
 1. Decide the canonical path. The simpler convention (`qa/{moduleKey}/{subKey}/`) is already
-   what `init.js` creates and what `validate.js` scans — prefer this one.
+   what `init.js` creates and what `validate.js` scans - prefer this one.
 2. In `agent-instructions/04-automation-generation.md`, find every reference to
    `qa/01-specifications/` and replace with `qa/{module-key}/{submodule-key}/`.
 3. In the spec file JSDoc template in `04-automation-generation.md`, update:
@@ -60,13 +60,13 @@ path.
    * @spec qa/{module-kebab}/{submodule-kebab}/05-test-scenarios.md
    ```
 4. Search all other files in `agent-instructions/`, `docs/`, and `README.md` for
-   `01-specifications` — update any remaining occurrences.
+   `01-specifications` - update any remaining occurrences.
 5. If `01-specifications/` was intentional (to keep specs separate from automation), document
    this decision explicitly and update `init.js` and `validate.js` to match.
 
 ---
 
-### ISSUE-02 — `EXEC_IDX` has a silent collision window
+### ISSUE-02 - `EXEC_IDX` has a silent collision window
 
 **Severity**: 🔴 Critical
 **Affects**: `agent-instructions/04-automation-generation.md`, `templates/automation-scaffold/fixtures/test-helpers.ts`, `templates/specification/04-test-data.md`
@@ -110,7 +110,7 @@ application bug rather than a test data problem.
 
 ---
 
-### ISSUE-03 — Security posture inconsistency: `.fill()` vs `page.evaluate()` for passwords
+### ISSUE-03 - Security posture inconsistency: `.fill()` vs `page.evaluate()` for passwords
 
 **Severity**: 🔴 Critical
 **Affects**: `templates/automation-scaffold/global-setup.ts`, `agent-instructions/04-automation-generation.md`
@@ -121,7 +121,7 @@ application bug rather than a test data problem.
 passwords, preventing them from appearing in Playwright traces:
 
 ```typescript
-// In 04-automation-generation.md — SECURE
+// In 04-automation-generation.md - SECURE
 await page.evaluate(
   ([sel, pwd]) => { (document.querySelector(sel) as HTMLInputElement).value = pwd; },
   [process.env.QA_LOGIN_PASSWORD_SELECTOR, process.env.QA_USER_PASSWORD]
@@ -131,7 +131,7 @@ await page.evaluate(
 `templates/automation-scaffold/global-setup.ts` uses `.fill()`:
 
 ```typescript
-// In global-setup.ts — INSECURE: password appears in traces
+// In global-setup.ts - INSECURE: password appears in traces
 await page.locator(passwordSelector).fill(password);
 ```
 
@@ -155,7 +155,7 @@ implementation than one reading `04-automation-generation.md`. Playwright traces
 
 ---
 
-### ISSUE-04 — No test data teardown strategy
+### ISSUE-04 - No test data teardown strategy
 
 **Severity**: 🟠 Significant
 **Affects**: `templates/specification/04-test-data.md`, `agent-instructions/04-automation-generation.md`, `agent-instructions/06-maintenance.md`
@@ -189,7 +189,7 @@ This is a shared-state problem that compounds non-linearly with module count and
 
 ---
 
-### ISSUE-05 — `COVERAGE-MAPPING.md` has no schema or template
+### ISSUE-05 - `COVERAGE-MAPPING.md` has no schema or template
 
 **Severity**: 🟠 Significant
 **Affects**: `agent-instructions/04-automation-generation.md`, `templates/`
@@ -207,7 +207,7 @@ agent will invent a different structure, making it:
 
 1. Create `templates/coverage-mapping.md` with the following defined columns:
    ```markdown
-   # Coverage Mapping — {MODULE} > {SUBMODULE}
+   # Coverage Mapping - {MODULE} > {SUBMODULE}
 
    | TC-ID | Title | Priority | Spec file | Playwright file | Test function name | Status | Notes |
    |-------|-------|----------|-----------|-----------------|-------------------|--------|-------|
@@ -220,7 +220,7 @@ agent will invent a different structure, making it:
 
 ---
 
-### ISSUE-06 — Automation feasibility has no update trigger
+### ISSUE-06 - Automation feasibility has no update trigger
 
 **Severity**: 🟠 Significant
 **Affects**: `templates/test-plan.md`, `agent-instructions/06-maintenance.md`
@@ -249,7 +249,7 @@ non-automatable TCs that may actually be automatable.
 
 ---
 
-### ISSUE-07 — ADO inject/sync has no rollback and breaks on title restructuring
+### ISSUE-07 - ADO inject/sync has no rollback and breaks on title restructuring
 
 **Severity**: 🟠 Significant
 **Affects**: `integrations/ado-powershell/scripts/inject-ado-ids.ps1`, `integrations/ado-powershell/scripts/sync-ado-titles.ps1`
@@ -257,13 +257,13 @@ non-automatable TCs that may actually be automatable.
 #### Description
 
 `inject-ado-ids.ps1` is idempotent (won't double-inject) but has no rollback. If the script
-runs and then Stage 3.5 (stabilization) causes test title restructuring — TC consolidation,
-splitting, or significant rename — the injected numeric prefix becomes stale:
+runs and then Stage 3.5 (stabilization) causes test title restructuring - TC consolidation,
+splitting, or significant rename - the injected numeric prefix becomes stale:
 
 - The title and the WI ID are now mismatched in both the spec file and ADO
 - `sync-ado-titles.ps1` silently skips entries where the title match pattern fails
 - TC consolidation (two tests merged into one) leaves an orphaned ADO WI with no spec file
-  reference — it never reports results, but is counted in the plan
+  reference - it never reports results, but is counted in the plan
 
 There is no detection mechanism for any of these states.
 
@@ -287,7 +287,7 @@ There is no detection mechanism for any of these states.
 
 ---
 
-### ISSUE-08 — Agent instructions are pipeline-sequence-unaware
+### ISSUE-08 - Agent instructions are pipeline-sequence-unaware
 
 **Severity**: 🟡 Moderate
 **Affects**: All files in `agent-instructions/`
@@ -315,9 +315,9 @@ the file header:
 |-------|-------|
 | Stage number | 3 |
 | Stage name | Test Case Generation |
-| Preceding stage | Stage 2 — Test Plan Generation (`02-test-plan-generation.md`) |
-| Following stage | Stage 3 — Automation Generation (`04-automation-generation.md`) |
-| Can be skipped? | Yes — skip if TCs are documented sufficiently in `05-test-scenarios.md` |
+| Preceding stage | Stage 2 - Test Plan Generation (`02-test-plan-generation.md`) |
+| Following stage | Stage 3 - Automation Generation (`04-automation-generation.md`) |
+| Can be skipped? | Yes - skip if TCs are documented sufficiently in `05-test-scenarios.md` |
 | Required inputs | Approved `test-plan.md` or populated `05-test-scenarios.md` |
 | Produced outputs | `templates/test-case.md` instance per complex TC |
 | Exit criterion | All P0 and P1 TCs have either a spec row or a standalone TC document |
@@ -327,7 +327,7 @@ Apply this block to all 7 instruction files (00 through 06).
 
 ---
 
-### ISSUE-09 — `03-test-case-generation.md` has no clear trigger and undefined audience
+### ISSUE-09 - `03-test-case-generation.md` has no clear trigger and undefined audience
 
 **Severity**: 🟡 Moderate
 **Affects**: `agent-instructions/03-test-case-generation.md`
@@ -336,7 +336,7 @@ Apply this block to all 7 instruction files (00 through 06).
 
 The instruction file says "use when a TC needs more detail than the table row provides."
 This is a judgment call with no objective criterion. In practice:
-- Agents generating automation (Stage 4) don't need standalone TC documents — `05-test-scenarios.md`
+- Agents generating automation (Stage 4) don't need standalone TC documents - `05-test-scenarios.md`
   rows + `04-automation-generation.md` patterns are sufficient
 - Human manual testers do need step-by-step documents
 - The planning-to-ADO stream (Mode B) needs TC-level detail to create `Ready` ADO WIs
@@ -359,12 +359,12 @@ The file is trying to serve three audiences with one document and a vague trigge
    - All TCs are automatable P0/P1 with ≤4 steps (covered by spec rows + automation directly)
    - The project is in Mode A (discovery-first) and automation is the only delivery channel
    ```
-2. Reference this from `agent-instructions/02-test-plan-generation.md` — when the plan
+2. Reference this from `agent-instructions/02-test-plan-generation.md` - when the plan
    identifies Manual-only TCs, it should explicitly trigger Stage 3.
 
 ---
 
-### ISSUE-10 — No module granularity decision rule
+### ISSUE-10 - No module granularity decision rule
 
 **Severity**: 🟡 Moderate
 **Affects**: `agent-instructions/00-module-analysis.md`, `docs/spec-driven-philosophy.md`
@@ -388,12 +388,12 @@ Add a `## Granularity Rules` section to `agent-instructions/00-module-analysis.m
 ## Granularity Rules
 
 **Module** = a top-level navigation section in the application (menu item, major feature area).
-A module code is 3–6 uppercase letters.
+A module code is 3-6 uppercase letters.
 
 **Submodule** = a distinct view, CRUD entity, or workflow within a module. It maps to:
 - One primary database entity (one Create/Read/Update/Delete surface)
 - One distinct workflow (approval, import, export as a standalone process)
-- NOT a sub-tab or secondary panel within a view — those are covered by the parent submodule
+- NOT a sub-tab or secondary panel within a view - those are covered by the parent submodule
 
 **Sizing heuristic**: A well-scoped submodule produces between 8 and 40 test cases.
 - Fewer than 8: consider merging with a sibling submodule
@@ -405,7 +405,7 @@ merging (merging requires retiring TC-IDs; splitting only requires adding new on
 
 ---
 
-### ISSUE-11 — `validate.js` does not check TypeScript compilation
+### ISSUE-11 - `validate.js` does not check TypeScript compilation
 
 **Severity**: 🟡 Moderate
 **Affects**: `scripts/validate.js`
@@ -434,7 +434,7 @@ signal.
          errors.push(`TypeScript compilation errors found:\n${result.stdout}`);
        }
      } else {
-       warnings.push('[STRICT] No tsconfig.json found in 07-automation/ — TypeScript check skipped');
+       warnings.push('[STRICT] No tsconfig.json found in 07-automation/ - TypeScript check skipped');
      }
    }
    ```
@@ -443,7 +443,7 @@ signal.
 
 ---
 
-### ISSUE-12 — Non-browser testing scope is undefined
+### ISSUE-12 - Non-browser testing scope is undefined
 
 **Severity**: 🟡 Moderate
 **Affects**: `docs/spec-driven-philosophy.md`, `docs/folder-structure-guide.md`, `README.md`
@@ -482,7 +482,7 @@ The absence creates ad-hoc divergent decisions across projects.
 
 ---
 
-### ISSUE-13 — TC Origin classification missing `SPRINT-AGREED` tag for Mode B
+### ISSUE-13 - TC Origin classification missing `SPRINT-AGREED` tag for Mode B
 
 **Severity**: 🟡 Moderate
 **Affects**: `docs/spec-driven-philosophy.md`, `agent-instructions/00-module-analysis.md`, `agent-instructions/03-test-case-generation.md`, `templates/specification/05-test-scenarios.md`
@@ -490,13 +490,13 @@ The absence creates ad-hoc divergent decisions across projects.
 #### Description
 
 `spec-driven-philosophy.md` defines three TC origin tags for traceability:
-- `UI-OBSERVED` — discovered from clicking through a live application
-- `PENDING-CODE` — feature not yet deployed; TC written ahead of code
-- `BLOCKED-PERMISSIONS` — TC cannot be run due to a missing role or environment
+- `UI-OBSERVED` - discovered from clicking through a live application
+- `PENDING-CODE` - feature not yet deployed; TC written ahead of code
+- `BLOCKED-PERMISSIONS` - TC cannot be run due to a missing role or environment
 
 This taxonomy was designed for **Mode A** (discovery-first, live app as source of truth).
 **Mode B** (planning-first, sprint meeting + ADO Work Items as source) has no equivalent tag.
-TCs drafted at planning time from WI descriptions — before the feature is built — require a
+TCs drafted at planning time from WI descriptions - before the feature is built - require a
 fundamentally different reliability assumption: the spec may be wrong, the step sequence is
 hypothetical, and the acceptance criteria haven't been validated against actual UI yet.
 
@@ -512,7 +512,7 @@ that these TCs have higher probability of requiring revision after the build lan
    |-----|---------|
    | `UI-OBSERVED` | Derived from live application interaction (Mode A) |
    | `SPRINT-AGREED` | Derived from sprint planning meeting / ADO Work Item description (Mode B). Steps are hypothetical until verified against the built feature. |
-   | `PENDING-CODE` | Feature not yet deployed; derivation mode irrelevant — code doesn't exist yet |
+   | `PENDING-CODE` | Feature not yet deployed; derivation mode irrelevant - code doesn't exist yet |
    | `BLOCKED-PERMISSIONS` | Cannot be executed due to missing access |
    ```
 2. In `templates/specification/05-test-scenarios.md`, add `Origin` as a column in the TC table
@@ -521,12 +521,12 @@ that these TCs have higher probability of requiring revision after the build lan
    generated TCs must be tagged `SPRINT-AGREED` and must include a
    `> ⚠️ Review after deploy: steps not yet validated against live UI` callout block.
 4. In `agent-instructions/00-module-analysis.md`, at the point where COVERAGE-MAPPING is
-   seeded, note that Mode B modules will have 100% `SPRINT-AGREED` TCs — this is expected
+   seeded, note that Mode B modules will have 100% `SPRINT-AGREED` TCs - this is expected
    and should not be treated as a quality gap.
 
 ---
 
-### ISSUE-14 — No connection between `04-test-data.md` and provisioning code
+### ISSUE-14 - No connection between `04-test-data.md` and provisioning code
 
 **Severity**: 🟠 Significant
 **Affects**: `templates/specification/04-test-data.md`, `agent-instructions/04-automation-generation.md`
@@ -535,8 +535,8 @@ that these TCs have higher probability of requiring revision after the build lan
 
 `04-test-data.md` is a spec document that describes the data shapes a submodule needs
 (entities, field ranges, precondition records). `04-automation-generation.md` describes
-`beforeAll` provisioning blocks inside `.spec.ts` files. The two documents are related —
-one describes *what* data; the other produces *the code that creates it* — but the framework
+`beforeAll` provisioning blocks inside `.spec.ts` files. The two documents are related -
+one describes *what* data; the other produces *the code that creates it* - but the framework
 never draws this connection.
 
 Consequences:
@@ -554,7 +554,7 @@ Consequences:
    ```markdown
    | Field | Type | Constraints | Example value | Provisioning reference |
    |-------|------|-------------|---------------|----------------------|
-   | name  | string | 3–100 chars, unique | QA-Supplier-{EXEC_IDX} | `helpers.createSupplier({ name })` |
+   | name  | string | 3-100 chars, unique | QA-Supplier-{EXEC_IDX} | `helpers.createSupplier({ name })` |
    ```
 2. In `agent-instructions/04-automation-generation.md`, add a step before "Write the spec
    file" instructing the agent to:
@@ -567,7 +567,7 @@ Consequences:
 
 ---
 
-### ISSUE-15 — CI pipeline template existence is unverified
+### ISSUE-15 - CI pipeline template existence is unverified
 
 **Severity**: 🟡 Moderate
 **Affects**: `agent-instructions/05-ado-integration.md`, `integrations/ado-powershell/pipelines/` (expected location)
@@ -581,7 +581,7 @@ and test outcome reporting. It is not confirmed whether this file exists inside
 
 If the file does not exist:
 - Agents following `05-ado-integration.md` will hit a dead reference and halt or improvise
-- The CI integration is effectively undocumented for new projects — each project re-invents
+- The CI integration is effectively undocumented for new projects - each project re-invents
   the pipeline YAML
 - `validate.js --strict` has no check for this file, so the gap is invisible
 
@@ -600,7 +600,7 @@ If the file does not exist:
 
 ---
 
-### ISSUE-16 — Examples folder is incomplete
+### ISSUE-16 - Examples folder is incomplete
 
 **Severity**: 🟠 Significant
 **Affects**: `examples/module-example/suppliers/`
@@ -623,7 +623,7 @@ A complete submodule requires 6 numbered spec files plus automation:
 - `suppliers-create.spec.ts` ✅ (exists, but incomplete without the full spec set)
 
 Agents and engineers onboarding to the framework rely on examples to understand correct
-output. An incomplete example is worse than no example — it implies the missing spec files
+output. An incomplete example is worse than no example - it implies the missing spec files
 either don't exist or don't matter.
 
 #### Fix instructions
@@ -631,7 +631,7 @@ either don't exist or don't matter.
 1. Create `examples/module-example/suppliers/01-business-rules.md` using the corresponding
    template, populated with realistic rules (e.g., "Supplier name must be unique within
    active suppliers", "RUT must pass Chilean checksum validation").
-2. Create `examples/module-example/suppliers/02-user-stories.md` with 3–5 user stories
+2. Create `examples/module-example/suppliers/02-user-stories.md` with 3-5 user stories
    covering the create-supplier workflow.
 3. Create `examples/module-example/suppliers/03-ui-screens.md` with placeholder screenshots
    and annotated field descriptions for the create-supplier form.
@@ -644,7 +644,7 @@ either don't exist or don't matter.
 
 ---
 
-### ISSUE-17 — `validate.js` checks `06-defects/` but not its required subdirectories
+### ISSUE-17 - `validate.js` checks `06-defects/` but not its required subdirectories
 
 **Severity**: 🟡 Moderate
 **Affects**: `scripts/validate.js`, `scripts/init.js`, `agent-instructions/06-maintenance.md`
@@ -660,7 +660,7 @@ qa/{moduleKey}/{subKey}/06-defects/
 
 `agent-instructions/06-maintenance.md` references files in `06-defects/open/` by path
 (e.g., "Move this file to `06-defects/resolved/`"). However, `validate.js` only checks
-that a `06-defects/` folder exists at the top level — it does NOT verify that
+that a `06-defects/` folder exists at the top level - it does NOT verify that
 `06-defects/open/` and `06-defects/resolved/` exist as subdirectories.
 
 Consequence: an `init.js` run that partially fails (e.g., creates `06-defects/` but not
@@ -689,7 +689,7 @@ moving defect files.
 
 ---
 
-### ISSUE-18 — Defect files placed at `06-defects/` root are not detected by `validate.js`
+### ISSUE-18 - Defect files placed at `06-defects/` root are not detected by `validate.js`
 
 **Severity**: 🟡 Moderate
 **Affects**: `scripts/validate.js`, `agent-instructions/06-maintenance.md`
@@ -702,7 +702,7 @@ convention: a defect file created directly at `06-defects/DEF-001.md` (skipping 
 subdirectory) will pass validation without warning.
 
 This is distinct from ISSUE-17 (which concerns the subdirectories themselves not existing).
-This issue concerns defect files that exist but are in the wrong location — they will not
+This issue concerns defect files that exist but are in the wrong location - they will not
 be found by agents scanning `06-defects/open/` for actionable defects.
 
 #### Fix instructions
@@ -721,7 +721,7 @@ be found by agents scanning `06-defects/open/` for actionable defects.
      }
    }
    ```
-2. This should produce a warning (not an error) — files at the root are not dangerously
+2. This should produce a warning (not an error) - files at the root are not dangerously
    wrong, just misplaced.
 3. Update the `## Conventions` section of `06-maintenance.md` to make this rule explicit:
    > Defect files MUST live in `06-defects/open/` or `06-defects/resolved/`. Files placed
@@ -729,7 +729,7 @@ be found by agents scanning `06-defects/open/` for actionable defects.
 
 ---
 
-### ISSUE-19 — Session summaries have no consolidated pipeline state view
+### ISSUE-19 - Session summaries have no consolidated pipeline state view
 
 **Severity**: 🟡 Moderate
 **Affects**: `templates/session-summary.md`, `agent-instructions/` (all files)
@@ -756,7 +756,7 @@ There is no single source of truth for pipeline state. This creates several fail
 1. Add a **Pipeline State Tracker** table to `templates/session-summary.md` as the first
    block written at every new session:
    ```markdown
-   ## Pipeline State — {MODULE} > {SUBMODULE}
+   ## Pipeline State - {MODULE} > {SUBMODULE}
 
    | Stage | Name | Status | Last updated | Notes |
    |-------|------|--------|-------------|-------|
@@ -764,17 +764,17 @@ There is no single source of truth for pipeline state. This creates several fail
    | 1 | Module Analysis | ✅ Complete | YYYY-MM-DD | |
    | 2 | Test Plan Generation | ✅ Complete | YYYY-MM-DD | |
    | 3 | Test Case Generation | ⏳ In progress | YYYY-MM-DD | |
-   | 3.5 | Test Stabilization | ⬜ Not started | — | |
-   | 4 | Automation Generation | ⬜ Not started | — | |
-   | 5 | ADO Integration | ⬜ Not started | — | |
-   | 6 | Maintenance | ⬜ Not started | — | |
+   | 3.5 | Test Stabilization | ⬜ Not started | - | |
+   | 4 | Automation Generation | ⬜ Not started | - | |
+   | 5 | ADO Integration | ⬜ Not started | - | |
+   | 6 | Maintenance | ⬜ Not started | - | |
    ```
 2. In every agent instruction file, add a **first step** before any analysis: "Open or
    create `session-summary.md` for this submodule. Update the Pipeline State Tracker table
    to reflect current known state. Mark the current stage as ⏳ In progress."
 3. At session end (or when switching stages), instruct agents to update the tracker, mark
    the current stage ✅ Complete, and identify the next stage.
-4. If a submodule has no `session-summary.md`, this is an error — `validate.js` should
+4. If a submodule has no `session-summary.md`, this is an error - `validate.js` should
    warn about its absence for any submodule that has been partially initialized (has spec
    files but no summary).
 
@@ -783,7 +783,7 @@ There is no single source of truth for pipeline state. This creates several fail
 > **Consolidation note**: Items 2, 6, and 7 from the original 21-item analysis were merged
 > into **ISSUE-01** (they all concern the same three-way spec path inconsistency: the
 > `@spec` annotation format, the `init.js` directory creation path, and the `validate.js`
-> scan pattern). This accounts for the apparent count discrepancy (21 items → 19 issues).
+> scan pattern). This accounts for the apparent count discrepancy (21 items -> 19 issues).
 
 ---
 
@@ -806,7 +806,7 @@ There is no single source of truth for pipeline state. This creates several fail
 | ISSUE-13 | 🟡 Moderate | TC Origin missing `SPRINT-AGREED` tag for Mode B | `spec-driven-philosophy.md`, `05-test-scenarios.md`, `03-test-case-generation.md` | No |
 | ISSUE-14 | 🟠 Significant | No connection between `04-test-data.md` and provisioning code | `04-test-data.md`, `04-automation-generation.md` | Yes |
 | ISSUE-15 | 🟡 Moderate | CI pipeline template existence unverified | `05-ado-integration.md`, `integrations/ado-powershell/pipelines/` | No |
-| ISSUE-16 | 🟠 Significant | Examples folder incomplete — 4 of 6 spec files missing | `examples/module-example/suppliers/` | Yes |
+| ISSUE-16 | 🟠 Significant | Examples folder incomplete - 4 of 6 spec files missing | `examples/module-example/suppliers/` | Yes |
 | ISSUE-17 | 🟡 Moderate | `validate.js` doesn't check `06-defects/open/` and `/resolved/` | `validate.js`, `init.js` | No |
 | ISSUE-18 | 🟡 Moderate | Defect files at `06-defects/` root not detected by `validate.js` | `validate.js`, `06-maintenance.md` | No |
 | ISSUE-19 | 🟡 Moderate | Session summaries lack consolidated pipeline state view | `templates/session-summary.md`, all `agent-instructions/` | No |

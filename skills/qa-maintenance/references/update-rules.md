@@ -17,7 +17,7 @@
 
 ### Field removed from UI
 
-1. Mark row in `00-inventory.md` as `[REMOVED - {YYYY-MM-DD}]` — do NOT delete the row
+1. Mark row in `00-inventory.md` as `[REMOVED - {YYYY-MM-DD}]` - do NOT delete the row
 2. Mark the related business rule in `01-business-rules.md` as `[DEPRECATED - {YYYY-MM-DD}]`
 3. Mark related TCs in `05-test-scenarios.md` as `[DEPRECATED]` for traceability
 4. Update or skip automation tests that reference the removed element's selector
@@ -26,7 +26,7 @@
 
 1. Update `02-workflows.md` with the new flow diagram
 2. Mark the old version as `[PREVIOUS - {YYYY-MM-DD}]` inside the same file (keep for reference)
-3. Review all TCs that test the affected steps — update expected results in `05-test-scenarios.md`
+3. Review all TCs that test the affected steps - update expected results in `05-test-scenarios.md`
 
 ### New submodule added
 
@@ -47,7 +47,7 @@ Follow the full module analysis process: `skills/qa-module-analysis/`.
 ### Selectors changed (redesign or framework update)
 
 1. Locate the spec file or page object containing the old selector
-2. Update the selector — prefer `getByRole`, `getByLabel`, `getByTestId`
+2. Update the selector - prefer `getByRole`, `getByLabel`, `getByTestId`
 3. Run the affected test 2+ times to confirm stability
 4. Add an entry to the correction log at top of the spec file:
 
@@ -83,7 +83,7 @@ Add to the bottom of each updated spec file:
 | Version | Date | Description |
 |---------|------|-------------|
 | 1.0 | YYYY-MM-DD | Initial creation |
-| 1.1 | YYYY-MM-DD | Added RN-{MODULE}-{NNN}: {rule title}. TC count: N → M |
+| 1.1 | YYYY-MM-DD | Added RN-{MODULE}-{NNN}: {rule title}. TC count: N -> M |
 | 1.2 | YYYY-MM-DD | Removed field {name} (deprecated) |
 ```
 
@@ -94,7 +94,7 @@ Add to the bottom of each updated spec file:
 Create at: `qa/SESSION-SUMMARY-{YYYY-MM-DD}-maintenance.md`
 
 ```markdown
-# Maintenance Session — {YYYY-MM-DD}
+# Maintenance Session - {YYYY-MM-DD}
 
 ## Change trigger
 {Brief description of the application change that triggered this session}
@@ -108,11 +108,11 @@ Create at: `qa/SESSION-SUMMARY-{YYYY-MM-DD}-maintenance.md`
 ## TC changes
 - New TCs: {IDs} (+N total)
 - Deprecated TCs: {IDs} (-N total)
-- Net TC count: {module} → {N}
+- Net TC count: {module} -> {N}
 
 ## Tests reactivated
-- {TC-ID}: removed test.skip() — DEF-{NNN} resolved
+- {TC-ID}: removed test.skip() - DEF-{NNN} resolved
 
 ## Tests newly skipped
-- {TC-ID}: test.skip() added — DEF-{NNN} filed for {bug description}
+- {TC-ID}: test.skip() added - DEF-{NNN} filed for {bug description}
 ```

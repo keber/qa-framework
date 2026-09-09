@@ -12,10 +12,10 @@ description: >
 
 # QA Skill: Test Case Step Expansion (Stage 4 of 6)
 
-**Stage**: 4 — Test Case Steps (expand / complete Plan de Pruebas)
+**Stage**: 4 - Test Case Steps (expand / complete Plan de Pruebas)
 **Prerequisite**: Plan de Pruebas exists at `qa/02-test-plans/sprints/Sprint-{N}/Plan-de-Pruebas-{proyecto}-Sprint-{N}-{modulo}.md`
 **Output**: Updated Plan de Pruebas table (primary) OR `qa/03-test-cases/TC-{ID}.md` files (standalone, optional)
-**Next stage**: Stage 5 — Automation (`qa-automation`) or ADO Integration (`qa-ado-integration`)
+**Next stage**: Stage 5 - Automation (`qa-automation`) or ADO Integration (`qa-ado-integration`)
 
 > **Pipeline rule**: TC IDs must be unique across the module. Never reuse a TC ID.
 > **Primary output** is the table in the Plan de Pruebas, not standalone files.
@@ -29,28 +29,28 @@ description: >
 | Plan de Pruebas has summary steps (from `05-test-scenarios.md`) that aren't concrete enough | Expand steps row by row in the table |
 | A specific TC requires multi-scenario, multi-role documentation | Create standalone `TC-{ID}.md` in `qa/03-test-cases/` |
 | TC is reused across multiple sprints unchanged | Create standalone file with cross-reference |
-| All steps in the table are already concrete and observable | Stage 4 not needed — proceed to Stage 5 or ADO |
+| All steps in the table are already concrete and observable | Stage 4 not needed - proceed to Stage 5 or ADO |
 
 ---
 
 ## Inputs Required
 
-1. `qa/02-test-plans/sprints/Sprint-{N}/Plan-de-Pruebas-{proyecto}-Sprint-{N}-{modulo}.md` — table to expand
-2. `qa/01-specifications/module-{name}/submodule-{name}/00-inventory.md` — UI field names, button labels, routes
-3. `qa/01-specifications/module-{name}/submodule-{name}/05-test-scenarios.md` — original scenario text
+1. `qa/02-test-plans/sprints/Sprint-{N}/Plan-de-Pruebas-{proyecto}-Sprint-{N}-{modulo}.md` - table to expand
+2. `qa/01-specifications/module-{name}/submodule-{name}/00-inventory.md` - UI field names, button labels, routes
+3. `qa/01-specifications/module-{name}/submodule-{name}/05-test-scenarios.md` - original scenario text
 
 ---
 
 ## Process
 
-### Step 1 — Identify rows needing expansion
+### Step 1 - Identify rows needing expansion
 
 Review the Tabla de Pruebas. Flag rows where Steps are:
 - Summary-level (e.g., "Navegar al módulo y verificar comportamiento")
 - Missing intermediate steps (fewer than 2 steps for a non-trivial scenario)
 - Using vague verbs ("hacer lo necesario", "verificar que funciona")
 
-### Step 2 — Expand steps in-table
+### Step 2 - Expand steps in-table
 
 For each flagged row, rewrite the Steps cell using:
 - `00-inventory.md` for exact UI element names and routes
@@ -62,14 +62,14 @@ Quality rules per step:
 - One action + one verification per step (when applicable)
 - Resultado Esperado must be measurable (specific text, state, count)
 
-### Step 3 — Standalone TC files (only when needed)
+### Step 3 - Standalone TC files (only when needed)
 
 If a TC requires standalone documentation (see "When to use" table above):
 - Save as `qa/03-test-cases/TC-{ID}.md`
 - Use template from `references/test-case-template.md`
 - Add a note in the Plan de Pruebas table row: "See qa/03-test-cases/TC-{ID}.md"
 
-### Step 4 — Quality gates
+### Step 4 - Quality gates
 
 Before marking stage complete:
 - [ ] Every row in the table has ≥ 2 numbered steps
@@ -77,6 +77,7 @@ Before marking stage complete:
 - [ ] Every Resultado Esperado is measurable
 - [ ] No blank cells in Confirma column (Task ID or `N/A`)
 - [ ] Standalone TC files (if created) are cross-referenced in the table
+- [ ] Output verification run and the counts reported (see `../qa-module-analysis/references/output-verification.md`) - report the command output, never a compliance claim
 
 ---
 

@@ -1,4 +1,4 @@
-# Plan de Pruebas — {{PROYECTO}} — Sprint {{NNN}} — {{MODULO_NOMBRE}}
+# Plan de Pruebas - {{PROYECTO}} - Sprint {{NNN}} - {{MODULO_NOMBRE}}
 
 **Proyecto:** {{PROYECTO}}
 **Sprint:** {{NNN}}
@@ -6,7 +6,7 @@
 **Código módulo:** {{MODULO_CODE}}
 **Fecha planificación:** {{YYYY-MM-DD}}
 **Ventana QA:** {{YYYY-MM-DD}} y {{YYYY-MM-DD}}
-**ADO Test Plan:** [Plan {{ADO_PLAN_ID}} — {{PROYECTO}} Sprint {{NNN}}]({{ADO_TEST_PLAN_URL}}) *(omitir si ADO no está habilitado)*
+**ADO Test Plan:** [Plan {{ADO_PLAN_ID}} - {{PROYECTO}} Sprint {{NNN}}]({{ADO_TEST_PLAN_URL}}) *(omitir si ADO no está habilitado)*
 
 ---
 
@@ -37,27 +37,27 @@
 > Si no hay ADO, listar los requerimientos o módulos abordados.
 
 ### {{AREA_FUNCIONAL_1}}
-- Task {{ID}} — {{DESCRIPCION}}
-- Task {{ID}} — {{DESCRIPCION}}
+- Task {{ID}} - {{DESCRIPCION}}
+- Task {{ID}} - {{DESCRIPCION}}
 
 ### {{AREA_FUNCIONAL_2}}
-- Task {{ID}} — {{DESCRIPCION}}
+- Task {{ID}} - {{DESCRIPCION}}
 
 ---
 
 ## 4. Priorización
 
-**P0 – Confirmación (obligatorio)**
+**P0 - Confirmación (obligatorio)**
 - {{ESCENARIO_CRITICO_1}}
 - {{ESCENARIO_CRITICO_2}}
 
-**P1 – Smoke (camino feliz)**
+**P1 - Smoke (camino feliz)**
 - {{FLUJO_PRINCIPAL}}
 
-**P2 – Regresión mínima adyacente**
+**P2 - Regresión mínima adyacente**
 - {{REGRESION_1}}
 
-**P3 – Exploratoria (timeboxed)**
+**P3 - Exploratoria (timeboxed)**
 - Charter 1 ({{N}} min): {{DESCRIPCION_CHARTER}}
 
 ---
@@ -77,8 +77,8 @@
 
 - Ambiente QA disponible en `{{QA_BASE_URL}}`
 - Roles disponibles:
-  - Usuario **{{ROL_1}}** — para {{ACCION}}
-  - Usuario **{{ROL_2}}** — para {{ACCION}}
+  - Usuario **{{ROL_1}}** - para {{ACCION}}
+  - Usuario **{{ROL_2}}** - para {{ACCION}}
 - Datos base:
   - {{DATO_BASE_1}}
   - {{DATO_BASE_2}}
@@ -109,7 +109,7 @@
 
 > Convenciones:
 > - **TC-ID:** `TC-{{MODULO_CODE}}-{{SUBMODULO_CODE}}-NNN` (o `N/A` si no hay ID asignado aún)
-> - **Steps:** numerados, separados por `<br>` — verbos concretos de UI (`Navegar a`, `Ingresar`, `Hacer click`, `Verificar`)
+> - **Steps:** numerados, separados por `<br>` - verbos concretos de UI (`Navegar a`, `Ingresar`, `Hacer click`, `Verificar`)
 > - **Confirma:** `Task NNNNN` si hay tarea ADO relacionada; `N/A` si no aplica
 > - **Tipo:** `Manual` | `Automatizado` | `Ambos`
 > - **Prioridad:** `P0` | `P1` | `P2` | `P3`
@@ -149,4 +149,4 @@
 > `qa/02-test-plans/sprints/Sprint-{{NNN}}/Plan-de-Pruebas-{{PROYECTO}}-Sprint-{{NNN}}.md`
 >
 > El consolidado se genera con el script `@keber/ado-qa consolidate-sprint --sprint {{NNN}}`.
-> **No editar manualmente** — es derivado de los archivos por módulo.
+> **No editar manualmente** - es derivado de los archivos por módulo.

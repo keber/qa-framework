@@ -27,7 +27,7 @@
     "testCaseIdPattern": "TC-{MODULE}-{SUBMODULE}-{NUM}",
     "businessRuleIdPattern": "RN-{MODULE}-{NUM}",
     "workflowIdPattern": "FL-{MODULE}-{NUM}",
-    "defectIdPattern": "DEF-{NUM}",
+    "defectIdPattern": "DEF-{PREFIX}-{NUM}",
     "testNamingPattern": "[{ID}] {title} @{priority}",
     "timestampFormat": "YYYY-MM-DD_HH-MM-SS",
     "tcPriorityLevels": ["P0", "P1", "P2", "P3"]
@@ -41,6 +41,20 @@
       "description": "{{ROLE_DESCRIPTION}}"
     }
   ],
+
+  "parallelLanes": {
+    "enabled": false,
+    "lanes": [
+      {
+        "id": "1",
+        "account": "QA_USER",
+        "storageState": ".auth/user-default.json",
+        "mcpNamespace": null,
+        "runnerProject": "chromium",
+        "capabilities": []
+      }
+    ]
+  },
 
   "integrations": {
     "playwright": {
@@ -69,7 +83,14 @@
       "variableGroup": "{{ADO_VARIABLE_GROUP}}",
       "pipelineFile": "qa/08-azure-integration/pipelines/azure-pipeline-qa.yml",
       "moduleRegistry": "qa/08-azure-integration/module-registry.json",
-      "reporterPackage": "@alex_neo/playwright-azure-reporter"
+      "reporterPackage": "@alex_neo/playwright-azure-reporter",
+      "sprintCycle": {
+        "enabled": false,
+        "sprintDurationDays": 8,
+        "manualTestingTimeboxDays": 2,
+        "dateFormat": "dd-mm-aaaa",
+        "timezone": "America/Santiago"
+      }
     }
   },
 

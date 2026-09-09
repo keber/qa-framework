@@ -11,7 +11,7 @@ description: >
 
 # QA Skill: Test Stabilization (Stage 5b)
 
-**Stage**: 5b — Stabilization (parallel to / after Stage 5)  
+**Stage**: 5b - Stabilization (parallel to / after Stage 5)  
 **Prerequisite**: Failing or flaky tests exist in `qa/07-automation/e2e/`  
 **Output**: Stable passing tests + `STABILIZATION-REPORT.md`  
 **Next stage**: Return to Stage 5 to continue automation, or Stage 6 if all tests pass
@@ -22,16 +22,16 @@ description: >
 
 ## Inputs Required
 
-1. Failure output — CI log, local run output, or list of failing test names
-2. `qa/07-automation/e2e/{file}.spec.ts` — failing spec files
-3. `qa/01-specifications/{module}/` — ground truth for expected behavior
-4. `qa/07-automation/playwright.config.ts` — current runner config
+1. Failure output - CI log, local run output, or list of failing test names
+2. `qa/07-automation/e2e/{file}.spec.ts` - failing spec files
+3. `qa/01-specifications/{module}/` - ground truth for expected behavior
+4. `qa/07-automation/playwright.config.ts` - current runner config
 
 ---
 
 ## Process
 
-### Step 1 — Reproduce locally
+### Step 1 - Reproduce locally
 
 Run failing tests in isolation:
 ```
@@ -39,42 +39,52 @@ npx playwright test {file}.spec.ts --project={project} --reporter=list
 ```
 Do not trust CI-only failures until reproduced, or classify immediately as Category H (CI environment).
 
-### Step 2 — Classify each failure
+Any finding produced by a standalone script - Node + Playwright run outside the project's test
+runner, such as an ad-hoc diagnosis script - must be confirmed through `npx playwright test` before
+it decides anything about a defect's status. A standalone script and the official suite have
+produced opposite, independently reproducible results for the same scenario: a polling diagnostic
+saw a toast 4/4 times while the official suite saw none, 6/6 across two runs. The defect had already
+been closed on the standalone evidence and had to be reopened. Standalone output is diagnostic
+input, never a verdict.
+
+### Step 2 - Classify each failure
 
 Use the classification protocol: `references/classification-protocol.md`
 
 Category summary:
-- **A — Selector broken**: locator no longer matches; fix selector
-- **B — Timing/flaky**: async operation not awaited correctly; replace with proper wait
-- **C — Data conflict**: parallel test data collision; apply `EXEC_IDX`
-- **D — Auth/session**: session expired or role mismatch; repair fixture
-- **E — Spec mismatch**: behavior changed; update spec first, then test
-- **F — Network dependency**: external call not mocked; add mock or skip
-- **G — Environment**: missing env var or wrong base URL; fix config
-- **H — CI environment**: OS/browser difference; add retry or tag as `@ci-skip`
-- **I — Logic error**: test assertion does not match the spec; fix assertion 
-  to match spec — **not** to match wrong app behavior. If the app is at fault, 
+- **A - Selector broken**: locator no longer matches; fix selector
+- **B - Timing/flaky**: async operation not awaited correctly; replace with proper wait
+- **C - Data conflict**: parallel test data collision; apply `EXEC_IDX`
+- **D - Auth/session**: session expired or role mismatch; repair fixture
+- **E - Spec mismatch**: behavior changed; update spec first, then test
+- **F - Network dependency**: external call not mocked; add mock or skip
+- **G - Environment**: missing env var or wrong base URL; fix config
+- **H - CI environment**: OS/browser difference; add retry or tag as `@ci-skip`
+- **I - Logic error**: test assertion does not match the spec; fix assertion 
+  to match spec - **not** to match wrong app behavior. If the app is at fault, 
   use `test.fail()` instead of correcting the assertion direction.
 
-### Step 3 — Apply fixes in priority order
+### Step 3 - Apply fixes in priority order
 
-Fix category priorities: A → C → D → B → I → E → F → G → H
+Fix category priorities: A -> C -> D -> B -> I -> E -> F -> G -> H
 
 For each fix:
-1. Apply minimal change — do not refactor surrounding code
+1. Apply minimal change - do not refactor surrounding code
 2. Re-run the specific TC to verify fix
 3. Re-run the full describe block to verify no regression
 4. Note confidence score (0-100) for each fix
 
-**Category I special rule — assertion polarity:**  
+**Category I special rule - assertion polarity:**  
 Before flipping or weakening an assertion, confirm its direction against the 
-spec. If the spec says the condition should hold and the app violates it → 
-the original assertion was *correct* and the app is broken → use `test.fail()` 
+spec. If the spec says the condition should hold and the app violates it -> 
+the original assertion was *correct* and the app is broken -> use `test.fail()` 
 + open a defect. Do NOT invert the assertion.  
 A test flipped from failing to passing by inverting its assertion is masking 
-a defect - which is worse than a failing test.
+a defect - which is worse than a failing test.  
+The confirmation that the app violates the spec must come from the official 
+suite, not from an isolated or standalone script.
 
-### Step 4 — Confidence scoring
+### Step 4 - Confidence scoring
 
 Calculate composite confidence:
 - Consistent pass ×3 locally: +40
@@ -84,17 +94,35 @@ Calculate composite confidence:
 
 Target: ≥ 90 before marking TC as stable.
 
-### Step 5 — Handle unresolvable failures
+### Step 5 - Handle unresolvable failures
 
 If a failure cannot be fixed without application code change:
 - Add `test.skip(true, 'PENDING-CODE: {ADO item or description}')` annotation
 - Update `qa/01-specifications/{module}/05-test-scenarios.md` with `PENDING-CODE` note
 
-### Step 6 — Update spec if behavior changed (Category E)
+**BLOCKING - before creating any defect file under `qa/06-defects/open/`:**
+
+1. Search the project's known-issues record for this module. Where a defect tracker is integrated,
+   that means the tracker's already-filed items; where the project keeps a local known-issues file,
+   search that too. Use the symptom, not the TC ID - the same defect reaches different TCs.
+2. Record the search inside the defect file itself: source consulted, terms searched, matches found
+   (or "none"). A defect file without that section is not ready to be filed.
+3. If a match exists in an open state: do **not** create a new defect. Reference the existing item
+   in the test's `test.fail()` / `test.skip()` note instead.
+4. If a match exists in a closed state: this is a regression, not a new defect. File it as such and
+   say which item it reopens - a defect closed three times and refiled as new each time reads as
+   three unrelated bugs.
+5. Only with no match, create a new defect using the project's `defectIdPattern`.
+
+This gate exists because it was skipped: four defects were filed in one session without it, and a
+later manual check found one of them sharing its exact symptom with three already-closed tracker
+items.
+
+### Step 6 - Update spec if behavior changed (Category E)
 
 Follow `qa-maintenance` skill for mid-sprint spec updates. Do not change spec to match wrong behavior.
 
-### Step 7 — Re-run full suite
+### Step 7 - Re-run full suite
 
 After all fixes applied, run the full module suite:
 ```
@@ -102,7 +130,7 @@ npx playwright test --project={module} --reporter=list
 ```
 All previously failing TCs should pass or be explicitly skipped.
 
-### Step 8 — Produce stabilization report
+### Step 8 - Produce stabilization report
 
 Template: `references/classification-protocol.md` (STABILIZATION-REPORT section)
 
@@ -121,8 +149,9 @@ Required sections:
 | No `waitForTimeout` | Use `waitForSelector` or `waitForResponse` |
 | No app code changes | Fix tests only, not application |
 | Spec is ground truth | Never change spec to match wrong behavior |
-| Unresolvable → skip | With PENDING-CODE annotation |
+| Unresolvable -> skip | With PENDING-CODE annotation |
 | Report required | Every stabilization session produces a report |
+| Official suite is source of truth | Only `npx playwright test`, run with the project's real config and fixtures, determines a test's or a defect's status. Standalone diagnostic scripts provide complementary evidence only - never grounds to close a defect or flip a `test.fail()` |
 
 ---
 

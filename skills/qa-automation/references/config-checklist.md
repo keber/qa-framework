@@ -12,7 +12,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   timeout: 30_000,            // Per-test timeout
-  actionTimeout: 10_000,      // Per-action timeout — REQUIRED, prevents silent hangs
+  actionTimeout: 10_000,      // Per-action timeout - REQUIRED, prevents silent hangs
   navigationTimeout: 60_000,  // Per-navigation timeout (SPAs may need longer)
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : 2,
@@ -31,7 +31,7 @@ export default defineConfig({
 
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
-    // ADO reporter — add only when integration is enabled:
+    // ADO reporter - add only when integration is enabled:
     // ['@alex_neo/playwright-azure-reporter', {
     //   orgUrl: process.env.ADO_ORG,
     //   projectName: process.env.ADO_PROJECT,
@@ -59,7 +59,7 @@ export default defineConfig({
 
 Before marking automation as complete, confirm:
 
-- [ ] `actionTimeout` is set — **not optional**; without it, `textContent()` and similar calls silently hang
+- [ ] `actionTimeout` is set - **not optional**; without it, `textContent()` and similar calls silently hang
 - [ ] `testIgnore` excludes seed scripts and debug files
 - [ ] `baseURL` reads from `process.env.QA_BASE_URL` (never hardcoded)
 - [ ] `storageState` path exists (created by `globalSetup`)
@@ -72,7 +72,7 @@ Before marking automation as complete, confirm:
 
 ## global-setup.ts Checklist
 
-- [ ] Reads every credential from `process.env` — no hardcoded values
+- [ ] Reads every credential from `process.env` - no hardcoded values
 - [ ] Uses `evaluate()` for password input (trace safety)
 - [ ] Saves storageState to `.auth/session.json` (or per-role paths)
 - [ ] Handles login failure explicitly (does not silently save an unauthenticated state)

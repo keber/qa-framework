@@ -1,6 +1,6 @@
 # docs/spec-driven-philosophy.md
 
-## Spec-Driven Automated Testing — Core Philosophy
+## Spec-Driven Automated Testing - Core Philosophy
 
 This document explains the methodology that underpins the entire `qa-framework`.
 
@@ -34,7 +34,7 @@ A test case with origin `PENDING-CODE` or `BLOCKED-PERMISSIONS` must be in `test
 ## The Spec-Before-Automation Rule
 
 ```
-Specification exists FIRST → Automation comes second
+Specification exists FIRST -> Automation comes second
 ```
 
 Automation artifacts (spec files, page objects) always reference a spec TC-ID. It is never acceptable to write a Playwright test without a corresponding TC in `05-test-scenarios.md`.
@@ -90,10 +90,10 @@ E2E tests should NOT try to cover:
 
 | Priority | Meaning | Target in automation |
 |---|---|---|
-| **P0** | Critical — system unusable without this | Must be automated |
-| **P1** | High — significant impact if broken | Should be automated |
-| **P2** | Medium — moderate impact | Automate if feasible |
-| **P3** | Low — minor impact | Manual testing acceptable |
+| **P0** | Critical - system unusable without this | Must be automated |
+| **P1** | High - significant impact if broken | Should be automated |
+| **P2** | Medium - moderate impact | Automate if feasible |
+| **P3** | Low - minor impact | Manual testing acceptable |
 
 In the automation suite, P0 tests form the **smoke suite** that runs on every CI build.
 P1 tests run on scheduled runs or before each release.
@@ -165,6 +165,6 @@ This framework supports both:
 | Maintenance after code change | Agent + Human review |
 
 The handoff between agent and human should always happen at a known checkpoint:
-- After the spec set is produced → human reviews before automation is written
-- After automation is written → human reviews coverage mapping
-- After a defect is filed → human decides priority and fix approach
+- After the spec set is produced -> human reviews before automation is written
+- After automation is written -> human reviews coverage mapping
+- After a defect is filed -> human decides priority and fix approach

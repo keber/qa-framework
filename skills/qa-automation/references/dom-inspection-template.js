@@ -1,5 +1,5 @@
 /**
- * DOM / API Inspection Script — {SUBMODULE_DISPLAY_NAME}
+ * DOM / API Inspection Script - {SUBMODULE_DISPLAY_NAME}
  *
  * Purpose: Capture real UI structure before writing automation specs.
  *          Run ONCE per submodule. Output drives selector and fixture decisions.
@@ -32,7 +32,7 @@
 const { chromium } = require('@playwright/test');
 const path = require('path');
 
-// ── Configuration — edit these 4 constants, leave the rest ───────────────────
+// ── Configuration - edit these 4 constants, leave the rest ───────────────────
 const STATE_FILE    = path.resolve(__dirname, '.auth/user-default.json');
 const BASE_URL      = process.env.QA_BASE_URL || '';
 const MODULE_ROUTE  = '/{EntityRoute}';                          // e.g. '/Users', '/Orders/list'
@@ -54,7 +54,7 @@ async function run() {
   console.log('BASE_URL:', BASE_URL);
   console.log('MODULE_ROUTE:', MODULE_ROUTE);
 
-  // ── 0. Intercept API calls — runs passively throughout the entire session ──
+  // ── 0. Intercept API calls - runs passively throughout the entire session ──
   const apiCalls = [];
   page.on('request', req => {
     try {
@@ -148,7 +148,7 @@ async function run() {
     ).catch(() => []);
     console.log('  <select> elements:', JSON.stringify(selects, null, 2));
 
-    // Custom dropdowns — uses ARIA roles (framework-agnostic)
+    // Custom dropdowns - uses ARIA roles (framework-agnostic)
     const customDDs = await page.$$eval(
       '[role="combobox"], [role="listbox"], [aria-haspopup="listbox"]',
       dds => dds.map((dd, i) => ({
@@ -181,7 +181,7 @@ async function run() {
     ).catch(() => []);
     if (tabs.length > 0) console.log('  Tabs:', JSON.stringify(tabs));
 
-    // Validation — submit empty form to capture required-field messages
+    // Validation - submit empty form to capture required-field messages
     const saveBtn = page.getByRole('button', { name: /guardar|save|submit|crear|create/i }).first();
     if (await saveBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await saveBtn.click();
@@ -194,7 +194,7 @@ async function run() {
     }
 
     // ── ADD EXTRA STEPS HERE for tabbed/nested forms ──────────────────────
-    // Example — inspect a specific tab:
+    // Example - inspect a specific tab:
     //   await page.getByRole('tab', { name: /identif/i }).click();
     //   await page.waitForTimeout(1_000);
     //   const tabDDs = await page.locator('[role="tab"][aria-selected="true"] + ... .rz-dropdown')...
@@ -227,7 +227,7 @@ async function run() {
   console.log('\n[STEP 5] API calls captured during session:');
   const unique = [...new Map(apiCalls.map(c => [`${c.method} ${c.url}`, c])).values()];
   if (unique.length === 0) {
-    console.log('  (none captured — app may use WASM-level data, not REST calls)');
+    console.log('  (none captured - app may use WASM-level data, not REST calls)');
   } else {
     unique.forEach(c => {
       console.log(`  ${c.method} ${c.url}`);

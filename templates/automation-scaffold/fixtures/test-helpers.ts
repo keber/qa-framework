@@ -6,7 +6,7 @@
  */
 
 // -----------------------------------------------------------------------
-// EXEC_IDX — unique numeric seed per minute-long execution window
+// EXEC_IDX - unique numeric seed per minute-long execution window
 // -----------------------------------------------------------------------
 // Use this wherever test data needs to be unique (e.g., names, emails,
 // codes) to avoid collisions between parallel or consecutive test runs

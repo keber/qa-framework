@@ -22,7 +22,9 @@
     "init": "node scripts/cli.js init",
     "generate": "node scripts/cli.js generate",
     "validate": "node scripts/cli.js validate",
-    "test": "node --test \"test/**/*.test.js\"",
+    "check-accents": "node scripts/check-spanish-accents.js",
+    "check-chars": "node scripts/check-forbidden-chars.js",
+    "test": "node --test test/*.test.js",
     "version": "node scripts/sync-version.js && git add README.md .github/copilot-instructions.md"
   },
   "files": [
@@ -38,7 +40,7 @@
     "qa-framework.config.json"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "peerDependencies": {
     "@keber/ado-qa": ">=1.0.0",
