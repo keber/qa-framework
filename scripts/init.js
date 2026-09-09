@@ -15,6 +15,9 @@
 const fs   = require('fs');
 const path = require('path');
 
+const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
+const { AGENT_NAMES, isSprintCycleEnabled, buildAgentContent, agentFileName } = require('./lib/claude-agents');
+
 // --- Parse args ---
 const args            = process.argv.slice(2);
 const configFlag      = args.indexOf('--config');
@@ -126,7 +129,7 @@ if (fs.existsSync(qaReadmeTemplate)) {
 // --- qa/memory/INDEX.md ---
 const memoryDir = path.join(qaRoot, 'memory');
 writeIfMissing(path.join(memoryDir, 'INDEX.md'),
-`# Memory Index — ${config.project?.displayName ?? config.project?.name ?? 'Project'}
+`# Memory Index - ${config.project?.displayName ?? config.project?.name ?? 'Project'}
 
 > The agent reads this file first before loading any memory file.
 > Add a row here whenever you create or update a file in this directory.
@@ -146,7 +149,7 @@ for (const file of ['ci-pipeline-findings.md', 'e2e-stabilization-patterns.md', 
 
 // --- 03-test-cases README (optional directory marker) ---
 writeIfMissing(path.join(qaRoot, '03-test-cases', 'README.md'),
-`# 03-test-cases/ — Optional Standalone Test Cases
+`# 03-test-cases/ - Optional Standalone Test Cases
 
 > **v1.7.0+:** The primary location for test cases (with detailed steps) is now
 > \`qa/02-test-plans/sprints/Sprint-{N}/Plan-de-Pruebas-{project}-Sprint-{N}-{module}.md\`.
@@ -198,7 +201,7 @@ for (const mod of modules) {
 
   for (const sub of submodules) {
     const subKey = sub.key ?? sub.name.toLowerCase().replace(/\s+/g, '-');
-    const subDir = path.join(qaRoot, moduleKey, subKey);
+    const subDir = path.join(qaRoot, '01-specifications', moduleKey, subKey);
     fs.mkdirSync(subDir, { recursive: true });
 
     for (const specFile of SPEC_FILES) {
@@ -245,6 +248,19 @@ for (const file of ['playwright.config.ts', 'global-setup.ts', '.env.example', '
     console.log(`  [created] ${path.relative(cwd, dest)}`);
   }
 }
+// Lane scripts: the lane lock plus its config reader and global-setup guards. Plain
+// CommonJS so they run as a CLI and stay testable with `node --test` without pulling
+// in a TypeScript test runner.
+const laneScriptsDir = path.join(e2eScaffoldDir, 'scripts');
+fs.mkdirSync(laneScriptsDir, { recursive: true });
+for (const file of ['lane-config.js', 'lane-lock.js', 'global-setup-guards.js']) {
+  const dest = path.join(laneScriptsDir, file);
+  if (!fs.existsSync(dest)) {
+    fs.copyFileSync(path.join(scaffoldSrc, 'scripts', file), dest);
+    console.log(`  [created] ${path.relative(cwd, dest)}`);
+  }
+}
+
 const fixturesDir = path.join(e2eScaffoldDir, 'fixtures');
 fs.mkdirSync(fixturesDir, { recursive: true });
 for (const file of ['auth.ts', 'test-helpers.ts', 'base.ts']) {
@@ -283,7 +299,7 @@ const adoDir = path.join(qaRoot, '08-azure-integration');
 writeIfMissing(path.join(adoDir, 'README.md'), `# ADO Integration\n\nSee keber/qa-framework integrations/ado-powershell/ for setup instructions.\n`);
 writeIfMissing(path.join(adoDir, 'module-registry.json'), JSON.stringify({ modules: [] }, null, 2));
 
-// --- Skills → .github/skills/ ---
+// --- Skills -> .github/skills/ ---
 const skillsSrc = path.resolve(__dirname, '..', 'skills');
 const skillsDest = path.join(cwd, '.github', 'skills');
 fs.mkdirSync(skillsDest, { recursive: true });
@@ -298,7 +314,7 @@ if (fs.existsSync(skillsSrc)) {
   }
 }
 
-// --- QA structure guide → qa/QA-STRUCTURE-GUIDE.md ---
+// --- QA structure guide -> qa/QA-STRUCTURE-GUIDE.md ---
 const structureGuideSrc  = path.resolve(__dirname, '..', 'docs', 'folder-structure-guide.md');
 const structureGuideDest = path.join(qaRoot, 'QA-STRUCTURE-GUIDE.md');
 if (fs.existsSync(structureGuideSrc)) {
@@ -314,7 +330,33 @@ const copilotInstrContent = fs.readFileSync(instrTemplatePath, 'utf8')
   .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
 writeIfMissing(copilotInstrPath, copilotInstrContent);
 
-// --- AGENT-NEXT-STEPS.md — readable by the agent after install ---
+// --- .claude/commands/qa-*.md - thin wrappers pointing at .github/skills/ ---
+const claudeCommandsDest = path.join(cwd, '.claude', 'commands');
+fs.mkdirSync(claudeCommandsDest, { recursive: true });
+for (const skillName of discoverSkillNames(skillsSrc)) {
+  writeIfMissing(path.join(claudeCommandsDest, commandFileName(skillName)), buildCommandContent(skillName));
+}
+
+// --- .claude/rules/qa-framework.md - always-loaded rules (Claude Code equivalent of applyTo: '**') ---
+const claudeRulesPath  = path.join(cwd, '.claude', 'rules', 'qa-framework.md');
+const rulesTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.rules.md');
+const claudeRulesContent = fs.readFileSync(rulesTemplatePath, 'utf8')
+  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
+writeIfMissing(claudeRulesPath, claudeRulesContent);
+
+// --- .claude/agents/qa-*.md - optional ANALISIS/PLAN sprint-cycle mode (Claude Code only) ---
+// Gated by integrations.azureDevOps.sprintCycle.enabled. No .github/ equivalent: Claude
+// Code subagents with per-agent tools/model frontmatter have no Copilot counterpart.
+if (isSprintCycleEnabled(config)) {
+  const templatesDir = path.resolve(__dirname, '..', 'templates');
+  const claudeAgentsDest = path.join(cwd, '.claude', 'agents');
+  fs.mkdirSync(claudeAgentsDest, { recursive: true });
+  for (const agentName of AGENT_NAMES) {
+    writeIfMissing(path.join(claudeAgentsDest, agentFileName(agentName)), buildAgentContent(agentName, templatesDir, config));
+  }
+}
+
+// --- AGENT-NEXT-STEPS.md - readable by the agent after install ---
 const nextStepsContent = `# ✅ @keber/qa-framework installed successfully
 
 > This file was generated automatically by the postinstall script.
@@ -324,6 +366,7 @@ const nextStepsContent = `# ✅ @keber/qa-framework installed successfully
 
 - \`qa/\` folder structure with spec templates and agent instructions
 - \`.github/instructions/qa-framework.instructions.md\` with QA agent behavior rules (framework-owned, safe to upgrade)
+- \`.claude/rules/qa-framework.md\` and \`.claude/commands/qa-*.md\` - equivalent Claude Code artifacts (framework-owned, safe to upgrade)
 
 ## Required next steps
 
@@ -362,12 +405,17 @@ const adoQaInstalledFinal = fs.existsSync(path.join(cwd, 'node_modules', '@keber
 const azureReporterInstalled = fs.existsSync(path.join(cwd, 'node_modules', '@alex_neo', 'playwright-azure-reporter'));
 
 console.log('');
-console.log('  @keber/qa-framework — scaffold complete');
+console.log('  @keber/qa-framework - scaffold complete');
 console.log('  ----------------------------------------');
 console.log('  Installed:');
 console.log('    qa/                    QA directory structure + spec templates');
 console.log('    .github/skills/        QA agent skills (8 stages)');
 console.log('    .github/instructions/  qa-framework.instructions.md');
+console.log('    .claude/commands/      qa-*.md (Claude Code slash commands)');
+console.log('    .claude/rules/         qa-framework.md (Claude Code always-loaded rules)');
+if (isSprintCycleEnabled(config)) {
+  console.log('    .claude/agents/        qa-analisis/qa-plan/qa-asesoria/qa-informe-resultados.md (ANALISIS/PLAN mode)');
+}
 console.log('');
 console.log('  Optional integrations:');
 if (playwrightInstalled) {

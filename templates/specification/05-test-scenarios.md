@@ -1,4 +1,4 @@
-# Test Scenarios — {{MODULE_NAME}}: {{SUBMODULE_NAME}}
+# Test Scenarios - {{MODULE_NAME}}: {{SUBMODULE_NAME}}
 
 > **Module code**: {{MODULE_CODE}} | **Submodule code**: {{SUBMODULE_CODE}}  
 > **Last updated**: YYYY-MM-DD
@@ -75,7 +75,7 @@
 
 ---
 
-### TC-{{M}}-{{S}}-004: Create new record — happy path
+### TC-{{M}}-{{S}}-004: Create new record - happy path
 
 | Field | Value |
 |-------|-------|
@@ -97,7 +97,7 @@
 
 ---
 
-### TC-{{M}}-{{S}}-005: Required field validation — name empty
+### TC-{{M}}-{{S}}-005: Required field validation - name empty
 
 | Field | Value |
 |-------|-------|
@@ -213,9 +213,9 @@
 
 | TC ID | Business Rules | Workflow |
 |-------|---------------|---------|
-| TC-{{M}}-{{S}}-001 | — | — |
+| TC-{{M}}-{{S}}-001 | - | - |
 | TC-{{M}}-{{S}}-004 | RN-{{M}}-001 | FL-{{M}}-001 |
-| TC-{{M}}-{{S}}-005 | RN-{{M}}-001 | — |
+| TC-{{M}}-{{S}}-005 | RN-{{M}}-001 | - |
 
 ---
 

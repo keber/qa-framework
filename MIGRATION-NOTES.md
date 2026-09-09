@@ -12,7 +12,7 @@ each pattern to the decoupled package approach.
 
 ---
 
-## Pattern A — Repo A style (redacted-repo-web)
+## Pattern A - Repo A style (redacted-repo-web)
 
 ### Characteristics
 
@@ -61,7 +61,7 @@ each pattern to the decoupled package approach.
 
 4. **Move existing spec files** (no structural changes needed):
    ```
-   qa/07-automation/e2e/          ← keep your existing .spec.ts files here
+   qa/07-automation/e2e/          <- keep your existing .spec.ts files here
    ```
 
 5. **Add missing standard folders**:
@@ -70,7 +70,7 @@ each pattern to the decoupled package approach.
    ```
    Copy the standards templates:
    - `node_modules/keber/qa-framework/templates/defect-report.md`
-     → `qa/00-standards/bug-report-template.md`
+     -> `qa/00-standards/bug-report-template.md`
 
 6. **Update `package.json` in `qa/07-automation/`**:
    Replace the existing `gmoindustrial-qa-e2e` package name with your project name.
@@ -89,7 +89,7 @@ each pattern to the decoupled package approach.
 
 ---
 
-## Pattern B — Repo B style (redacted-repo)
+## Pattern B - Repo B style (redacted-repo)
 
 ### Characteristics
 
@@ -97,7 +97,7 @@ each pattern to the decoupled package approach.
 - Has `00-standards/` with naming-conventions, bug-template, TC-template, test-data-guidelines
 - Has `08-azure-integration/` with playwright-azure-reporter, inject-ado-ids.ps1, module-registry.json
 - Multi-module structure: 4 modules × 17+ submodules
-- Full ADO integration: Plans 22304/22794/22875, WI IDs 22957–23034
+- Full ADO integration: Plans 22304/22794/22875, WI IDs 22957-23034
 - Login: email-based auth
 
 ### Migration steps
@@ -133,15 +133,15 @@ each pattern to the decoupled package approach.
    }
    ```
 
-3. **Keep existing `00-standards/` files** — they are compliant with the framework.
+3. **Keep existing `00-standards/` files** - they are compliant with the framework.
    The framework's `templates/defect-report.md` is a generalization of the existing
    bug-report template; no changes required.
 
 4. **Keep existing `08-azure-integration/` files**:
-   - `module-registry.json` — compatible as-is
+   - `module-registry.json` - compatible as-is
    - Replace `inject-ado-ids.ps1` with the generalized version from
      `node_modules/keber/qa-framework/integrations/ado-powershell/scripts/inject-ado-ids.ps1`
-     (optional — existing script continues to work)
+     (optional - existing script continues to work)
 
 5. **Verify `.gitignore`** contains:
    ```
@@ -164,10 +164,10 @@ each pattern to the decoupled package approach.
 - **TC IDs**: The framework uses `[TC-MODULE-SUB-NNN]` format. Existing TCs with different
   formats (e.g., plain numbers like `[TC-001]`) can be migrated by renaming at the next
   spec refresh cycle; no immediate change required.
-- **ADO WI IDs**: Already injected IDs (`[22957]` prefixes) are compatible — the reporter
+- **ADO WI IDs**: Already injected IDs (`[22957]` prefixes) are compatible - the reporter
   reads the numeric prefix regardless of what follows.
 - **storageState files**: Existing `.auth/*.json` files are compatible with the scaffold's
-  `global-setup.ts` — no migration needed.
+  `global-setup.ts` - no migration needed.
 - **Package name**: The automation sub-package (`gmoindustrial-qa-e2e` or similar) is a
   private local package; renaming is optional cosmetic change.
 
@@ -205,3 +205,56 @@ upgradeable without touching the project's custom Copilot instructions.
 
 The detection marker is the heading `# QA Framework Instructions`, which is consistent
 across all previous versions.
+
+---
+
+## Native Claude Code support (no manual per-project work needed)
+
+Previously, projects that used Claude Code instead of (or alongside) GitHub Copilot had
+to hand-build their own bridge to the framework's skills and instructions - there was no
+generated artifact for Claude Code at all. Two real consumer projects independently built
+two incompatible solutions to the same problem (a full skill mirror with a manual sync
+script in one case, hand-written thin command wrappers in the other).
+
+`init` and `upgrade` now generate Claude Code artifacts natively, in parallel with the
+Copilot ones, with no agent detection required:
+
+- `.claude/commands/qa-{name}.md` - one thin wrapper per skill, generated dynamically from
+  `.github/skills/`. Each wrapper points back at the corresponding `SKILL.md` as the single
+  source of truth (`Read the full skill at .github/skills/qa-{name}/SKILL.md FIRST...`).
+  Zero duplication, zero drift.
+- `.claude/rules/qa-framework.md` - the same 11 agent behavior rules and pipeline table as
+  `.github/instructions/qa-framework.instructions.md`, with skill references expressed as
+  `/qa-{name}` slash commands. No frontmatter, so it loads unconditionally (equivalent to
+  `applyTo: '**'`).
+
+Both files are framework-owned and refreshed safely by `npx qa-framework upgrade`, the
+same way the Copilot artifacts are. Projects that built a manual bridge to Claude Code
+before this version can retire it (custom sync scripts, hand-copied skill mirrors, or
+hand-translated `CLAUDE.md`/`.claude/rules/` content) and rely on the generated artifacts
+instead.
+
+---
+
+## Optional ANALISIS/PLAN sprint-cycle mode (Claude Code only)
+
+Previously, a project that wanted a sprint-centric manual testing workflow parallel to
+the 6-stage pipeline (analysis document, ADO-trace-linked test plan, chat-only QA
+advisory, sprint closing results report) had to hand-build its own Claude Code
+subagents - one real consumer project did exactly that, with the sprint duration,
+manual-testing timebox, date format, and locale all hardcoded to its own conventions.
+
+`init` and `upgrade` now generate this mode natively as four generic, parameterized
+subagents under `.claude/agents/` (`qa-analisis.md`, `qa-plan.md`, `qa-asesoria.md`,
+`qa-informe-resultados.md`), gated by `integrations.azureDevOps.sprintCycle.enabled` in
+`qa-framework.config.json`. It is off by default, requires Azure DevOps integration to
+be meaningful (three of the four agents consume ADO work items or an ADO execution
+report), and is intentionally Claude-only - these are Claude Code subagents with
+per-agent `tools`/`model` frontmatter, a primitive GitHub Copilot has no equivalent for.
+
+Projects that hand-built this mode before this version can retire their local copy and
+adopt the generated one, moving their project-specific sprint duration, manual-testing
+timebox, date format, and timezone into `integrations.azureDevOps.sprintCycle` in
+`qa-framework.config.json`. See [docs/usage-with-agent.md](docs/usage-with-agent.md) and
+[docs/installation.md](docs/installation.md) for the full config shape and generated
+file list.

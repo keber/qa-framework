@@ -1,8 +1,8 @@
-# Bug Report — DEF-{{NNN}}: {{Short Title}}
+# Bug Report - DEF-{{PREFIX}}-{{NNN}}: {{Short Title}}
 
 | Field | Value |
 |-------|-------|
-| Bug ID | DEF-{{NNN}} |
+| Bug ID | DEF-{{PREFIX}}-{{NNN}} |
 | Title | {{Short title (max 80 chars)}} |
 | Severity | Critical / High / Medium / Low |
 | Priority | P0 / P1 / P2 / P3 |
@@ -15,6 +15,20 @@
 | Date reported | YYYY-MM-DD |
 | ADO WI | #{ADO_WORK_ITEM_ID} (if ADO enabled) |
 | Related TCs | TC-{{M}}-{{S}}-{{NNN}} |
+
+---
+
+## Known-issues check
+
+> Filled in **before** this file is created. See the blocking step in the
+> `qa-test-stabilization` skill. A defect filed without this section is not ready.
+
+| Field | Value |
+|-------|-------|
+| Source consulted | {{tracker query / known-issues file / both}} |
+| Terms searched | {{symptom terms, not the TC ID}} |
+| Matches found | {{item IDs and their state, or "none"}} |
+| Classification | New defect / Regression of {{ID}} / Duplicate of {{ID}} |
 
 ---
 
@@ -76,7 +90,7 @@
 **Test skip command added**:
 ```typescript
 test.skip(true,
-  'DEF-{{NNN}}: {{description}}. Reactivate when ADO #{{WI_ID}} is resolved.'
+  'DEF-{{PREFIX}}-{{NNN}}: {{description}}. Reactivate when ADO #{{WI_ID}} is resolved.'
 );
 ```
 

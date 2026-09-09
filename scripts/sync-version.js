@@ -13,6 +13,11 @@ const targets = [
   path.join(rootDir, '.github', 'copilot-instructions.md'),
 ];
 
+// templates/qa-framework.instructions.md and templates/qa-framework.rules.md contain a
+// literal {{VERSION}} placeholder substituted by init.js/upgrade.js in the consumer
+// project at install/upgrade time. That placeholder is NOT a hardcoded version string
+// and must never be touched here.
+
 const versionPattern = /v\d+\.\d+\.\d+/;
 
 for (const filePath of targets) {

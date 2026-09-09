@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * scripts/validate.js — Validate qa/ folder structure and conventions
+ * scripts/validate.js - Validate qa/ folder structure and conventions
  *
  * Usage:
  *   qa-framework validate
@@ -9,7 +9,7 @@
  *
  * Checks:
  *   1. Required top-level folders exist
- *   2. All submodule folders contain the 6 required spec files
+ *   2. All submodule folders under 01-specifications/ contain the 6 required spec files
  *   3. No plaintext credentials in spec files (basic scan)
  *   4. Test case naming convention (TC-NNN pattern in spec files)
  *   5. [--strict] Automation spec files exist for every submodule
@@ -70,18 +70,18 @@ const SPEC_FILES = [
   '05-test-scenarios.md',
 ];
 
-const SKIP_DIRS = new Set([
-  '00-guides', '00-standards', '05-test-execution',
-  '06-defects', '07-automation', '08-azure-integration',
-]);
+// Specs live at qa/01-specifications/{module}/{submodule}/. Rooting the scan
+// here keeps it at the right depth and means sibling folders such as
+// 02-test-plans/ or memory/ are never mistaken for modules in the first place.
+const specsRoot = path.join(qaRoot, '01-specifications');
 
-if (fs.existsSync(qaRoot)) {
-  const topDirs = fs.readdirSync(qaRoot).filter(d => {
-    return fs.statSync(path.join(qaRoot, d)).isDirectory() && !SKIP_DIRS.has(d);
-  });
+if (fs.existsSync(specsRoot)) {
+  const moduleDirs = fs.readdirSync(specsRoot).filter(d =>
+    fs.statSync(path.join(specsRoot, d)).isDirectory()
+  );
 
-  for (const moduleDir of topDirs) {
-    const modulePath = path.join(qaRoot, moduleDir);
+  for (const moduleDir of moduleDirs) {
+    const modulePath = path.join(specsRoot, moduleDir);
     const subDirs = fs.readdirSync(modulePath).filter(d =>
       fs.statSync(path.join(modulePath, d)).isDirectory()
     );
@@ -90,15 +90,15 @@ if (fs.existsSync(qaRoot)) {
       const subPath = path.join(modulePath, subDir);
       for (const specFile of SPEC_FILES) {
         if (!fs.existsSync(path.join(subPath, specFile))) {
-          errors.push(`Missing spec file: qa/${moduleDir}/${subDir}/${specFile}`);
+          errors.push(`Missing spec file: qa/01-specifications/${moduleDir}/${subDir}/${specFile}`);
         }
       }
 
       // Strict: automation spec must exist
       if (strict) {
-        const specTs = path.join(qaRoot, '07-automation', 'e2e', moduleDir, `${subDir}.spec.ts`);
+        const specTs = path.join(qaRoot, '07-automation', 'e2e', 'tests', moduleDir, `${subDir}.spec.ts`);
         if (!fs.existsSync(specTs)) {
-          warnings.push(`[STRICT] No automation spec found: qa/07-automation/e2e/${moduleDir}/${subDir}.spec.ts`);
+          warnings.push(`[STRICT] No automation spec found: qa/07-automation/e2e/tests/${moduleDir}/${subDir}.spec.ts`);
         }
       }
     }
@@ -147,7 +147,7 @@ for (const f of specFiles) {
 // -----------------------------------------------------------------------
 console.log('');
 if (errors.length === 0 && warnings.length === 0) {
-  console.log('✅ Validation passed — no issues found.');
+  console.log('✅ Validation passed - no issues found.');
   process.exit(0);
 }
 

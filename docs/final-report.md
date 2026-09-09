@@ -1,4 +1,4 @@
-# Phase 6 — Final Report: keber/qa-framework
+# Phase 6 - Final Report: keber/qa-framework
 
 **Date**: 2025-01-15
 **Version analyzed**: 1.0.0
@@ -26,29 +26,29 @@ procedures documented in `MIGRATION-NOTES.md`.
 
 ## 2. Source Repository Findings
 
-### Repo A — redacted-repo-web
+### Repo A - redacted-repo-web
 
 | Category | Finding |
 |----------|---------|
 | Stack | ASP.NET MVC 5 + Web API 2 + SQL Server |
 | Frontend | jQuery + Select2 + toastr + SweetAlert2 + Metronic |
 | Auth | RUT-based login (`#m_login_signin_submit`) |
-| QA maturity | Medium — spec files present, standards missing |
+| QA maturity | Medium - spec files present, standards missing |
 | Automation | Sprint 40: 26 P0 tests (24 pass, 2 skip via DEF-001/DEF-002) |
 | ADO | Referenced (Plan 21992/Suite 21993) but not reporter-integrated |
 | Modules | 7 submodules documented (~160 TCs across 82 QA files) |
 | Strengths | EXEC_IDX pattern, POM structure, multi-role auth, skip+DEF |
 | Gaps | No `00-standards/`, no `08-azure-integration/`, no session summaries |
 
-### Repo B — redacted-repo
+### Repo B - redacted-repo
 
 | Category | Finding |
 |----------|---------|
 | Stack | Blazor WebAssembly + .NET + Radzen components |
 | Auth | Email-based (`#email-input` / `#password-input`) |
-| QA maturity | High — complete standards folder, ADO fully integrated |
+| QA maturity | High - complete standards folder, ADO fully integrated |
 | Automation | 67 automated TCs (53 pass / 2 fail / 12 skip) |
-| ADO | Full: Plans 22304/22794/22875, WI IDs 22957–23034, bi-directional sync |
+| ADO | Full: Plans 22304/22794/22875, WI IDs 22957-23034, bi-directional sync |
 | Modules | 4 modules × 17+ submodules (~894 TCs) |
 | Strengths | `00-standards/`, `08-azure-integration/`, module-registry, ado reporter |
 | Gaps | No EXEC_IDX pattern, no POM convention, no session summaries |
@@ -61,9 +61,9 @@ procedures documented in `MIGRATION-NOTES.md`.
 |---------|--------|----------|
 | 6-file submodule spec pattern | Both | Core framework pattern |
 | Playwright `@playwright/test` | Both | Standard automation library |
-| Priority levels P0–P3 | Both | Universal tagging via `@PX` |
+| Priority levels P0-P3 | Both | Universal tagging via `@PX` |
 | `test.skip()` + DEF reference | Repo A | Adopted as standard skip convention |
-| `06-defects/` folder | Repo A | Optional — recommended without ADO |
+| `06-defects/` folder | Repo A | Optional - recommended without ADO |
 | `00-standards/` folder | Repo B | Adopted; templates included |
 | `08-azure-integration/` folder | Repo B | Optional; fully documented |
 | `module-registry.json` | Repo B | Included in ADO integration |
@@ -85,7 +85,7 @@ procedures documented in `MIGRATION-NOTES.md`.
 | RUT-based username field | Repo A | Parameterized via `QA_LOGIN_EMAIL_SELECTOR` |
 | `#email-input` / `#password-input` | Repo B | Parameterized via env vars |
 | ADO Plan IDs (21992, 22304, etc.) | Both | Parameterized via `QA_ADO_PLAN_ID` |
-| ADO WI IDs (22957–23034) | Repo B | Injected per-project via inject-ado-ids.ps1 |
+| ADO WI IDs (22957-23034) | Repo B | Injected per-project via inject-ado-ids.ps1 |
 | Specific module names/selectors | Both | Remain in project-specific spec files |
 | Sprint numbers | Both | Remain in project-specific test plans |
 | Metronic theme selectors | Repo A | Project-specific; documented in Repo A specs |
@@ -110,7 +110,7 @@ Fifteen formal decisions were made and documented in `docs/generalization-decisi
 | §8 | POM pattern | Recommended (Repo A); inline acceptable |
 | §9 | Standards folder | Adopted from Repo B (more complete) |
 | §10 | Session summaries | New addition to both repos' patterns |
-| §11 | Priority levels | P0–P3 universal; `@P0` grep-tag convention |
+| §11 | Priority levels | P0-P3 universal; `@P0` grep-tag convention |
 | §12 | `08-azure-integration/` | Optional; fully documented scripts |
 | §13 | CI pipeline | Parameterized `azure-pipeline-qa.yml` |
 | §14 | Framework distribution | npm package (`keber/qa-framework`) |
@@ -122,23 +122,23 @@ Fifteen formal decisions were made and documented in `docs/generalization-decisi
 
 ```
 qa-framework/
-├── package.json                          ← npm package, CLI entry
-├── qa-framework.config.json             ← example project config
+├── package.json                          <- npm package, CLI entry
+├── qa-framework.config.json             <- example project config
 ├── README.md
 ├── CHANGELOG.md
 ├── MIGRATION-NOTES.md
 │
 ├── docs/
-│   ├── architecture.md                  ← 4-layer component map
-│   ├── comparison-matrix.md             ← Phase 1 artifact
-│   ├── generalization-decisions.md      ← Phase 2 artifact (15 decisions)
-│   ├── installation.md                  ← 3 install options
-│   ├── spec-driven-philosophy.md        ← Core methodology
-│   ├── folder-structure-guide.md        ← Full folder reference
-│   ├── usage-with-agent.md              ← Agent prompt patterns
-│   └── final-report.md                  ← This file
+│   ├── architecture.md                  <- 4-layer component map
+│   ├── comparison-matrix.md             <- Phase 1 artifact
+│   ├── generalization-decisions.md      <- Phase 2 artifact (15 decisions)
+│   ├── installation.md                  <- 3 install options
+│   ├── spec-driven-philosophy.md        <- Core methodology
+│   ├── folder-structure-guide.md        <- Full folder reference
+│   ├── usage-with-agent.md              <- Agent prompt patterns
+│   └── final-report.md                  <- This file
 │
-├── agent-instructions/                  ← Consumed by Copilot agent
+├── agent-instructions/                  <- Consumed by Copilot agent
 │   ├── 00-module-analysis.md
 │   ├── 01-spec-generation.md
 │   ├── 02-test-plan-generation.md
@@ -148,7 +148,7 @@ qa-framework/
 │   └── 06-maintenance.md
 │
 ├── templates/
-│   ├── specification/                   ← 6-file submodule template set
+│   ├── specification/                   <- 6-file submodule template set
 │   │   ├── 00-inventory.md
 │   │   ├── 01-business-rules.md
 │   │   ├── 02-workflows.md
@@ -188,7 +188,7 @@ qa-framework/
 │           ├── 00-inventory.md
 │           └── suppliers-create.spec.ts
 │
-└── scripts/                             ← CLI implementation
+└── scripts/                             <- CLI implementation
     ├── cli.js
     ├── init.js
     ├── generate.js

@@ -11,10 +11,10 @@ description: >
 
 # QA Skill: Maintenance (Stage 6 of 6)
 
-**Stage**: 6 — Maintenance  
+**Stage**: 6 - Maintenance  
 **Prerequisite**: An application change (bug fix, feature change, new requirement) has been delivered  
 **Output**: Updated specs, TCs, and automation aligned with the new application behavior  
-**Cycle**: Returns to Stage 2 (spec update) → Stage 4 (TC update) → Stage 5 (automation update) as needed
+**Cycle**: Returns to Stage 2 (spec update) -> Stage 4 (TC update) -> Stage 5 (automation update) as needed
 
 > **Rule**: Never update specs to match an incorrect application behavior. Specs define correct behavior; automation reflects specs. If the app is wrong, file a defect, don't update the spec.
 
@@ -22,16 +22,16 @@ description: >
 
 ## Inputs Required
 
-1. Description of the change — which submodule, what changed, and why
-2. `qa/01-specifications/{module}/` — specs affected by the change
-3. `qa/07-automation/e2e/tests/{module}/` — automation affected by the change
+1. Description of the change - which submodule, what changed, and why
+2. `qa/01-specifications/{module}/` - specs affected by the change
+3. `qa/07-automation/e2e/tests/{module}/` - automation affected by the change
 4. Optionally: ADO work item or defect report describing the change
 
 ---
 
 ## Process
 
-### Step 1 — Identify affected artifacts
+### Step 1 - Identify affected artifacts
 
 For the delivered change, identify:
 - Which spec files reference the changed behavior (search for affected term/field/flow)
@@ -39,7 +39,7 @@ For the delivered change, identify:
 - Which automation files implement those TCs
 - Whether any test data in `04-test-data.md` is affected
 
-### Step 2 — Update specs first
+### Step 2 - Update specs first
 
 Update spec files before touching automation. Spec update rules:
 
@@ -54,14 +54,14 @@ Update spec files before touching automation. Spec update rules:
 
 Detailed rules: `references/update-rules.md`
 
-### Step 3 — Update TCs
+### Step 3 - Update TCs
 
 After specs are updated:
 - Update step text in affected `TC-*.md` files
 - If a TC no longer applies: mark as `[OBSOLETE]` in the index, do not delete the file
 - If a new scenario added to specs: generate new TC following Stage 4
 
-### Step 4 — Update automation
+### Step 4 - Update automation
 
 After TCs are updated:
 - Update locators for changed UI elements
@@ -71,7 +71,7 @@ After TCs are updated:
 
 Automation update rules: `references/update-rules.md`
 
-### Step 5 — Bump spec version and log change
+### Step 5 - Bump spec version and log change
 
 In the spec file's YAML frontmatter (or header block):
 ```
@@ -80,7 +80,7 @@ last-updated: {date}
 change-summary: {one-line description of what changed}
 ```
 
-### Step 6 — Update README and close session
+### Step 6 - Update README and close session
 
 - Update `qa/README.md` module row (spec version, TC count if changed, automation status)
 - Update `AGENT-NEXT-STEPS.md`:

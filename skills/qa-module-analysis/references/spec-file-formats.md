@@ -8,7 +8,7 @@
 ## `00-inventory.md`
 
 ```markdown
-# MODULE: {Module Display Name} — Submodule: {Submodule Display Name}
+# MODULE: {Module Display Name} - Submodule: {Submodule Display Name}
 
 | Field | Value |
 |-------|-------|
@@ -47,11 +47,11 @@
 ```
 
 **Rule identification tips**:
-- Every required field → at least 1 RN
-- Every unique constraint → 1 RN (duplicate not allowed)
-- Every state transition → 1 RN (can only approve if status=pending)
-- Every role restriction → 1 RN
-- Every auto-calculated field → 1 RN
+- Every required field -> at least 1 RN
+- Every unique constraint -> 1 RN (duplicate not allowed)
+- Every state transition -> 1 RN (can only approve if status=pending)
+- Every role restriction -> 1 RN
+- Every auto-calculated field -> 1 RN
 
 ---
 
@@ -88,7 +88,7 @@
 ## `03-roles-permissions.md`
 
 ```markdown
-# Roles and Permissions — {Submodule}
+# Roles and Permissions - {Submodule}
 
 ## Access Matrix
 
@@ -115,7 +115,7 @@
 ## `04-test-data.md`
 
 ```markdown
-# Test Data — {Submodule}
+# Test Data - {Submodule}
 
 ## Prerequisites
 
@@ -129,7 +129,7 @@
 - Field A: {value type}
 - User: role `{ROLE_NAME}`, credentials from `QA_USER_{ROLE}_EMAIL` env var
 
-### Scenario: {negative — duplicate}
+### Scenario: {negative - duplicate}
 - Precondition: {entity} with the same key already exists
 - Field A: {same value as existing record}
 - Expected: {system rejection behavior}
@@ -153,7 +153,7 @@ const uniqueTitle = `Test-${EXEC_IDX}`;
 ## `05-test-scenarios.md`
 
 ```markdown
-# Test Scenarios — {Module}: {Submodule}
+# Test Scenarios - {Module}: {Submodule}
 
 **Module code**: {MODULE_CODE}  
 **Submodule code**: {SUBMODULE_CODE}  
@@ -177,7 +177,7 @@ const uniqueTitle = `Test-${EXEC_IDX}`;
 |-------|-------|
 | Priority | P0 / P1 / P2 / P3 |
 | Type | Functional / Negative / Regression / Security / Integration |
-| Origin | UI-OBSERVED / PENDING-CODE / BLOCKED-PERMISSIONS |
+| Origin | UI-OBSERVED / PENDING-BROWSER / PENDING-CODE / BLOCKED-PERMISSIONS |
 | Automation | Yes / Partial / No |
 | Playwright | (fill after automation is written) |
 
@@ -199,9 +199,9 @@ const uniqueTitle = `Test-${EXEC_IDX}`;
 - [ ] Access: unauthenticated user redirected to login
 - [ ] Access: role without permission receives error or empty page
 - [ ] Happy path: primary workflow with valid data succeeds
-- [ ] Negative: required field missing → validation error shown
-- [ ] Negative: duplicate record → system rejects with error message
-- [ ] Negative: invalid format → format error shown
+- [ ] Negative: required field missing -> validation error shown
+- [ ] Negative: duplicate record -> system rejects with error message
+- [ ] Negative: invalid format -> format error shown
 - [ ] State transition: state changes correctly on action
 - [ ] Export/download: file is generated (if feature exists)
 - [ ] Pagination/search: filtering works correctly (if feature exists)

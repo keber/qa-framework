@@ -176,7 +176,7 @@ qa/
 ├── {module}/{submodule}/        <- 6-file spec sets created per module/submodule in config
 ├── 02-test-plans/               <- Test plans (automated + manual)
 ├── 03-test-cases/               <- TC-*.md step-by-step docs (manual track; optional if fully automated)
-├── 04-test-data/                <- Shared test data factories/seeders (optional — per-module data lives in 01-specs)
+├── 04-test-data/                <- Shared test data factories/seeders (optional - per-module data lives in 01-specs)
 ├── 05-test-execution/           <- Execution reports and results
 ├── 06-defects/open|resolved/    <- Defect tracking
 ├── 07-automation/               <- Playwright automation code and config

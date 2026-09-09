@@ -16,7 +16,7 @@ All user emails, passwords, API keys, and tokens must come from environment vari
 const email    = process.env.QA_USER_EMAIL!;
 const password = process.env.QA_USER_PASSWORD!;
 
-// ❌ WRONG — never commit credentials
+// ❌ WRONG - never commit credentials
 const email    = 'admin@example.com';
 const password = 'secret123';
 ```
@@ -25,7 +25,7 @@ Document env var names in `qa/04-test-data/users.md`. Use `<PLACEHOLDER>` for va
 
 ### 2. Use EXEC_IDX for unique values per run
 
-Never create records with static names — they collide between runs and can leave leftover data.
+Never create records with static names - they collide between runs and can leave leftover data.
 
 ```typescript
 const EXEC_IDX = Math.floor(Date.now() / 60_000) % 100_000;
@@ -42,7 +42,7 @@ const date  = `${year}-${month}-${day}`;
 
 ### 3. Provision in `beforeAll`, not `beforeEach`
 
-Create required records once per suite, not once per test. Each test that **consumes** a record needs its own provisioned record — never share a single record among multiple tests.
+Create required records once per suite, not once per test. Each test that **consumes** a record needs its own provisioned record - never share a single record among multiple tests.
 
 ```typescript
 test.beforeAll(async ({ browser }) => {
@@ -61,10 +61,10 @@ Complex setup that cannot be done via the UI goes in a seeder script, not inside
 
 ```
 qa/04-test-data/
-├── users.md          ← Role catalog + env var names (no real values)
-├── fixtures/         ← Static JSON/Markdown for reference data
-├── factories/        ← Dynamic data generation patterns
-└── seeders/          ← DB/API seed scripts for complex prerequisites
+├── users.md          <- Role catalog + env var names (no real values)
+├── fixtures/         <- Static JSON/Markdown for reference data
+├── factories/        <- Dynamic data generation patterns
+└── seeders/          <- DB/API seed scripts for complex prerequisites
 ```
 
 ### 5. Add `.env` and `.auth/` to `.gitignore`

@@ -61,7 +61,7 @@ foreach ($entry in $mapping) {
                 Select-Object -First 1
 
     if (-not $specFile) {
-        Write-Warning "  [NOT FOUND] $($entry.specFile) — skipping WI $adoId"
+        Write-Warning "  [NOT FOUND] $($entry.specFile) - skipping WI $adoId"
         $skipped++
         continue
     }
@@ -84,7 +84,7 @@ foreach ($entry in $mapping) {
 
     if ($PSCmdlet.ShouldProcess("WI #$adoId", "Update title to: $newTitle")) {
         Invoke-RestMethod -Method Patch -Uri $patchUrl -Headers $headers -Body $body | Out-Null
-        Write-Host "  [SYNCED] WI #$adoId → $newTitle"
+        Write-Host "  [SYNCED] WI #$adoId -> $newTitle"
         $synced++
     }
 }

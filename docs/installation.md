@@ -13,7 +13,7 @@
 
 ---
 
-## Option A — npm install (recommended)
+## Option A - npm install (recommended)
 
 ```bash
 npm install --save-dev @keber/qa-framework
@@ -57,7 +57,7 @@ qa/
 
 ---
 
-## Option B — Clone or copy (no npm registry)
+## Option B - Clone or copy (no npm registry)
 
 ```bash
 # From your project root
@@ -69,7 +69,7 @@ node tools/qa-framework/scripts/cli.js init
 
 ---
 
-## Option C — Manual scaffold (advanced)
+## Option C - Manual scaffold (advanced)
 
 If you prefer to control exactly what gets created:
 
@@ -156,9 +156,37 @@ Edit `qa/qa-framework.config.json` (or `qa-framework.config.json` at project roo
 **Never** put `testPlanId`, `suiteId`, or `ADO_PAT` in the config file directly.  
 Use environment variables:
 
-- `ADO_PAT` — Personal Access Token
-- `ADO_PLAN_ID` — Test Plan ID (can also go in `module-registry.json`)
-- `ADO_SUITE_ID` — Suite ID
+- `ADO_PAT` - Personal Access Token
+
+#### Optional: ANALISIS/PLAN agent mode (Claude Code only)
+
+Gated by `integrations.azureDevOps.sprintCycle.enabled`. When `true`, `init`/`upgrade`
+generate four Claude Code subagents (`.claude/agents/qa-analisis.md`, `qa-plan.md`,
+`qa-asesoria.md`, `qa-informe-resultados.md`) for a sprint-centric manual testing
+workflow parallel to the 6-stage pipeline. See
+[docs/usage-with-agent.md](usage-with-agent.md) for details.
+
+```json
+{
+  "integrations": {
+    "azureDevOps": {
+      "enabled": true,
+      "sprintCycle": {
+        "enabled": true,
+        "sprintDurationDays": 8,
+        "manualTestingTimeboxDays": 2,
+        "dateFormat": "dd-mm-aaaa",
+        "timezone": "America/Santiago"
+      }
+    }
+  }
+}
+```
+
+All `sprintCycle` fields are optional; omitted fields fall back to neutral framework
+defaults (8-day sprint, 2-day manual testing timebox, `dd-mm-aaaa`, `America/Santiago`).
+- `ADO_PLAN_ID` - Test Plan ID (can also go in `module-registry.json`)
+- `ADO_SUITE_ID` - Suite ID
 
 ---
 
@@ -244,6 +272,6 @@ The `upgrade` command:
 1. Checks the current framework version in your project
 2. Shows a diff of changed template and instruction files
 3. Prompts before overwriting any file that has local modifications
-4. Never touches `01-specifications/`, `02-test-plans/`, `03-test-cases/`, `04-test-data/`, `05-test-execution/`, `06-defects/` — only framework-owned files are updated
+4. Never touches `01-specifications/`, `02-test-plans/`, `03-test-cases/`, `04-test-data/`, `05-test-execution/`, `06-defects/` - only framework-owned files are updated
 
 See `MIGRATION-NOTES.md` for version-specific migration instructions.

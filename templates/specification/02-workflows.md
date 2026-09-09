@@ -1,4 +1,4 @@
-# Workflows — {{MODULE_NAME}}: {{SUBMODULE_NAME}}
+# Workflows - {{MODULE_NAME}}: {{SUBMODULE_NAME}}
 
 > **Module code**: {{MODULE_CODE}} | **Submodule code**: {{SUBMODULE_CODE}}  
 > **Last updated**: YYYY-MM-DD

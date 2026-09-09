@@ -18,7 +18,7 @@ Creates a new ADO Test Plan with suites and test cases from the mapping JSON fil
   -MappingFile .\qa\08-azure-integration\ado-ids-mapping-{project}.json
 ```
 
-Output: `TestPlanId` and `SuiteIds` — record in `module-registry.json`.
+Output: `TestPlanId` and `SuiteIds` - record in `module-registry.json`.
 
 ---
 
@@ -104,7 +104,7 @@ Apply with `-DryRun:$false`.
       "specsPath": "qa/07-automation/e2e/tests/{module-kebab}",
       "planId": 0,
       "suiteId": 0,
-      "description": "{Module display name} — {N} submodules"
+      "description": "{Module display name} - {N} submodules"
     }
   ]
 }
@@ -130,7 +130,7 @@ Add to `qa/07-automation/playwright.config.ts` reporter array:
 }]
 ```
 
-**`isDisabled: !process.env.CI`** — prevents publishing from local developer runs.
+**`isDisabled: !process.env.CI`** - prevents publishing from local developer runs.
 
 ---
 
@@ -194,8 +194,8 @@ steps:
 
 ## Credential Security Rules
 
-1. `ADO_PAT` is **never** committed to any file — always from env var or CI variable group
+1. `ADO_PAT` is **never** committed to any file - always from env var or CI variable group
 2. `ADO_PAT` is **never** logged, printed, or written to any markdown file
 3. If a PAT appears in any log or output: revoke it immediately in ADO Portal, generate new one
-4. Variable group `qa-secrets` must be scoped to the pipeline only — no project-wide access
-5. PAT minimum scopes: `Work Items (Read, Write)`, `Test Management (Read, Write)` — never use full-access PATs
+4. Variable group `qa-secrets` must be scoped to the pipeline only - no project-wide access
+5. PAT minimum scopes: `Work Items (Read, Write)`, `Test Management (Read, Write)` - never use full-access PATs

@@ -11,14 +11,14 @@
  *   - Reference the matching storageState in playwright.config.ts projects[].
  *
  * Environment variables required:
- *   QA_BASE_URL           — Base URL of the application under test
- *   QA_USER_EMAIL         — Default QA user email (or username/RUT)
- *   QA_USER_PASSWORD      — Default QA user password
- *   QA_LOGIN_PATH         — Relative path to the login page (default: /login)
- *   QA_LOGIN_EMAIL_SELECTOR    — CSS selector for the username/email input
- *   QA_LOGIN_PASSWORD_SELECTOR — CSS selector for the password input
- *   QA_LOGIN_SUBMIT_SELECTOR   — CSS selector for the submit button
- *   QA_LOGIN_SUCCESS_SELECTOR  — CSS selector that confirms successful login
+ *   QA_BASE_URL           - Base URL of the application under test
+ *   QA_USER_EMAIL         - Default QA user email (or username/RUT)
+ *   QA_USER_PASSWORD      - Default QA user password
+ *   QA_LOGIN_PATH         - Relative path to the login page (default: /login)
+ *   QA_LOGIN_EMAIL_SELECTOR    - CSS selector for the username/email input
+ *   QA_LOGIN_PASSWORD_SELECTOR - CSS selector for the password input
+ *   QA_LOGIN_SUBMIT_SELECTOR   - CSS selector for the submit button
+ *   QA_LOGIN_SUCCESS_SELECTOR  - CSS selector that confirms successful login
  *
  * See .env.example for all supported variables.
  */
@@ -30,6 +30,20 @@ import * as fs from 'fs';
 
 dotenv.config();
 
+// Lane table and guards. Both are CommonJS so the guard logic stays testable with
+// `node --test` without adding ts-node or tsx as a dependency.
+const laneLock = require('./scripts/lane-lock.js');
+const guards = require('./scripts/global-setup-guards.js');
+
+type LaneInfo = {
+  account: string;
+  storageState: string;
+  mcpNamespace: string | null;
+  runnerProject: string | null;
+  capabilities: string[];
+};
+const LANE_INFO: Record<string, LaneInfo> = laneLock.LANE_INFO;
+
 function resolveVar(param: string | undefined, envKey: string, defaultValue: string): [string, string] {
   if (param !== undefined) {
     return [param, 'param'];
@@ -40,37 +54,51 @@ function resolveVar(param: string | undefined, envKey: string, defaultValue: str
   return [defaultValue, 'default'];
 }
 
-function resolveAuthUsers(config: FullConfig): Set<'1' | '2'> {
+/**
+ * Decides which lanes to log in.
+ *
+ * Resolution order:
+ *   1. QA_LANE_ONLY  - pins the run to exactly one lane. This is the normal path and
+ *      the only one the guards permit without an explicit cold-setup opt-in.
+ *   2. QA_AUTH_USER  - comma-separated lane ids, for an intentional multi-lane setup.
+ *   3. the projects' storageState, matched against the lane table.
+ *   4. every configured lane (the cold-setup path, gated by QA_COLD_SETUP=1).
+ *
+ * Step 3 matches storageState by EXACT equality against the lane table rather than by
+ * substring. The previous scaffold used storageState.includes('user-2'), which is what
+ * breaks first beyond two lanes: 'user-2' is a substring of 'user-20', and there was no
+ * branch at all for a third lane, so lanes past the second were silently never logged in.
+ */
+function resolveAuthLanes(config: FullConfig): string[] {
+  const laneIds = Object.keys(LANE_INFO);
+
+  const laneOnly = process.env.QA_LANE_ONLY;
+  if (laneOnly) {
+    // Throws on an unknown lane rather than guessing. Guessing is how a run logs into
+    // an account it does not hold.
+    return [laneLock.laneIdForQaLaneOnly(laneOnly)];
+  }
+
   const explicit = process.env.QA_AUTH_USER;
   if (explicit) {
-    const resolved = new Set<'1' | '2'>();
-    for (const token of explicit.split(',').map((value) => value.trim())) {
-      if (token === '1' || token === '2') {
-        resolved.add(token);
-      }
-    }
-    if (resolved.size) {
-      return resolved;
-    }
+    const resolved = explicit
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => laneIds.includes(value));
+    if (resolved.length) return resolved;
   }
 
-  const fromProjects = new Set<'1' | '2'>();
+  const fromProjects = new Set<string>();
   for (const project of config.projects) {
     const storageState = (project.use as { storageState?: unknown } | undefined)?.storageState;
-    if (typeof storageState === 'string') {
-      if (storageState.includes('user-2')) {
-        fromProjects.add('2');
-      } else if (storageState.includes('user-1')) {
-        fromProjects.add('1');
-      }
+    if (typeof storageState !== 'string') continue;
+    for (const laneId of laneIds) {
+      if (LANE_INFO[laneId].storageState === storageState) fromProjects.add(laneId);
     }
   }
+  if (fromProjects.size) return [...fromProjects];
 
-  if (fromProjects.size) {
-    return fromProjects;
-  }
-
-  return new Set(['1']);
+  return laneIds;
 }
 
 async function dismissOnboardingFlow(page: import('@playwright/test').Page): Promise<void> {
@@ -133,7 +161,27 @@ async function loginAs(params: {
     for (let attempt = 1; attempt <= 3 && !signedIn; attempt++) {
       await page.goto(loginUrl, { waitUntil: 'load', timeout: 60_000 });
       await page.locator(emailSelector).fill(email);
-      await page.locator(passwordSelector).fill(password);
+      // Trace safety: Playwright records fill() argument values in traces, and this
+      // project runs with trace/video 'retain-on-failure' - a failed CI run would
+      // persist the plaintext password in the artifact. Setting the value through
+      // evaluate() keeps it out of the trace. Do not "simplify" this back to fill().
+      // The input/change events are required because assigning .value directly does
+      // not notify SPA frameworks (Blazor/Radzen bind on those events).
+      // evaluate() has no auto-wait, so the explicit waitFor replaces the one that
+      // locator().fill() performed implicitly.
+      await page.locator(passwordSelector).waitFor({ state: 'visible', timeout: 30_000 });
+      await page.evaluate(
+        ([selector, pwd]) => {
+          const input = document.querySelector(selector) as HTMLInputElement | null;
+          if (!input) {
+            throw new Error(`[qa-framework] Password input not found for selector: ${selector}`);
+          }
+          input.value = pwd;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+        [passwordSelector, password] as const
+      );
       await page.locator(submitSelector).click();
 
       const result = await Promise.race([
@@ -167,30 +215,51 @@ async function loginAs(params: {
 }
 
 export default async function globalSetup(_config: FullConfig): Promise<void> {
-  const baseURL  = process.env.QA_BASE_URL!;
-  const authUsers = resolveAuthUsers(_config);
+  const baseURL = process.env.QA_BASE_URL!;
 
-  if (authUsers.has('1')) {
-    const [email, emailSource] = resolveVar(process.env.QA_USER_EMAIL, 'QA_USER_EMAIL', 'qa-user@example.com');
-    const [password, passwordSource] = resolveVar(process.env.QA_USER_PASSWORD, 'QA_USER_PASSWORD', 'CHANGE_ME');
-    console.log(`[global-setup] user-1 credentials from ${emailSource} / ${passwordSource}`);
-    await loginAs({
-      email,
-      password,
-      baseURL,
-      stateFile: '.auth/user-default.json',
-    });
+  // Guards run BEFORE any login. A lock nothing consults is decoration, and this is
+  // the last point at which a run about to drive an account it does not hold can
+  // still be stopped.
+  //
+  // global-setup NEVER acquires or reserves a lane itself. It only READS the lock
+  // state and verifies the lane is already held. Reserving is the caller's job - the
+  // operator, the orchestrator, or the CI job. A global-setup that reserved its own
+  // lane would make every accidental run look legitimate.
+  guards.assertColdSetupIsIntentional(process.env);
+
+  const laneOnly = process.env.QA_LANE_ONLY;
+  if (laneOnly) {
+    guards.assertLaneIsLocked(laneOnly, process.env, laneLock);
+    guards.assertProjectsMatchLane(laneOnly, _config.projects, process.argv, laneLock);
   }
 
-  if (authUsers.has('2') && process.env.QA_USER2_EMAIL && process.env.QA_USER2_PASSWORD) {
-    const [email, emailSource] = resolveVar(process.env.QA_USER2_EMAIL, 'QA_USER2_EMAIL', 'qa-user2@example.com');
-    const [password, passwordSource] = resolveVar(process.env.QA_USER2_PASSWORD, 'QA_USER2_PASSWORD', 'CHANGE_ME');
-    console.log(`[global-setup] user-2 credentials from ${emailSource} / ${passwordSource}`);
+  for (const laneId of resolveAuthLanes(_config)) {
+    const lane = LANE_INFO[laneId];
+
+    // Credentials come from the lane's declared account prefix, e.g. account
+    // 'QA_USER4' resolves QA_USER4_EMAIL / QA_USER4_PASSWORD. This is what replaces
+    // the old hardcoded QA_USER / QA_USER2 pair and is what lets a lane be added by
+    // config alone.
+    const emailKey = `${lane.account}_EMAIL`;
+    const passwordKey = `${lane.account}_PASSWORD`;
+
+    if (!process.env[emailKey] || !process.env[passwordKey]) {
+      throw new Error(
+        `[global-setup] Lane ${laneId} (account ${lane.account}) is missing ${emailKey} or ` +
+        `${passwordKey}. Every configured lane needs its own credentials, otherwise two lanes ` +
+        'end up sharing an account, which is exactly what lanes exist to prevent.'
+      );
+    }
+
+    const [email, emailSource] = resolveVar(process.env[emailKey], emailKey, 'qa-user@example.com');
+    const [password, passwordSource] = resolveVar(process.env[passwordKey], passwordKey, 'CHANGE_ME');
+    console.log(`[global-setup] lane ${laneId} (${lane.account}) credentials from ${emailSource} / ${passwordSource}`);
+
     await loginAs({
       email,
       password,
       baseURL,
-      stateFile: '.auth/user-2.json',
+      stateFile: lane.storageState,
     });
   }
 }

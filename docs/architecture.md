@@ -9,11 +9,11 @@
 
 ## Design Goals
 
-1. **Decoupled core** — the framework works without Playwright, without Azure DevOps, without any specific CI/CD system
-2. **Layered optionality** — features are added as explicit opt-in integrations, not baked into the core
-3. **Agent-first design** — every convention exists so that an IDE agent can navigate and produce artifacts predictably
-4. **Spec-before-automation** — the specification layer is always the source of truth; automation references specs, never the reverse
-5. **Parameterization over hardcoding** — project-specific values live in `qa-framework.config.json`, not in framework files
+1. **Decoupled core** - the framework works without Playwright, without Azure DevOps, without any specific CI/CD system
+2. **Layered optionality** - features are added as explicit opt-in integrations, not baked into the core
+3. **Agent-first design** - every convention exists so that an IDE agent can navigate and produce artifacts predictably
+4. **Spec-before-automation** - the specification layer is always the source of truth; automation references specs, never the reverse
+5. **Parameterization over hardcoding** - project-specific values live in `qa-framework.config.json`, not in framework files
 
 ---
 
@@ -86,6 +86,8 @@
 │                                                                             │
 │  .github/instructions/qa-framework.instructions.md <- generated (framework) │
 │  .github/skills/                 <- copied from package (framework-owned)  │
+│  .claude/rules/qa-framework.md   <- generated (framework, Claude Code)     │
+│  .claude/commands/qa-*.md        <- generated (framework, Claude Code)     │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -98,12 +100,12 @@ Module analysis (agent)
         │
         ▼
 01-specifications/module-X/submodule-Y/
-  ├── 00-inventory.md       ← what exists in the UI
-  ├── 01-business-rules.md  ← RN-* identifiers
-  ├── 02-workflows.md       ← FL-* flowcharts
+  ├── 00-inventory.md       <- what exists in the UI
+  ├── 01-business-rules.md  <- RN-* identifiers
+  ├── 02-workflows.md       <- FL-* flowcharts
   ├── 03-roles-permissions.md
   ├── 04-test-data.md
-  └── 05-test-scenarios.md  ← TC-* identifiers  ──────────────────────┐
+  └── 05-test-scenarios.md  <- TC-* identifiers  ──────────────────────┐
                                                                        │
         │                                                              │
         ▼                                                              ▼
@@ -120,8 +122,8 @@ Module analysis (agent)
                               │
                               ▼
                [ADO enabled?]
-                  YES → playwright-azure-reporter syncs results to ADO Test Plan
-                  NO  → 05-test-execution/automated/{date}.md   (local report)
+                  YES -> playwright-azure-reporter syncs results to ADO Test Plan
+                  NO  -> 05-test-execution/automated/{date}.md   (local report)
                               │
                               ▼
                     06-defects/ (if test.skip for known bug)
@@ -132,18 +134,20 @@ Module analysis (agent)
 
 ## Layer Definitions
 
-### Layer 1 — Framework Core (mandatory)
+### Layer 1 - Framework Core (mandatory)
 
 Installed always. Contains:
 
 - `qa/` directory skeleton (10 folders)
-- `.github/skills/` — 8 agent skill sets (3-layer model: SKILL.md + references/)
-- `00-standards/` — naming conventions, templates
+- `.github/skills/` - 8 agent skill sets (3-layer model: SKILL.md + references/)
+- `00-standards/` - naming conventions, templates
 - `QA-STRUCTURE-GUIDE.md`
-- `.github/copilot-instructions.md` — generated pipeline sequencer
+- `.github/instructions/qa-framework.instructions.md` - generated pipeline sequencer (Copilot)
+- `.claude/rules/qa-framework.md` - generated pipeline sequencer (Claude Code, unconditional load)
+- `.claude/commands/qa-*.md` - generated thin wrappers, one per skill (Claude Code)
 - `qa-framework.config.json` schema
 
-### Layer 2 — Playwright Integration (opt-in)
+### Layer 2 - Playwright Integration (opt-in)
 
 Installed always (scaffold is always created by `init`):
 
@@ -156,7 +160,7 @@ Installed always (scaffold is always created by `init`):
 - `qa/07-automation/integration/README.md` (placeholder)
 - `qa/07-automation/load/README.md` (placeholder)
 
-### Layer 3 — Azure DevOps Integration (opt-in)
+### Layer 3 - Azure DevOps Integration (opt-in)
 
 Installed when `integrations.azureDevOps.enabled = true`:
 
@@ -173,11 +177,11 @@ Installed when `integrations.azureDevOps.enabled = true`:
 ```
 qa-framework.config.json  (project-level, committed to repo)
         │
-        ├── project.*           → Display values, URLs (non-secret)
-        ├── modules[]           → Module codes, paths, ADO IDs
-        ├── conventions.*       → Naming patterns, TC ID format
-        ├── testUsers[]         → Role→envVar mapping (NOT credentials)
-        └── integrations.*      → Feature flags + integration config
+        ├── project.*           -> Display values, URLs (non-secret)
+        ├── modules[]           -> Module codes, paths, ADO IDs
+        ├── conventions.*       -> Naming patterns, TC ID format
+        ├── testUsers[]         -> Role->envVar mapping (NOT credentials)
+        └── integrations.*      -> Feature flags + integration config
                 │
                 └── credentials come from:
                       .env  (local, gitignored)
@@ -227,6 +231,6 @@ Full rules: [docs/folder-structure-guide.md](folder-structure-guide.md)
 
 1. The primary test runner is Playwright. Other runners (Jest, Cypress) are not excluded but are not provided adapters in v1.0.
 2. The target application runs in a browser. Back-end API-only testing is not the primary use case of this framework (though API testing can be added to `07-automation/` as needed).
-3. The IDE agent is GitHub Copilot or equivalent. The instructions are written in Markdown and are IDE-agnostic.
+3. The IDE agent is GitHub Copilot, Claude Code, or equivalent. The instructions are written in Markdown and are IDE-agnostic; `init`/`upgrade` generate native artifacts for both Copilot (`.github/instructions/`) and Claude Code (`.claude/rules/`, `.claude/commands/`) in parallel, without detecting which agent the consumer uses.
 4. The project uses Git. The `qa/` directory lives inside the same repository as the application code (monorepo-friendly).
 5. Credentials are always managed via environment variables. There is no fallback to hardcoded credentials in any framework file.

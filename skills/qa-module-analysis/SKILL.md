@@ -10,10 +10,10 @@ description: >
 
 # QA Skill: Module Analysis (Stage 1 of 6)
 
-**Stage**: 1 — Module Analysis  
-**Prerequisite**: None — this is the first stage  
+**Stage**: 1 - Module Analysis  
+**Prerequisite**: None - this is the first stage  
 **Output**: `qa/01-specifications/module-{name}/submodule-{name}/` with 6 spec files  
-**Next stage**: Stage 2 — Specification Generation (`qa-spec-generation`)
+**Next stage**: Stage 2 - Specification Generation (`qa-spec-generation`)
 
 > **Pipeline rule**: This stage must be completed before any spec generation, test planning,
 > or automation can begin. Do not skip to a later stage.
@@ -33,32 +33,32 @@ Before starting:
 
 ---
 
-## Phase 1 — Preparation
+## Phase 1 - Preparation
 
 1. Check if `qa/01-specifications/module-{name}/` already exists
    - **Exists**: read all existing files; only re-analyze what changed
    - **New**: create the directory and plan submodules
-2. Allocate a unique 2–6 letter uppercase module code (check naming-conventions.md for conflicts)
+2. Allocate a unique 2-6 letter uppercase module code (check naming-conventions.md for conflicts)
 3. Create `qa/01-specifications/module-{name}/README.md` listing all planned submodules before analysis begins
 
 ---
 
-## Phase 2 — Exploration (one pass per submodule)
+## Phase 2 - Exploration (one pass per submodule)
 
 For each submodule, use browser automation to collect:
 
-1. **Navigation** — URLs, page titles, breadcrumbs
-2. **UI inventory** — all inputs (type, required, validation), dropdowns (options), buttons, tables, modals, badges
-3. **API endpoints** — observe network requests during create/read/update/delete; record method, path, payload shape
-4. **Role access** — log in as each configured role; record `can access / cannot access / permission error`
-5. **Workflow** — execute the primary happy path; record steps, branch points, state transitions
-6. **Business rules** — attempt invalid inputs and boundary conditions; record validation messages exactly
+1. **Navigation** - URLs, page titles, breadcrumbs
+2. **UI inventory** - all inputs (type, required, validation), dropdowns (options), buttons, tables, modals, badges
+3. **API endpoints** - observe network requests during create/read/update/delete; record method, path, payload shape
+4. **Role access** - log in as each configured role; record `can access / cannot access / permission error`
+5. **Workflow** - execute the primary happy path; record steps, branch points, state transitions
+6. **Business rules** - attempt invalid inputs and boundary conditions; record validation messages exactly
 
 Detailed exploration checklist: `references/exploration-checklist.md`
 
 ---
 
-## Phase 3 — Documentation (6-file output)
+## Phase 3 - Documentation (6-file output)
 
 Produce 6 files per submodule. File formats and templates: `references/spec-file-formats.md`
 
@@ -69,13 +69,13 @@ Produce 6 files per submodule. File formats and templates: `references/spec-file
 | `02-workflows.md` | `FL-{MODULE}-{NNN}` flows with ASCII/Mermaid diagrams |
 | `03-roles-permissions.md` | Role × feature access matrix; env var references for test users |
 | `04-test-data.md` | Prerequisites, data shapes per scenario, EXEC_IDX pattern |
-| `05-test-scenarios.md` | TC table: 50–85 TCs per submodule, all mandatory coverage categories |
+| `05-test-scenarios.md` | TC table: 50-85 TCs per submodule, all mandatory coverage categories |
 
-TC target: **50–85 per submodule**. Mark origin as `UI-OBSERVED`, `PENDING-CODE`, or `BLOCKED-PERMISSIONS`.
+TC target: **50-85 per submodule**. Mark origin as `UI-OBSERVED` (element and behavior both confirmed this session), `PENDING-BROWSER` (element observed but the behavior could not be exercised end-to-end this session, e.g. a disabled control or an unmet precondition), `PENDING-CODE` (feature not present or not reachable in this environment), or `BLOCKED-PERMISSIONS` (blocked by role/access, not by feature absence).
 
 ---
 
-## Phase 4 — Review
+## Phase 4 - Review
 
 Completeness checklist before closing the stage:
 
@@ -85,11 +85,12 @@ Completeness checklist before closing the stage:
 - [ ] All TC IDs are unique across the module
 - [ ] Module README updated with submodule table and TC counts
 - [ ] `qa/README.md` module status row updated
+- [ ] Output verification run and the counts reported (see `references/output-verification.md`) - report the command output, never a compliance claim
 
 ---
 
 ## Outputs
 
-- `qa/01-specifications/module-{name}/` — fully populated spec tree
-- `qa/01-specifications/module-{name}/README.md` — updated with submodule table
-- `qa/README.md` — module status row updated
+- `qa/01-specifications/module-{name}/` - fully populated spec tree
+- `qa/01-specifications/module-{name}/README.md` - updated with submodule table
+- `qa/README.md` - module status row updated

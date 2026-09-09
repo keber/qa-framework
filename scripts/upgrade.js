@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * scripts/upgrade.js — Upgrade framework-owned files in an existing project
+ * scripts/upgrade.js - Upgrade framework-owned files in an existing project
  *
  * Usage:
  *   qa-framework upgrade
@@ -46,6 +46,9 @@
 const fs   = require('fs');
 const path = require('path');
 
+const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
+const { AGENT_NAMES, isSprintCycleEnabled, buildAgentContent, agentFileName } = require('./lib/claude-agents');
+
 const args   = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 
@@ -78,17 +81,17 @@ console.log(`\n[qa-framework/upgrade] ${dryRun ? '(dry-run) ' : ''}Upgrading fra
 console.log(`[qa-framework/upgrade] Project root: ${cwd}\n`);
 
 // ---------------------------------------------------------------------------
-// 1. .github/skills/ — always overwrite (framework-owned)
+// 1. .github/skills/ - always overwrite (framework-owned)
 // ---------------------------------------------------------------------------
 if (!fs.existsSync(skillsSrc)) {
-  warnings.push('skills/ source directory not found in package — skipping skill install');
+  warnings.push('skills/ source directory not found in package - skipping skill install');
 } else {
   fs.mkdirSync(skillsDest, { recursive: true });
   copyDirForce(skillsSrc, skillsDest);
 }
 
 // ---------------------------------------------------------------------------
-// 2. .github/instructions/qa-framework.instructions.md — overwrite (framework-owned)
+// 2. .github/instructions/qa-framework.instructions.md - overwrite (framework-owned)
 // ---------------------------------------------------------------------------
 const copilotInstrPath = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
 const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.instructions.md');
@@ -97,12 +100,39 @@ const copilotContent = fs.readFileSync(instrTemplatePath, 'utf8')
 forceWrite(copilotInstrPath, copilotContent);
 
 // ---------------------------------------------------------------------------
+// 2a. .claude/commands/qa-*.md and .claude/rules/qa-framework.md - overwrite (framework-owned)
+// ---------------------------------------------------------------------------
+const claudeCommandsDest = path.join(cwd, '.claude', 'commands');
+for (const skillName of discoverSkillNames(skillsSrc)) {
+  forceWrite(path.join(claudeCommandsDest, commandFileName(skillName)), buildCommandContent(skillName));
+}
+
+const claudeRulesPath   = path.join(cwd, '.claude', 'rules', 'qa-framework.md');
+const rulesTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.rules.md');
+const claudeRulesContent = fs.readFileSync(rulesTemplatePath, 'utf8')
+  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
+forceWrite(claudeRulesPath, claudeRulesContent);
+
+// ---------------------------------------------------------------------------
+// 2c. .claude/agents/qa-*.md - optional ANALISIS/PLAN sprint-cycle mode (Claude Code only)
+//     Gated by integrations.azureDevOps.sprintCycle.enabled. Framework-owned when the
+//     flag is on; never generated (and never deleted if it was hand-authored) otherwise.
+// ---------------------------------------------------------------------------
+if (isSprintCycleEnabled(config)) {
+  const templatesDir = path.resolve(__dirname, '..', 'templates');
+  const claudeAgentsDest = path.join(cwd, '.claude', 'agents');
+  for (const agentName of AGENT_NAMES) {
+    forceWrite(path.join(claudeAgentsDest, agentFileName(agentName)), buildAgentContent(agentName, templatesDir, config));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 2b. Migration: strip QA Framework section from old copilot-instructions.md
 //
 // Handles all cases:
-//   A. File has custom instructions + QA section  → keep custom, strip QA section
-//   B. File has ONLY QA section (any version)     → delete the file
-//   C. File does not mention QA Framework         → leave untouched
+//   A. File has custom instructions + QA section  -> keep custom, strip QA section
+//   B. File has ONLY QA section (any version)     -> delete the file
+//   C. File does not mention QA Framework         -> leave untouched
 //
 // The QA section always starts with "# QA Framework Instructions" across all
 // previous versions, so that heading is the reliable split point.
@@ -118,22 +148,22 @@ if (fs.existsSync(oldCopilotPath)) {
     const before = oldContent.slice(0, qaIdx).replace(/\s*\n---\s*$/, '').trim();
 
     if (before.length === 0) {
-      // Case B: file contained only QA Framework content → delete it
+      // Case B: file contained only QA Framework content -> delete it
       if (!dryRun) fs.unlinkSync(oldCopilotPath);
       updated.push(oldCopilotPath);
-      console.log(`  [deleted]  .github/copilot-instructions.md (contained only QA Framework rules — now in .github/instructions/qa-framework.instructions.md)`);
+      console.log(`  [deleted]  .github/copilot-instructions.md (contained only QA Framework rules - now in .github/instructions/qa-framework.instructions.md)`);
     } else {
-      // Case A: file had custom content too → write back only the custom part
+      // Case A: file had custom content too -> write back only the custom part
       if (!dryRun) fs.writeFileSync(oldCopilotPath, before + '\n', 'utf8');
       updated.push(oldCopilotPath);
-      console.log(`  [cleaned]  .github/copilot-instructions.md — removed QA Framework section, kept custom instructions`);
+      console.log(`  [cleaned]  .github/copilot-instructions.md - removed QA Framework section, kept custom instructions`);
     }
   }
-  // Case C: no QA marker found → leave untouched (no log noise)
+  // Case C: no QA marker found -> leave untouched (no log noise)
 }
 
 // ---------------------------------------------------------------------------
-// 3. qa/QA-STRUCTURE-GUIDE.md — overwrite (framework doc)
+// 3. qa/QA-STRUCTURE-GUIDE.md - overwrite (framework doc)
 // ---------------------------------------------------------------------------
 const structureGuideSrc  = path.resolve(__dirname, '..', 'docs', 'folder-structure-guide.md');
 const structureGuideDest = path.join(qaRoot, 'QA-STRUCTURE-GUIDE.md');
@@ -220,7 +250,7 @@ if (fs.existsSync(e2eDir)) {
       console.log(`  [migrated] e2e/${entry.name}/ -> e2e/tests/${entry.name}/`);
     } else {
       warnings.push(
-        `Cannot migrate e2e/${entry.name}/ — target e2e/tests/${entry.name}/ already exists. Merge manually.`
+        `Cannot migrate e2e/${entry.name}/ - target e2e/tests/${entry.name}/ already exists. Merge manually.`
       );
     }
   }
@@ -275,7 +305,7 @@ if (fs.existsSync(playwrightConfigPath)) {
   if (/testDir\s*:\s*['"]\.['"]/.test(cfg)) {
     cfg = cfg.replace(/testDir\s*:\s*['"]\.['"]/g, "testDir:  './tests'");
     cfgChanged = true;
-    console.log(`  [patched] e2e/playwright.config.ts — testDir: '.' -> './tests'`);
+    console.log(`  [patched] e2e/playwright.config.ts - testDir: '.' -> './tests'`);
   }
 
   // Inject testIgnore after testDir line if not present
@@ -285,7 +315,7 @@ if (fs.existsSync(playwrightConfigPath)) {
       "$1  testIgnore: ['**/helpers/debug/**', '**/seeds/**'],\n"
     );
     cfgChanged = true;
-    console.log(`  [patched] e2e/playwright.config.ts — added testIgnore`);
+    console.log(`  [patched] e2e/playwright.config.ts - added testIgnore`);
   }
 
   if (cfgChanged) {
@@ -344,7 +374,7 @@ if (fs.existsSync(testPlansDir)) {
         updated.push(newFile);
         console.log(`  [migrated] 02-test-plans/${entry.name} -> 02-test-plans/sprints/legacy/${entry.name}`);
       } else {
-        warnings.push(`Cannot migrate 02-test-plans/${entry.name} — target already exists. Move manually.`);
+        warnings.push(`Cannot migrate 02-test-plans/${entry.name} - target already exists. Move manually.`);
       }
     }
   }
@@ -363,7 +393,7 @@ if (!fs.existsSync(testCasesReadme)) {
   if (!dryRun) {
     fs.mkdirSync(path.dirname(testCasesReadme), { recursive: true });
     fs.writeFileSync(testCasesReadme,
-      '# 03-test-cases/ — Optional Standalone Test Cases\n\n' +
+      '# 03-test-cases/ - Optional Standalone Test Cases\n\n' +
       '> **v1.7.0+:** The primary location for test cases (with detailed steps) is now\n' +
       '> `qa/02-test-plans/sprints/Sprint-{N}/Plan-de-Pruebas-{project}-Sprint-{N}-{module}.md`.\n' +
       '>\n' +
@@ -451,7 +481,7 @@ if (updated.length) {
 }
 if (skipped.length) {
   console.log('\n  Skipped (already up to date):');
-  for (const f of skipped) console.log(`    — ${path.relative(cwd, f)}`);
+  for (const f of skipped) console.log(`    - ${path.relative(cwd, f)}`);
 }
 if (warnings.length) {
   console.log('\n  Warnings:');

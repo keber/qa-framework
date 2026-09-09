@@ -1,4 +1,4 @@
-# Integration — Playwright
+# Integration - Playwright
 
 This directory documents how `@playwright/test` is configured within the
 `keber/qa-framework` opinionated setup.
@@ -40,9 +40,9 @@ suite execution.
 
 ## Debugging checklist
 
-1. `PWDEBUG=1 npx playwright test` — step through in inspector
-2. `--headed` — watch the browser
-3. `--trace on` — record full trace; open with `npx playwright show-trace`
+1. `PWDEBUG=1 npx playwright test` - step through in inspector
+2. `--headed` - watch the browser
+3. `--trace on` - record full trace; open with `npx playwright show-trace`
 4. Increase `actionTimeout` if the app has slow server-side rendering
 5. Add `await page.waitForLoadState('networkidle')` before assertions on
    dynamically loaded content

@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/keber/qa-framework/qa-framework.config.schema.json",
+  "title": "qa-framework project configuration",
+  "type": "object",
+  "properties": {
+    "frameworkVersion": { "type": "string" },
+    "project": { "type": "object" },
+    "modules": { "type": "array" },
+    "conventions": { "type": "object" },
+    "testUsers": { "type": "array" },
+    "integrations": { "type": "object" },
+    "agentSettings": { "type": "object" },
+
+    "parallelLanes": {
+      "type": "object",
+      "description": "Parallel QA lanes. A lane is a distinct QA account. Lanes exist because the applications under test invalidate a session when the same account logs in again, so two concurrent workers on one account silently destroy each other's session. Omit this block entirely, or set enabled to false, to keep the single-lane behavior a project had before lanes were configurable.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "When false, the framework behaves exactly as a project with no parallelLanes block: one implicit default lane. Lets a project disable lanes without deleting its lane definitions.",
+          "default": false
+        },
+        "lanes": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The lane table. Each entry couples four values that cannot be inferred from one another.",
+          "items": {
+            "type": "object",
+            "required": ["id", "account", "storageState"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]+$",
+                "description": "Lane identifier, as passed in QA_LANE_ONLY and used as a key in the lock state. Restricted to letters, digits, dash and underscore because it travels through shell env and CI variables."
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Env var prefix for this lane's credentials, e.g. QA_USER4 resolves QA_USER4_EMAIL and QA_USER4_PASSWORD."
+              },
+              "storageState": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Playwright storage state file for this lane's account. Must be unique across lanes: two lanes sharing a storageState are not isolated at all."
+              },
+              "mcpNamespace": {
+                "type": ["string", "null"],
+                "description": "Tool prefix when an agent drives this lane over Playwright MCP, e.g. mcp__playwright-qauser4__. Null when this lane has no MCP server provisioned (a CLI-only lane)."
+              },
+              "runnerProject": {
+                "type": ["string", "null"],
+                "description": "Name of the playwright.config.ts project bound to this lane, for CLI and CI runs. Null when the lane is not bound to a runner project."
+              },
+              "capabilities": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "default": [],
+                "description": "What this lane can actually do, e.g. [\"mcp\"]. Capabilities are PER-LANE state, not a global property of the lane set: a project can have 6 accounts but only 3 MCP servers. Handing a lane to a consumer that needs a capability that lane lacks is a real failure, so consumers declare what they require (lane-lock acquire --require-capability) and the lock only hands out lanes that satisfy it."
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

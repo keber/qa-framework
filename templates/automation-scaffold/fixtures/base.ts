@@ -63,7 +63,29 @@ async function reauth(browser: import('@playwright/test').Browser, stateFile: st
   try {
     await page.goto(loginPath, { waitUntil: 'load', timeout: 60_000 });
     await page.locator(emailSelector).fill(email);
-    await page.locator(passwordSelector).fill(password);
+    // Trace safety: Playwright records fill() argument values in traces, and this
+    // project runs with trace/video 'retain-on-failure'. This reauth path runs for
+    // every test whose session exceeded the TTL, so a fill() here would leak the
+    // plaintext password into far more failure artifacts than the one-time global
+    // setup does. Setting the value through evaluate() keeps it out of the trace.
+    // Do not "simplify" this back to fill().
+    // The input/change events are required because assigning .value directly does
+    // not notify SPA frameworks (Blazor/Radzen bind on those events).
+    // evaluate() has no auto-wait, so the explicit waitFor replaces the one that
+    // locator().fill() performed implicitly.
+    await page.locator(passwordSelector).waitFor({ state: 'visible', timeout: 30_000 });
+    await page.evaluate(
+      ([selector, pwd]) => {
+        const input = document.querySelector(selector) as HTMLInputElement | null;
+        if (!input) {
+          throw new Error(`[qa-framework] Password input not found for selector: ${selector}`);
+        }
+        input.value = pwd;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      },
+      [passwordSelector, password] as const
+    );
     await page.locator(submitSelector).click();
     await page.waitForSelector(successSelector, { timeout: 30_000 });
 
