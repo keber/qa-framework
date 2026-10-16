@@ -89,7 +89,8 @@
         "sprintDurationDays": 8,
         "manualTestingTimeboxDays": 2,
         "dateFormat": "dd-mm-aaaa",
-        "timezone": "America/Santiago"
+        "timezone": "America/Santiago",
+        "approvalThresholdPercent": 85
       }
     }
   },

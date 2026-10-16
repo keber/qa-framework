@@ -7,9 +7,55 @@
     "frameworkVersion": { "type": "string" },
     "project": { "type": "object" },
     "modules": { "type": "array" },
-    "conventions": { "type": "object" },
+    "conventions": {
+      "type": "object",
+      "properties": {
+        "decimalSeparator": {
+          "type": "string",
+          "enum": [",", "."],
+          "description": "Decimal separator used for percentages in the generated sprint agents (qa-informe-resultados, qa-reporte-ejecucion). Optional: when absent it is derived from locale/language (\"es*\" -> \",\", anything else -> \".\", no locale -> \",\")."
+        },
+        "defectIdPrefix": {
+          "type": "string",
+          "pattern": "^[A-Z0-9-]+$",
+          "description": "Prefix for local defect candidate ids (DEF-<prefix>-NNN) in the generated sprint agents. Optional: when absent it is derived from project.name (uppercased, non-alphanumerics replaced by \"-\")."
+        },
+        "testCaseIdPattern": {
+          "type": "string",
+          "default": "TC-{MODULE}-{SUBMODULE}-{NUM}",
+          "description": "Local test case id pattern. The generated sprint agents use it to recognise local ids that must not appear in ADO-facing documents."
+        }
+      }
+    },
     "testUsers": { "type": "array" },
-    "integrations": { "type": "object" },
+    "integrations": {
+      "type": "object",
+      "properties": {
+        "azureDevOps": {
+          "type": "object",
+          "properties": {
+            "sprintCycle": {
+              "type": "object",
+              "description": "Optional sprint-cycle mode. When enabled, init/upgrade generate the Claude Code agents under .claude/agents/.",
+              "properties": {
+                "enabled": { "type": "boolean", "default": false },
+                "sprintDurationDays": { "type": "number", "default": 8 },
+                "manualTestingTimeboxDays": { "type": "number", "default": 2 },
+                "dateFormat": { "type": "string", "default": "dd-mm-aaaa" },
+                "timezone": { "type": "string", "default": "America/Santiago" },
+                "approvalThresholdPercent": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 100,
+                  "default": 85,
+                  "description": "Minimum success rate over executed cases (passed / (passed + failed)) for a sprint to be \"Aprobado con observaciones\". Used by qa-informe-resultados and referenced by qa-reporte-ejecucion."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "agentSettings": { "type": "object" },
 
     "parallelLanes": {
@@ -47,7 +93,8 @@
               },
               "mcpNamespace": {
                 "type": ["string", "null"],
-                "description": "Tool prefix when an agent drives this lane over Playwright MCP, e.g. mcp__playwright-qauser4__. Null when this lane has no MCP server provisioned (a CLI-only lane)."
+                "pattern": "^mcp__[A-Za-z0-9_-]+__$",
+                "description": "Tool prefix when an agent drives this lane over Playwright MCP, e.g. mcp__playwright-qauser4__. Null when this lane has no MCP server provisioned (a CLI-only lane). Lanes with a namespace grant their Playwright MCP browser tools to the generated qa-investigador agent."
               },
               "runnerProject": {
                 "type": ["string", "null"],
