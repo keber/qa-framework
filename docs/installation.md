@@ -161,8 +161,9 @@ Use environment variables:
 #### Optional: ANALISIS/PLAN agent mode (Claude Code only)
 
 Gated by `integrations.azureDevOps.sprintCycle.enabled`. When `true`, `init`/`upgrade`
-generate four Claude Code subagents (`.claude/agents/qa-analisis.md`, `qa-plan.md`,
-`qa-asesoria.md`, `qa-informe-resultados.md`) for a sprint-centric manual testing
+generate six Claude Code subagents (`.claude/agents/qa-analisis.md`, `qa-plan.md`,
+`qa-asesoria.md`, `qa-reporte-ejecucion.md`, `qa-informe-resultados.md`,
+`qa-investigador.md`) for a sprint-centric manual testing
 workflow parallel to the 6-stage pipeline. See
 [docs/usage-with-agent.md](usage-with-agent.md) for details.
 
@@ -176,7 +177,8 @@ workflow parallel to the 6-stage pipeline. See
         "sprintDurationDays": 8,
         "manualTestingTimeboxDays": 2,
         "dateFormat": "dd-mm-aaaa",
-        "timezone": "America/Santiago"
+        "timezone": "America/Santiago",
+        "approvalThresholdPercent": 85
       }
     }
   }
@@ -184,7 +186,12 @@ workflow parallel to the 6-stage pipeline. See
 ```
 
 All `sprintCycle` fields are optional; omitted fields fall back to neutral framework
-defaults (8-day sprint, 2-day manual testing timebox, `dd-mm-aaaa`, `America/Santiago`).
+defaults (8-day sprint, 2-day manual testing timebox, `dd-mm-aaaa`, `America/Santiago`,
+85% approval threshold over executed cases). Optional overrides under `conventions`:
+`decimalSeparator` (`","` or `"."`, otherwise derived from the locale) and
+`defectIdPrefix` (e.g. `"ACME"`, otherwise derived from `project.name`).
+`qa-investigador` gets Playwright MCP browser tools only for `parallelLanes.lanes[]`
+entries with an `mcpNamespace` (pattern `^mcp__[A-Za-z0-9_-]+__$`).
 - `ADO_PLAN_ID` - Test Plan ID (can also go in `module-registry.json`)
 - `ADO_SUITE_ID` - Suite ID
 

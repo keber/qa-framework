@@ -53,6 +53,48 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   there.
 
 ---
+## [1.13.0] - 2026-10-16
+
+### Added
+
+- `templates/agents/qa-reporte-ejecucion.md` - new Claude Code agent that exports the ADO
+  test plan results, versions the raw export under `ado-export-<YYYY-MM-DD>/` and writes the
+  sprint `Reporte-de-Ejecucion-de-Pruebas-<project>-Sprint-<N>.md` (summary with executed,
+  success and coverage metrics, plus promoted findings).
+- `templates/agents/qa-investigador.md` - new Claude Code agent that investigates one root
+  cause against the real environment. Its tools are generated from `parallelLanes`: each lane
+  with an `mcpNamespace` adds 15 Playwright MCP browser tools, a lane table and the mandatory
+  heartbeat protocol; with no MCP lane it gets a no-browser section instead.
+- Agent template engine: `{{#if FLAG}}` / `{{#unless FLAG}}` blocks, single-pass placeholder
+  replacement and a guard that fails on any unresolved `{{...}}` token.
+- New placeholders: `INVESTIGATOR_TOOLS`, `LANE_MCP_TABLE`, `APPROVAL_THRESHOLD_PERCENT`,
+  `APPROVAL_THRESHOLD_RATIO`, `DECIMAL_SEPARATOR`, `TC_ID_PATTERN`, `QA_BASE_URL`,
+  `LOGIN_PATH`, `TECH_STACK`.
+- Config keys: `integrations.azureDevOps.sprintCycle.approvalThresholdPercent` (default 85),
+  optional `conventions.decimalSeparator` and `conventions.defectIdPrefix`. Documented in
+  `qa-framework.config.schema.json`, together with the `mcpNamespace` pattern.
+- `qa-framework validate` checks present-but-invalid values of those keys and of
+  `parallelLanes`, and now finds the config under `qa/` as well as at the project root.
+
+### Changed
+
+- `init` and `upgrade` generate six agents (was four) when `sprintCycle.enabled` is true.
+  Agents are rendered independently: an invalid lane config fails `qa-investigador` only,
+  the other five are still written and the command exits 1.
+- `qa-informe-resultados` reads its approval threshold from config instead of a hardcoded
+  85% and states the decimal separator rule.
+
+### Fixed
+
+- `qa-informe-resultados` looked for `Reporte-de-Ejecucion-de-Pruebas-...` and pointed to the
+  `qa-ado-integration` skill, which does not produce that file. It now names the
+  `qa-reporte-ejecucion` agent, the canonical filename (active and historical sprint folders)
+  and accepts the older accented `Reporte-ejecuci?n-de-pruebas-*` files.
+- `templates/qa-framework.instructions.md` and `templates/qa-framework.rules.md` carried a
+  project-specific `DEF-SIS-NNN` example; it is now `DEF-{PREFIX}-NNN`.
+
+---
+
 ## [1.12.0] - 2026-09-08
 
 Reconstructed from `4fe32fb..f52257a` (39 commits). Minor rather than major: a project

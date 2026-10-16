@@ -245,6 +245,46 @@ See [docs/skills-architecture.md](docs/skills-architecture.md) for the full desi
 
 ---
 
+## Claude Code Sprint Agents (optional)
+
+When `integrations.azureDevOps.sprintCycle.enabled` is `true`, `init` (only if missing) and
+`upgrade` (always, framework-owned) generate six Claude Code subagents under `.claude/agents/`:
+
+| Agent | What it does |
+|---|---|
+| `qa-analisis` | Sprint analysis document: test universe, automation feasibility, P0-P3 prioritization, traceability matrix |
+| `qa-plan` | Sprint test plan: executive summary plus a trace-linked test case table that fits the manual-testing timebox |
+| `qa-asesoria` | Chat-only QA advisory (no `Write`/`Bash`) |
+| `qa-reporte-ejecucion` | Exports the ADO test plan results (via the `ado-qa` `getADO.ps1` script), versions the raw export by date and writes `Reporte-de-Ejecucion-de-Pruebas-<project>-Sprint-<N>.md` |
+| `qa-informe-resultados` | Narrative sprint closing report (metrics, failures, risks, QA verdict) built from the Reporte above |
+| `qa-investigador` | Investigates one concrete root cause against the real environment and returns a verdict with evidence; drives a browser over Playwright MCP when lanes provide one |
+
+Config keys read by the agents (all optional; defaults shown):
+
+| Key | Default | Used for |
+|---|---|---|
+| `integrations.azureDevOps.sprintCycle.approvalThresholdPercent` | `85` | Success rate over executed cases required for "Aprobado con observaciones" |
+| `integrations.azureDevOps.sprintCycle.sprintDurationDays` / `manualTestingTimeboxDays` | `8` / `2` | Sprint planning agents |
+| `integrations.azureDevOps.sprintCycle.dateFormat` / `timezone` | `dd-mm-aaaa` / `America/Santiago` | Dates in generated documents |
+| `conventions.decimalSeparator` | derived: `,` for `es*` locales or no locale, `.` otherwise | Percentages in reports |
+| `conventions.defectIdPrefix` | derived from `project.name` (uppercased) | Local defect candidate ids `DEF-<prefix>-NNN` |
+| `conventions.testCaseIdPattern` | `TC-{MODULE}-{SUBMODULE}-{NUM}` | Local ids kept out of ADO-facing documents |
+| `project.qaBaseUrl` / `loginPath` / `techStack` | "(no configurado: ...)" | Environment context for `qa-investigador` |
+
+`qa-investigador` and `parallelLanes`:
+
+- **0 MCP lanes** (no `parallelLanes`, `enabled: false`, or no lane with `mcpNamespace`): tools are
+  `Read, Write, Edit, Grep, Glob, Bash` and the agent investigates through code, config, logs and the
+  CLI runner, reporting browser-only hypotheses as blocked.
+- **1 or N MCP lanes**: every lane with an `mcpNamespace` (e.g. `mcp__playwright-qauser__`) adds its
+  15 Playwright MCP browser tools, in config order, plus a lane table and the mandatory
+  `lane-lock.js heartbeat` protocol. CLI-only lanes are skipped.
+- An invalid lane block or an `mcpNamespace` not matching `^mcp__[A-Za-z0-9_-]+__$` fails
+  `qa-investigador` only: the other five agents are still written and the command exits 1.
+  `qa-framework validate` reports the same problems.
+
+---
+
 ## CLI Reference
 
 ```
