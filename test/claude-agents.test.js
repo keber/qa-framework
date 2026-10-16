@@ -365,3 +365,70 @@ test('qa-analisis, qa-plan and qa-asesoria render exactly as before', () => {
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// Review corrections (READ-001/REL-003, REL-002, REL-005, READ-006, READ-007)
+// ---------------------------------------------------------------------------
+
+function metricLines(content) {
+  return ['ejecutados', 'na', 'exito_ejecutados', 'cobertura'].map((name) => {
+    const line = content.split(/\r?\n/).find((l) => l.startsWith('- `' + name + '` = '));
+    assert.ok(line, `metric line for ${name} must exist`);
+    return line;
+  });
+}
+
+test('READ-001/REL-003: informe and reporte state the same metric formulas, Blocked included', () => {
+  const informe = build('qa-informe-resultados', makeConfig());
+  const reporte = build('qa-reporte-ejecucion', makeConfig());
+  assert.deepEqual(metricLines(informe), metricLines(reporte));
+  assert.match(metricLines(informe)[1], /Blocked/);
+  // Executive summary row and section 2 break Blocked out explicitly.
+  assert.match(informe, /\| \*\*Casos sin ejecutar o N\/A\*\* \|[^\n]*Blocked/);
+  assert.match(informe, /^\| Casos `Blocked` \|/m);
+});
+
+test('REL-002: both agents state the threshold comparison is strict', () => {
+  for (const name of ['qa-informe-resultados', 'qa-reporte-ejecucion']) {
+    assert.match(build(name, makeConfig()), /estrictamente mayor que 85%/, name);
+  }
+});
+
+test('REL-005: a fractional threshold percent uses the decimal separator, the ratio keeps the dot', () => {
+  const cfg = (locale) => makeConfig({
+    conventions: { locale },
+    integrations: { azureDevOps: { sprintCycle: { enabled: true, approvalThresholdPercent: 85.5 } } },
+  });
+  const es = build('qa-informe-resultados', cfg('es-CL'));
+  assert.match(es, /85,5%/);
+  assert.match(es, /0\.855/);
+  assert.doesNotMatch(es, /85\.5%/);
+  assert.match(build('qa-reporte-ejecucion', cfg('es-CL')), /estrictamente mayor que 85,5%/);
+  const en = build('qa-informe-resultados', cfg('en-US'));
+  assert.match(en, /85\.5%/);
+  assert.match(en, /0\.855/);
+});
+
+test('REL-002: approvalThresholdPercent 100 is out of range and falls back to 85', () => {
+  const config = makeConfig({
+    integrations: { azureDevOps: { sprintCycle: { enabled: true, approvalThresholdPercent: 100 } } },
+  });
+  assert.match(build('qa-informe-resultados', config), /0\.85/);
+});
+
+test('READ-006: informe lists arrows as prohibited and its example uses the decimal separator', () => {
+  const es = build('qa-informe-resultados', makeConfig({ conventions: { locale: 'es-CL' } }));
+  assert.match(es, /solo están prohibidos[^\n]*flechas/);
+  assert.match(es, /95,35%/);
+  assert.match(es, /97,7%/);
+  const en = build('qa-informe-resultados', makeConfig({ conventions: { locale: 'en-US' } }));
+  assert.match(en, /95\.35%/);
+  assert.match(en, /97\.7%/);
+});
+
+test('READ-007: informe uses the configured test case id pattern', () => {
+  const config = makeConfig({ conventions: { locale: 'es-CL', testCaseIdPattern: 'CP-{MODULE}-{NUM}' } });
+  const informe = build('qa-informe-resultados', config);
+  assert.equal(informe.split('CP-{MODULE}-{NUM}').length - 1, 2);
+  assert.doesNotMatch(informe, /TC-<MODULO>-NNN/);
+});

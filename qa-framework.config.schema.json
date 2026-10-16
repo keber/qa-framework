@@ -46,9 +46,9 @@
                 "approvalThresholdPercent": {
                   "type": "number",
                   "exclusiveMinimum": 0,
-                  "maximum": 100,
+                  "exclusiveMaximum": 100,
                   "default": 85,
-                  "description": "Minimum success rate over executed cases (passed / (passed + failed)) for a sprint to be \"Aprobado con observaciones\". Used by qa-informe-resultados and referenced by qa-reporte-ejecucion."
+                  "description": "Success rate over executed cases (passed / (passed + failed)) that must be strictly exceeded for a sprint to be \"Aprobado con observaciones\". Used by qa-informe-resultados and referenced by qa-reporte-ejecucion."
                 }
               }
             }

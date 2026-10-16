@@ -61,13 +61,15 @@ Therefore:
 
 The `## Resumen` table uses the same metric definitions as `qa-informe-resultados`, so both documents always agree:
 
-- `ejecutados` = `passed + failed`. These are the only cases that actually ran and produced an execution verdict.
-- `na` = `NotApplicable` + `Blocked` + rows without an `Outcome`. **A `NotApplicable` does NOT count as executed**: it is a `test.skip()`, exactly like a row without `Outcome`.
-- `% éxito sobre ejecutados` = `passed / ejecutados` when `ejecutados > 0`; otherwise write `N/A`.
-- `Cobertura` = `ejecutados / Total TCs`.
+- `ejecutados` = `passed + failed`. Son los únicos casos que realmente corrieron y produjeron un veredicto de ejecución.
+- `na` = `NotApplicable + Blocked + sin_outcome` (`sin_outcome` = filas sin `Outcome` registrado). Ninguno de estos se ejecutó.
+- `exito_ejecutados` = `passed / ejecutados` si `ejecutados > 0`; si no, `N/A`.
+- `cobertura` = `ejecutados / total_planificados` (`total_planificados` = total de filas del reporte).
 - Percentages use `{{DECIMAL_SEPARATOR}}` as the decimal separator.
 
-Reference: approval threshold {{APPROVAL_THRESHOLD_PERCENT}}% of executed cases; the verdict is applied by qa-informe-resultados, not here.
+**A `NotApplicable` does NOT count as executed**: it is a `test.skip()`, exactly like a row without `Outcome`. In the `## Resumen` table, `Total TCs` is `total_planificados`, `Ejecutados` is `ejecutados`, `% éxito sobre ejecutados` is `exito_ejecutados` and `Cobertura` is `cobertura`; `Blocked`, `NotApplicable` and `Sin Outcome` are reported separately and add up to `na`.
+
+Reference: approval threshold {{APPROVAL_THRESHOLD_PERCENT}}% of executed cases (`exito_ejecutados` estrictamente mayor que {{APPROVAL_THRESHOLD_PERCENT}}%, i.e. `> {{APPROVAL_THRESHOLD_RATIO}}`); the verdict is applied by qa-informe-resultados, not here.
 
 # Output -- Reporte template
 
@@ -125,7 +127,7 @@ Candidatos excluidos (DEF-{{DEFECT_ID_PREFIX}}-NNN sin ADO Id, no entran a la ta
 - [ ] The new raw export landed in its own `ado-export-<fecha>/` folder without overwriting earlier exports.
 - [ ] The Reporte header explicitly points to the raw export folder used.
 - [ ] The `## Test Plan: ...` table reproduces the raw export rows verbatim, without reinterpreting any `Outcome`.
-- [ ] The `## Resumen` metrics follow the metric rules: `NotApplicable` and rows without `Outcome` are NOT counted as executed.
+- [ ] The `## Resumen` metrics follow the metric rules: `NotApplicable`, `Blocked` and rows without `Outcome` are NOT counted as executed.
 - [ ] The findings table contains ONLY candidates with an ADO Id (promoted defects), never bare `DEF-{{DEFECT_ID_PREFIX}}-NNN`.
 - [ ] No local identifier (`DEF-{{DEFECT_ID_PREFIX}}-NNN`, `{{TC_ID_PATTERN}}`) appears in the body of the Reporte.
 - [ ] If a Reporte already existed for this sprint, it was not blindly overwritten: it was regenerated from the most recent raw export and the export date is recorded in the header.

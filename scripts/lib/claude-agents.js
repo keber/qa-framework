@@ -94,7 +94,7 @@ function resolveLocaleLanguageLabel(locale) {
 }
 
 function isValidApprovalThreshold(value) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 100;
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 && value < 100;
 }
 
 function resolveApprovalThresholdPercent(sprintCycle) {
@@ -195,7 +195,7 @@ function buildPlaceholders(config) {
     '{{TIMEZONE}}': sprintCycle.timezone,
     '{{LOCALE_LANGUAGE_LABEL}}': resolveLocaleLanguageLabel(config?.conventions?.locale ?? config?.conventions?.language),
     '{{DEFECT_ID_PREFIX}}': resolveDefectIdPrefix(config),
-    '{{APPROVAL_THRESHOLD_PERCENT}}': String(approvalPercent),
+    '{{APPROVAL_THRESHOLD_PERCENT}}': String(approvalPercent).replace('.', resolveDecimalSeparator(config)),
     '{{APPROVAL_THRESHOLD_RATIO}}': formatRatio(approvalPercent),
     '{{DECIMAL_SEPARATOR}}': resolveDecimalSeparator(config),
     '{{TC_ID_PATTERN}}': config?.conventions?.testCaseIdPattern || DEFAULT_TC_ID_PATTERN,
@@ -283,7 +283,7 @@ function validateAgentConfig(config) {
 
   if ('approvalThresholdPercent' in sprintCycle && !isValidApprovalThreshold(sprintCycle.approvalThresholdPercent)) {
     errors.push(
-      'integrations.azureDevOps.sprintCycle.approvalThresholdPercent must be a number greater than 0 and at most 100. ' +
+      'integrations.azureDevOps.sprintCycle.approvalThresholdPercent must be a number greater than 0 and less than 100. ' +
         `Got: ${JSON.stringify(sprintCycle.approvalThresholdPercent)}`
     );
   }
@@ -300,7 +300,15 @@ function validateAgentConfig(config) {
     );
   }
 
-  const lanes = config?.parallelLanes?.lanes;
+  // Lanes are only checked when the generator actually consumes them: sprint agents on
+  // and a lane block that laneTableFromConfig does not short-circuit (enabled !== false).
+  // A disabled block, or a project without sprint agents, never fails validate here.
+  const block = config?.parallelLanes;
+  const lanesInUse =
+    isSprintCycleEnabled(config) && block !== undefined && block !== null && block.enabled !== false;
+  if (!lanesInUse) return errors;
+
+  const lanes = block.lanes;
   if (Array.isArray(lanes)) {
     lanes.forEach((lane, index) => {
       const ns = lane && typeof lane === 'object' ? lane.mcpNamespace : undefined;
@@ -312,7 +320,7 @@ function validateAgentConfig(config) {
     });
   }
   try {
-    laneTableFromConfig(config ?? {});
+    laneTableFromConfig(config);
   } catch (err) {
     errors.push(`parallelLanes: ${err.message.replace(/^\[lane-config\] /, '')}`);
   }
