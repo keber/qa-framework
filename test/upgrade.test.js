@@ -462,3 +462,136 @@ test('upgrade: an invalid mcpNamespace fails qa-investigador only and exits 1', 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Legacy layout migrations (v1.6.0 e2e/{module}/ and v1.7.0 flat 02-test-plans/*.md)
+// must only move content that is provably legacy. Anything else is user-owned.
+// ---------------------------------------------------------------------------
+
+const testPlans = (root) => path.join(root, 'qa', '02-test-plans');
+
+function write(file, content = '// content\n') {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, content, 'utf8');
+}
+
+test('upgrade: non-module folders under e2e/ are never moved into tests/', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    const kept = [
+      path.join('lib', 'foo.js'),
+      path.join('node_modules', 'x', 'index.js'),
+      // A dependency that ships its own specs must still not be treated as a module.
+      path.join('node_modules', 'y', 'thing.spec.ts'),
+      path.join('.auth', 'user.json'),
+      path.join('test-results', 'run', 'login.spec.ts-trace.zip'),
+      path.join('playwright-report', 'index.html'),
+      path.join('.cache', 'stale.spec.ts'),
+      // A user folder with no spec files is not proven legacy.
+      path.join('docs', 'notes.md'),
+    ];
+    for (const rel of kept) write(path.join(e2e(root), rel));
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    for (const rel of kept) {
+      assert.ok(fs.existsSync(path.join(e2e(root), rel)), `e2e/${rel} must stay where it is`);
+      assert.ok(
+        !fs.existsSync(path.join(e2e(root), 'tests', rel)),
+        `e2e/${rel} must not be copied into tests/`
+      );
+    }
+    assert.doesNotMatch(result.stdout, /\[migrated\] e2e\//);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: a legacy e2e/{module}/ folder holding specs is still moved into tests/', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    write(path.join(e2e(root), 'login', 'login.spec.ts'));
+    write(path.join(e2e(root), 'billing', 'invoices', 'list.spec.ts'));
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    assert.ok(fs.existsSync(path.join(e2e(root), 'tests', 'login', 'login.spec.ts')));
+    assert.ok(fs.existsSync(path.join(e2e(root), 'tests', 'billing', 'invoices', 'list.spec.ts')));
+    assert.ok(!fs.existsSync(path.join(e2e(root), 'login')));
+    assert.ok(!fs.existsSync(path.join(e2e(root), 'billing')));
+    assert.match(result.stdout, /\[migrated\] e2e\/login\/ -> e2e\/tests\/login\//);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: flat 02-test-plans/*.md that are not legacy plans stay in place', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    const kept = ['plan-sprint-1.md', 'README.md', 'notes.md'];
+    for (const name of kept) write(path.join(testPlans(root), name), '# My plan\n');
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    for (const name of kept) {
+      assert.ok(fs.existsSync(path.join(testPlans(root), name)), `${name} must stay in place`);
+      assert.ok(!fs.existsSync(path.join(testPlans(root), 'sprints', 'legacy', name)));
+    }
+    assert.doesNotMatch(result.stdout, /\[migrated\] 02-test-plans\/[^/\s]+\.md/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: legacy flat test plans are still moved to sprints/legacy/', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    // Naming used by qa-test-plan up to v1.6.x.
+    write(path.join(testPlans(root), 'login-test-plan.md'), '# Test Plan - Login\n');
+    write(path.join(testPlans(root), 'billing-automated-test-plan.md'), '# Test Plan\n');
+    // Renamed by hand, but still generated from the pre-v1.7.0 templates/test-plan.md.
+    write(
+      path.join(testPlans(root), 'pagos.md'),
+      '# Test Plan - Pagos\n\n**Plan ID**: TP-PAG-1.0\n**Module**: Pagos\n'
+    );
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    for (const name of ['login-test-plan.md', 'billing-automated-test-plan.md', 'pagos.md']) {
+      assert.ok(
+        fs.existsSync(path.join(testPlans(root), 'sprints', 'legacy', name)),
+        `${name} should have been moved to sprints/legacy/`
+      );
+      assert.ok(!fs.existsSync(path.join(testPlans(root), name)));
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: --dry-run reports legacy module and plan moves but moves nothing', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    write(path.join(e2e(root), 'login', 'login.spec.ts'));
+    write(path.join(testPlans(root), 'login-test-plan.md'), '# Test Plan\n');
+    const before = snapshot(path.join(root, 'qa'));
+
+    const result = runUpgrade(root, ['--dry-run']);
+    assert.equal(result.status, 0, result.stderr);
+
+    assert.match(result.stdout, /\[migrated\] e2e\/login\//);
+    assert.match(result.stdout, /\[migrated\] 02-test-plans\/login-test-plan\.md/);
+    assert.deepEqual(snapshot(path.join(root, 'qa')), before, 'dry-run must not move any file');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
