@@ -81,6 +81,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - `init` and `upgrade` generate six agents (was four) when `sprintCycle.enabled` is true.
   Agents are rendered independently: an invalid lane config fails `qa-investigador` only,
   the other five are still written and the command exits 1.
+- As npm postinstall (`init --skip-if-exists`), an agent that cannot be rendered is reported
+  as a WARNING naming the agent and asking to fix the config and run
+  `npx qa-framework upgrade`; postinstall exits 0 so `npm install` does not fail. Explicit
+  `init` and `upgrade` keep exit code 1.
 - `qa-informe-resultados` reads its approval threshold from config instead of a hardcoded
   85% and states the decimal separator rule.
 
@@ -89,7 +93,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - `qa-informe-resultados` looked for `Reporte-de-Ejecucion-de-Pruebas-...` and pointed to the
   `qa-ado-integration` skill, which does not produce that file. It now names the
   `qa-reporte-ejecucion` agent, the canonical filename (active and historical sprint folders)
-  and accepts the older accented `Reporte-ejecuci?n-de-pruebas-*` files.
+  and accepts the older `Reporte-ejecución-de-pruebas-*` files.
 - `templates/qa-framework.instructions.md` and `templates/qa-framework.rules.md` carried a
   project-specific `DEF-SIS-NNN` example; it is now `DEF-{PREFIX}-NNN`.
 
