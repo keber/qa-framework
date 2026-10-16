@@ -281,8 +281,39 @@ test('init: an invalid lane config fails qa-investigador only, writes the other 
       for (const name of SPRINT_AGENTS.filter((n) => n !== 'qa-investigador')) {
         assert.ok(fs.existsSync(agentPath(projectRoot, name)), `expected .claude/agents/${name}.md`);
       }
+      // READ-008: the summary must not list an agent that was not generated.
+      const summaryLine = result.stdout.split(/\r?\n/).find((l) => l.includes('.claude/agents/'));
+      assert.ok(summaryLine, 'summary must still list the generated agents');
+      assert.doesNotMatch(summaryLine, /qa-investigador/);
+      assert.match(summaryLine, /qa-reporte-ejecucion/);
     } finally {
       fs.rmSync(projectRoot, { recursive: true, force: true });
     }
+  }
+});
+
+// RES-001: as npm postinstall, a non-zero exit fails `npm install` of the package itself.
+test('init --skip-if-exists (postinstall): an agent render failure is a warning and exits 0', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    writeRootConfig(projectRoot, {
+      project: { name: 'demo' },
+      parallelLanes: {
+        enabled: true,
+        lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright' }],
+      },
+      integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+    });
+    const result = runInit(['--skip-if-exists'], projectRoot);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stderr, /WARNING/);
+    assert.match(result.stderr, /qa-investigador/);
+    assert.match(result.stderr, /npx qa-framework upgrade/);
+    assert.equal(fs.existsSync(agentPath(projectRoot, 'qa-investigador')), false);
+    for (const name of SPRINT_AGENTS.filter((n) => n !== 'qa-investigador')) {
+      assert.ok(fs.existsSync(agentPath(projectRoot, name)), `expected .claude/agents/${name}.md`);
+    }
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });

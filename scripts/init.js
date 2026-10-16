@@ -434,7 +434,11 @@ console.log('    .github/instructions/  qa-framework.instructions.md');
 console.log('    .claude/commands/      qa-*.md (Claude Code slash commands)');
 console.log('    .claude/rules/         qa-framework.md (Claude Code always-loaded rules)');
 if (isSprintCycleEnabled(config)) {
-  console.log(`    .claude/agents/        ${AGENT_NAMES.join('/')}.md (ANALISIS/PLAN mode)`);
+  const failedAgents = new Set(agentFailures.map((a) => a.agentName));
+  const generatedAgents = AGENT_NAMES.filter((name) => !failedAgents.has(name));
+  if (generatedAgents.length) {
+    console.log(`    .claude/agents/        ${generatedAgents.join('/')}.md (ANALISIS/PLAN mode)`);
+  }
 }
 console.log('');
 console.log('  Optional integrations:');
@@ -459,11 +463,20 @@ console.log('  Next: edit qa/qa-framework.config.json, then read qa/AGENT-NEXT-S
 console.log('');
 
 if (agentFailures.length) {
-  for (const { fileName, error } of agentFailures) {
-    console.error(`[qa-framework/init] ERROR: .claude/agents/${fileName} was not generated. ${error.message}`);
+  if (skipIfExists) {
+    // Postinstall mode: a non-zero exit would make `npm install` of this package fail,
+    // which blocks the user from ever reaching the fix. Report loudly, exit 0.
+    for (const { agentName, fileName, error } of agentFailures) {
+      console.error(`[qa-framework/init] WARNING: agent ${agentName} (.claude/agents/${fileName}) was not generated. ${error.message}`);
+    }
+    console.error('[qa-framework/init] WARNING: fix qa-framework.config.json (run "npx qa-framework validate"), then run "npx qa-framework upgrade" to generate the missing agent.');
+  } else {
+    for (const { fileName, error } of agentFailures) {
+      console.error(`[qa-framework/init] ERROR: .claude/agents/${fileName} was not generated. ${error.message}`);
+    }
+    console.error('[qa-framework/init] Fix qa-framework.config.json (run "qa-framework validate") and run init or upgrade again.');
+    process.exitCode = 1;
   }
-  console.error('[qa-framework/init] Fix qa-framework.config.json (run "qa-framework validate") and run init or upgrade again.');
-  process.exitCode = 1;
 }
 
 // -----------------------------------------------------------------------
