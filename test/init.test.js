@@ -205,3 +205,84 @@ test('init: --config with a missing path exits 1', () => {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// .claude/agents/ - sprint-cycle subagents
+// ---------------------------------------------------------------------------
+
+const SPRINT_AGENTS = [
+  'qa-analisis',
+  'qa-plan',
+  'qa-asesoria',
+  'qa-informe-resultados',
+  'qa-reporte-ejecucion',
+  'qa-investigador',
+];
+
+function writeRootConfig(projectRoot, config) {
+  fs.writeFileSync(path.join(projectRoot, 'qa-framework.config.json'), JSON.stringify(config, null, 2));
+}
+
+const agentPath = (root, name) => path.join(root, '.claude', 'agents', `${name}.md`);
+
+test('init: sprintCycle enabled generates the six agents without leftover placeholders', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    writeRootConfig(projectRoot, {
+      project: { name: 'demo', displayName: 'Demo' },
+      integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+    });
+    const result = runInit([], projectRoot);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    for (const name of SPRINT_AGENTS) {
+      assert.ok(fs.existsSync(agentPath(projectRoot, name)), `expected .claude/agents/${name}.md`);
+      assert.doesNotMatch(fs.readFileSync(agentPath(projectRoot, name), 'utf8'), /\{\{/);
+    }
+    assert.match(result.stdout, /qa-reporte-ejecucion/);
+    assert.match(result.stdout, /qa-investigador/);
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('init: sprintCycle disabled generates no agents', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    writeRootConfig(projectRoot, {
+      project: { name: 'demo' },
+      integrations: { azureDevOps: { sprintCycle: { enabled: false } } },
+    });
+    const result = runInit([], projectRoot);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    for (const name of SPRINT_AGENTS) {
+      assert.equal(fs.existsSync(agentPath(projectRoot, name)), false, `${name} must not be generated`);
+    }
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('init: an invalid lane config fails qa-investigador only, writes the other five, exits 1', () => {
+  for (const parallelLanes of [
+    { enabled: true, lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright' }] },
+    { enabled: true, lanes: [] },
+  ]) {
+    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+    try {
+      writeRootConfig(projectRoot, {
+        project: { name: 'demo' },
+        parallelLanes,
+        integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+      });
+      const result = runInit([], projectRoot);
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stderr, /qa-investigador/);
+      assert.equal(fs.existsSync(agentPath(projectRoot, 'qa-investigador')), false);
+      for (const name of SPRINT_AGENTS.filter((n) => n !== 'qa-investigador')) {
+        assert.ok(fs.existsSync(agentPath(projectRoot, name)), `expected .claude/agents/${name}.md`);
+      }
+    } finally {
+      fs.rmSync(projectRoot, { recursive: true, force: true });
+    }
+  }
+});

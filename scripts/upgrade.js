@@ -77,7 +77,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
-const { AGENT_NAMES, isSprintCycleEnabled, buildAgentContent, agentFileName } = require('./lib/claude-agents');
+const { isSprintCycleEnabled, renderAllAgents } = require('./lib/claude-agents');
 
 const args   = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
@@ -152,6 +152,7 @@ const SHIPPED_SCAFFOLD_HASHES = {
 const updated  = [];
 const skipped  = [];
 const warnings = [];
+const errors   = [];
 
 console.log(`\n[qa-framework/upgrade] ${dryRun ? '(dry-run) ' : ''}Upgrading framework-owned files`);
 console.log(`[qa-framework/upgrade] Project root: ${cwd}\n`);
@@ -197,8 +198,14 @@ forceWrite(claudeRulesPath, claudeRulesContent);
 if (isSprintCycleEnabled(config)) {
   const templatesDir = path.resolve(__dirname, '..', 'templates');
   const claudeAgentsDest = path.join(cwd, '.claude', 'agents');
-  for (const agentName of AGENT_NAMES) {
-    forceWrite(path.join(claudeAgentsDest, agentFileName(agentName)), buildAgentContent(agentName, templatesDir, config));
+  // Rendered per agent: one invalid agent (e.g. qa-investigador with a bad lane config)
+  // is reported and left untouched on disk, the others are still upgraded.
+  for (const agent of renderAllAgents(templatesDir, config)) {
+    if (agent.error) {
+      errors.push(`.claude/agents/${agent.fileName} was not generated. ${agent.error.message}`);
+      continue;
+    }
+    forceWrite(path.join(claudeAgentsDest, agent.fileName), agent.content);
   }
 }
 
@@ -702,6 +709,12 @@ if (skipped.length) {
 if (warnings.length) {
   console.log('\n  Warnings:');
   for (const w of warnings) console.log(`    ⚠️  ${w}`);
+}
+
+if (errors.length) {
+  for (const e of errors) console.error(`[qa-framework/upgrade] ERROR: ${e}`);
+  console.error('[qa-framework/upgrade] Fix qa-framework.config.json (run "qa-framework validate") and run upgrade again.');
+  process.exitCode = 1;
 }
 
 console.log('\n[qa-framework/upgrade] Done.\n');
