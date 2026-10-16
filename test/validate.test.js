@@ -267,12 +267,12 @@ test('validate: valid optional config keys produce no config errors', () => {
       enabled: true,
       lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'mcp__playwright-qauser__' }],
     },
-    ...sprintCycle({ approvalThresholdPercent: 100 }),
+    ...sprintCycle({ approvalThresholdPercent: 99.5 }),
   });
   assert.equal(result.status, 0, result.stdout);
 });
 
-for (const bad of [0, 150, -5, '85']) {
+for (const bad of [0, 100, 150, -5, '85']) {
   test(`validate: approvalThresholdPercent ${JSON.stringify(bad)} is an error`, () => {
     const result = validateWithConfig(sprintCycle({ approvalThresholdPercent: bad }));
     assert.equal(result.status, 1, result.stdout);
@@ -298,13 +298,34 @@ test('validate: an invalid mcpNamespace is an error (config under qa/)', () => {
       enabled: true,
       lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright-qauser' }],
     },
+    ...sprintCycle({}),
   }, 'qa');
   assert.equal(result.status, 1, result.stdout);
   assert.match(result.stdout, /mcpNamespace/);
 });
 
 test('validate: an invalid parallelLanes block is an error', () => {
-  const result = validateWithConfig({ parallelLanes: { enabled: true, lanes: [] } });
+  const result = validateWithConfig({ parallelLanes: { enabled: true, lanes: [] }, ...sprintCycle({}) });
   assert.equal(result.status, 1, result.stdout);
   assert.match(result.stdout, /parallelLanes/);
+});
+
+// REL-007: lanes are only consumed by the generator when lanes AND sprint agents are on.
+const BAD_NS_LANES = [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright-qauser' }];
+
+test('validate: a bad mcpNamespace in a disabled lane block is not an error', () => {
+  const result = validateWithConfig({ parallelLanes: { enabled: false, lanes: BAD_NS_LANES }, ...sprintCycle({}) });
+  assert.equal(result.status, 0, result.stdout);
+  assert.doesNotMatch(result.stdout, /mcpNamespace/);
+});
+
+test('validate: a bad mcpNamespace or lane block is not an error when sprint agents are off', () => {
+  for (const parallelLanes of [{ enabled: true, lanes: BAD_NS_LANES }, { enabled: true, lanes: [] }]) {
+    const result = validateWithConfig({
+      parallelLanes,
+      integrations: { azureDevOps: { sprintCycle: { enabled: false } } },
+    });
+    assert.equal(result.status, 0, result.stdout);
+    assert.doesNotMatch(result.stdout, /Invalid config/);
+  }
 });

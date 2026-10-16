@@ -8,6 +8,9 @@
  *   qa-framework validate --config ./my-config.json
  *
  * Checks:
+ *   0. Config values read by the sprint agents: approvalThresholdPercent (0 < x < 100),
+ *      decimalSeparator, defectIdPrefix and, when sprint agents and lanes are enabled,
+ *      parallelLanes / mcpNamespace (only present-but-invalid values are reported)
  *   1. Required top-level folders exist
  *   2. All submodule folders under 01-specifications/ contain the 6 required spec files
  *   3. No plaintext credentials in spec files (basic scan)
