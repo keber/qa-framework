@@ -7,6 +7,41 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **`scripts/init.js`** - module spec folders are now scaffolded as
+  `qa/01-specifications/module-{name}/submodule-{name}/`, the layout declared by every
+  skill, by `docs/folder-structure-guide.md` and by the `specPath` field of
+  `qa-framework.config.json`. init.js wrote the bare key, so a freshly scaffolded
+  project violated the spec-path convention its own agent instructions impose.
+  Prefixing is idempotent: a config whose key already reads `module-suppliers` is not
+  turned into `module-module-suppliers`.
+- **`scripts/init.js`** - automation stubs and test case ids keep using the **bare**
+  key (`e2e/tests/suppliers/create.spec.ts`, `TC-SUPPLIERS-CREATE-001`), matching the
+  `automationPath` field and the live consuming projects. Only the spec tree is
+  prefixed.
+- **`scripts/validate.js`** - `--strict` strips the `module-` / `submodule-` prefix
+  before deriving the automation path. It was pointing the warning at
+  `e2e/tests/module-{name}/` , a folder no project has ever created.
+- **`qa-framework.config.json`** - `frameworkVersion` was stuck at `1.10.0` while the
+  package shipped `1.12.0`. The file is published and is the template copied into every
+  consuming project, where the value is injected into `{{VERSION}}` of the generated
+  agent instructions, so every fresh install since 1.11.0 reported the wrong version.
+
+### Added
+
+- **`scripts/lib/module-keys.js`** - single source of truth for how a module key maps
+  to a spec folder (prefixed) and to an automation folder (bare). Shared by `init.js`
+  and `validate.js` so the two cannot drift apart again.
+- **`scripts/sync-version.js`** - now also rewrites `frameworkVersion` in
+  `qa-framework.config.json`, by field rather than by the loose `vX.Y.Z` prose pattern.
+- **`test/module-keys.test.js`, `test/sync-version.test.js`** - unit coverage for the
+  key helpers plus a drift guard that fails CI whenever a published version surface
+  disagrees with `package.json`.
+
+---
 ## [1.11.0] - 2026-06-24
 
 ### Added
