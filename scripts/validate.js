@@ -20,6 +20,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { moduleBareName, submoduleBareName } = require('./lib/module-keys');
 
 // --- Args ---
 const args       = process.argv.slice(2);
@@ -94,11 +95,16 @@ if (fs.existsSync(specsRoot)) {
         }
       }
 
-      // Strict: automation spec must exist
+      // Strict: automation spec must exist.
+      // Spec folders are module-{name}/submodule-{name}; e2e/tests/ is keyed by the
+      // bare name, so the prefixes are stripped before deriving the automation path.
+      // Without this the warning points at a folder no project has ever created.
       if (strict) {
-        const specTs = path.join(qaRoot, '07-automation', 'e2e', 'tests', moduleDir, `${subDir}.spec.ts`);
+        const moduleName = moduleBareName(moduleDir);
+        const subName = submoduleBareName(subDir);
+        const specTs = path.join(qaRoot, '07-automation', 'e2e', 'tests', moduleName, `${subName}.spec.ts`);
         if (!fs.existsSync(specTs)) {
-          warnings.push(`[STRICT] No automation spec found: qa/07-automation/e2e/tests/${moduleDir}/${subDir}.spec.ts`);
+          warnings.push(`[STRICT] No automation spec found: qa/07-automation/e2e/tests/${moduleName}/${subName}.spec.ts`);
         }
       }
     }

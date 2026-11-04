@@ -195,13 +195,26 @@ const SPEC_FILES = [
 
 const templateDir = path.resolve(__dirname, '..', 'templates', 'specification');
 
+// Spec folders carry the module-/submodule- prefix; automation folders and TC ids
+// use the bare key. See scripts/lib/module-keys.js for why the two differ.
+const {
+  moduleSpecDirName,
+  submoduleSpecDirName,
+  moduleBareName,
+  submoduleBareName,
+} = require('./lib/module-keys');
+
 for (const mod of modules) {
   const moduleKey = mod.key ?? mod.name.toLowerCase().replace(/\s+/g, '-');
+  const moduleDirName = moduleSpecDirName(moduleKey);
+  const moduleName = moduleBareName(moduleKey);
   const submodules = mod.submodules ?? [];
 
   for (const sub of submodules) {
     const subKey = sub.key ?? sub.name.toLowerCase().replace(/\s+/g, '-');
-    const subDir = path.join(qaRoot, '01-specifications', moduleKey, subKey);
+    const subDirName = submoduleSpecDirName(subKey);
+    const subName = submoduleBareName(subKey);
+    const subDir = path.join(qaRoot, '01-specifications', moduleDirName, subDirName);
     fs.mkdirSync(subDir, { recursive: true });
 
     for (const specFile of SPEC_FILES) {
@@ -213,8 +226,8 @@ for (const mod of modules) {
           content = content
             .replace(/\{\{MODULE_NAME\}\}/g, mod.name)
             .replace(/\{\{SUBMODULE_NAME\}\}/g, sub.name)
-            .replace(/\{\{MODULE\}\}/g, moduleKey.toUpperCase())
-            .replace(/\{\{SUB\}\}/g, subKey.toUpperCase());
+            .replace(/\{\{MODULE\}\}/g, moduleName.toUpperCase())
+            .replace(/\{\{SUB\}\}/g, subName.toUpperCase());
           fs.writeFileSync(dest, content, 'utf8');
         } else {
           fs.writeFileSync(dest, `# ${specFile}\n\n> Auto-generated placeholder\n`, 'utf8');
@@ -226,11 +239,11 @@ for (const mod of modules) {
     }
 
     // Create automation spec stub in e2e/tests/{module}/
-    const e2eDir = path.join(qaRoot, '07-automation', 'e2e', 'tests', moduleKey);
+    const e2eDir = path.join(qaRoot, '07-automation', 'e2e', 'tests', moduleName);
     fs.mkdirSync(e2eDir, { recursive: true });
-    const specTs = path.join(e2eDir, `${subKey}.spec.ts`);
+    const specTs = path.join(e2eDir, `${subName}.spec.ts`);
     if (!fs.existsSync(specTs)) {
-      fs.writeFileSync(specTs, specScaffold(mod.name, sub.name, moduleKey, subKey), 'utf8');
+      fs.writeFileSync(specTs, specScaffold(mod.name, sub.name, moduleName, subName), 'utf8');
       console.log(`  [created] ${path.relative(cwd, specTs)}`);
     }
   }
