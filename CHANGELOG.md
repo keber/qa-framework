@@ -46,6 +46,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **`test/module-keys.test.js`, `test/sync-version.test.js`** - unit coverage for the
   key helpers plus a drift guard that fails CI whenever a published version surface
   disagrees with `package.json`.
+- **`.github/workflows/publish.yml`** - the suite now runs before `npm publish`.
+  `ci.yml` triggers on pushes to `main` and on pull requests, so it never sees a tag,
+  and publishing is triggered by a tag push: nothing was verified on the path that
+  actually reaches npm. The drift guard above only protects a release once it runs
+  there.
 
 ---
 ## [1.12.0] - 2026-09-08
