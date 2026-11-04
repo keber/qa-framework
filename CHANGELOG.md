@@ -244,6 +244,47 @@ then on, not what already exists. The one user-visible break is `engines` moving
 
 ---
 
+## [1.11.3] - 2026-06-24
+
+Reconstructed from `5507f1a..4fe32fb`. Release plumbing only.
+
+### Changed
+
+- **`.github/workflows/publish.yml`** - `actions/checkout` and `actions/setup-node` move
+  from v4 to v6, and the publish job's Node version from 20 to 24.
+
+### Removed
+
+- **`NODE_AUTH_TOKEN` / `secrets.NPM_TOKEN`** from the publish step, completing the move
+  to npm trusted publishing begun in 1.11.1: the job now authenticates with the
+  short-lived OIDC token the `id-token: write` permission grants, so no long-lived npm
+  token is stored in the repository.
+
+No package content changed. Nothing reached consuming projects.
+
+---
+
+## [1.11.2] - 2026-06-24
+
+Version bump only - a republish of 1.11.1 after a failed publish run. No source,
+template, skill or script change; the diff is `package.json` and `package-lock.json`.
+
+---
+
+## [1.11.1] - 2026-06-24
+
+Reconstructed from `3a29617..59f6fe0`. Release plumbing only.
+
+### Added
+
+- **`.github/workflows/publish.yml`** - `id-token: write` permission on the publish job,
+  the prerequisite for npm trusted publishing. The long-lived token it replaces is dropped in
+  1.11.3.
+
+No package content changed. Nothing reached consuming projects.
+
+---
+
 ## [1.11.0] - 2026-06-24
 
 ### Added
