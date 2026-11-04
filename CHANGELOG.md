@@ -7,6 +7,295 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **`scripts/init.js`** - module spec folders are now scaffolded as
+  `qa/01-specifications/module-{name}/submodule-{name}/`, the layout declared by every
+  skill, by `docs/folder-structure-guide.md` and by the `specPath` field of
+  `qa-framework.config.json`. init.js wrote the bare key, so a freshly scaffolded
+  project violated the spec-path convention its own agent instructions impose.
+  Prefixing is idempotent: a config whose key already reads `module-suppliers` is not
+  turned into `module-module-suppliers`.
+- **`scripts/init.js`** - automation stubs and test case ids keep using the **bare**
+  key (`e2e/tests/suppliers/create.spec.ts`, `TC-SUPPLIERS-CREATE-001`), matching the
+  `automationPath` field and the live consuming projects. Only the spec tree is
+  prefixed.
+- **`scripts/validate.js`** - `--strict` strips the `module-` / `submodule-` prefix
+  before deriving the automation path. It was pointing the warning at
+  `e2e/tests/module-{name}/` , a folder no project has ever created.
+- **`qa-framework.config.json`** - `frameworkVersion` was stuck at `1.10.0` while the
+  package shipped `1.12.0`. The file is published and is the template copied into every
+  consuming project, where the value is injected into `{{VERSION}}` of the generated
+  agent instructions, so every fresh install since 1.11.0 reported the wrong version.
+
+- **`package.json`** - the npm `version` lifecycle script now also stages
+  `qa-framework.config.json`. sync-version.js rewrites it, but the staging list did not
+  include it, so the release commit and its tag would have carried the OLD
+  frameworkVersion - and the publish workflow builds from a clean checkout of that tag,
+  reintroducing the exact drift this change set out to fix.
+
+### Added
+
+- **`scripts/lib/module-keys.js`** - single source of truth for how a module key maps
+  to a spec folder (prefixed) and to an automation folder (bare). Shared by `init.js`
+  and `validate.js` so the two cannot drift apart again.
+- **`scripts/sync-version.js`** - now also rewrites `frameworkVersion` in
+  `qa-framework.config.json`, by field rather than by the loose `vX.Y.Z` prose pattern.
+- **`test/module-keys.test.js`, `test/sync-version.test.js`** - unit coverage for the
+  key helpers plus a drift guard that fails CI whenever a published version surface
+  disagrees with `package.json`.
+- **`.github/workflows/publish.yml`** - the suite now runs before `npm publish`.
+  `ci.yml` triggers on pushes to `main` and on pull requests, so it never sees a tag,
+  and publishing is triggered by a tag push: nothing was verified on the path that
+  actually reaches npm. The drift guard above only protects a release once it runs
+  there.
+
+---
+## [1.12.0] - 2026-09-08
+
+Reconstructed from `4fe32fb..f52257a` (39 commits). Minor rather than major: a project
+with no `parallelLanes` block behaves exactly as before, `PENDING-BROWSER` adds an enum
+value without removing any, and the spec-path change affects what `init` generates from
+then on, not what already exists. The one user-visible break is `engines` moving from
+`>=18` to `>=20`.
+
+### Added
+
+- **`parallelLanes` lane table** - `qa-framework.config.json` gains a lane block and
+  `qa-framework.config.schema.json` is published alongside it. A lane is four coupled
+  values (account env prefix, `storageState`, MCP namespace, runner project), none of
+  which can be inferred from the others, plus per-lane capabilities: a project can have
+  six accounts but only three MCP servers. A project with no block, or `enabled: false`,
+  resolves a single implicit default lane.
+- **`templates/automation-scaffold/scripts/lane-lock.js`** - config-driven lane lock
+  ported from the reference implementation. `acquire` (random free lane, queues) and
+  `reserve` (exact lane, no queue, throws when busy) stay two separate verbs; staleness
+  is a composite predicate (past the threshold AND no recent heartbeat); the lock
+  directory resolves by shell > `.env` > per-checkout precedence and the resolved path
+  and its source are reported on stderr. Reads `.env` with `dotenv.parse()`, never
+  `config()`, so a script whose only job is choosing a directory never gains ambient
+  access to the QA account passwords in the same file.
+- **`templates/automation-scaffold/scripts/global-setup-guards.js`** - `global-setup`
+  performs the only login, so it is the last point at which a run about to drive an
+  account it does not hold can be stopped. `assertColdSetupIsIntentional` throws before
+  any login when neither `QA_LANE_ONLY` nor `QA_COLD_SETUP=1` is set, since a cold setup
+  re-logs in every lane and invalidates other running sessions; `assertLaneIsLocked`
+  verifies outside CI that the lane is held; `assertProjectsMatchLane` catches a
+  `--project` whose `storageState` points at a different lane than the one reserved.
+  Plain CommonJS so it is testable with `node --test` without adding `ts-node`.
+- **`templates/automation-scaffold/scripts/lane-config.js`** - lane table resolver shared
+  by the config and the guards.
+- **`templates/qa-framework.rules.md`** plus **`templates/agents/`** - four agent
+  templates (`qa-analisis.md`, `qa-asesoria.md`, `qa-plan.md`,
+  `qa-informe-resultados.md`) for analysis, sprint advisory, test planning and ADO result
+  reporting, deployed through `scripts/lib/claude-agents.js` and
+  `scripts/lib/claude-commands.js`.
+- **`scripts/check-forbidden-chars.js`** (`npm run check-chars`) - enforces the BLOCKING
+  character-safety rule the package stated but never checked. Flags em-dash, en-dash,
+  ellipsis, smart quotes and arrows; leaves Latin Extended and emoji alone. Reports
+  `file:line:column` with the code point and its ASCII replacement.
+- **`scripts/check-spanish-accents.js`** (`npm run check-accents`) - language-aware accent
+  gate for Markdown. Classification is the hard part, not detection: it measures the
+  density of Spanish function words in prose only, after stripping fenced code, inline
+  code, link targets, tags, placeholders and paths. Against this package's corpus English
+  lands at 0.000-0.001 and Spanish templates at 0.125-0.165, with the threshold at 0.07;
+  a test asserts the gap stays wide.
+- **`scripts/sync-version.js`** - wired into the `npm version` lifecycle to keep
+  `README.md` and `.github/copilot-instructions.md` aligned with `package.json`.
+- **Test suite and CI** - black-box tests for `cli.js`, `init.js`, `validate.js`,
+  `upgrade.js`, the lane scripts and both character gates, using Node's built-in runner
+  with no new devDependency, plus `.github/workflows/ci.yml`.
+- **`scripts/upgrade.js` section 9** - carries the v1.12.0 scaffold into existing
+  projects. `upgrade` force-copied only `.github/skills/`, `copilot-instructions.md` and
+  `QA-STRUCTURE-GUIDE.md`, so everything this release changed under `templates/` reached
+  new projects through `init.js` alone and existing installations kept the old scaffold,
+  including the login that types the password with `fill()`. The rule is per file:
+  overwrite what is framework-owned, warn and continue where overwriting would destroy
+  working user code, and treat a dependency group as all-or-nothing, since
+  `playwright.config.ts` and `global-setup.ts` both `require()` the lane scripts and a
+  partial install leaves a project that cannot start Playwright. Baseline detection is
+  content-hash based, not `frameworkVersion` based: the recorded values in live projects
+  were `1.10.0`, `1.1.3`, `1.1.3` and `1.0.0`, two of them malformed. Files left
+  user-owned are scanned for `.fill(password)` and reported with file and line, without a
+  textual patch.
+- **`PENDING-BROWSER`** - fourth value in the TC Origin vocabulary, for an element
+  observed and confirmed to exist whose behavior could not be exercised end to end.
+  Without it agents either overclaim with `UI-OBSERVED` or misuse `PENDING-CODE`, which
+  pollutes gap tracking downstream.
+- **Known-issues lookup before defect creation** - nothing required checking whether a
+  defect had already been filed. The gate distinguishes the two outcomes that matter: an
+  open match is referenced instead of refiled, a closed match is filed as a regression.
+  `templates/defect-report.md` gains the section that records the search.
+- **Stage 5 gates** - `tsc --noEmit` plus a single smoke run of a newly written spec
+  before the submodule is marked complete. Both run before the completion checklist; a
+  full green suite remains Stage 5b's job.
+- **Closing measurement for doc-generating stages** - the four skills that write Markdown
+  now end on evidence (accent count, forbidden characters, BOM) rather than a compliance
+  claim, with the language boundary stated so English artifacts are not asked for accents
+  they should not have.
+- **`skills/qa-automation/references/pom-template.md`** - page-object template taken from
+  real project use: an abstract per-module CRUD base plus thin per-submodule classes,
+  with the accent-insensitive label matching that pattern needs against Spanish UIs.
+- **`MIGRATION-NOTES.md`**, **`docs/decisions/lane-heartbeat-caller.md`** and
+  **`docs/visuals/`** - embedded-QA migration guidance, the record that the dispatcher
+  (not the executor) calls heartbeat, and the diagrams referenced from the architecture
+  docs.
+
+### Changed
+
+- **`engines`** - `>=18` becomes `>=20`, and CI tests Node 20, 22 and 24. The matrix had
+  been testing 18 and 20, both out of maintenance, while `publish.yml` released on 24,
+  which no job tested. Users on 18 now get an npm warning, which is the point.
+- **`templates/*/playwright.config.ts`** - both configs called `dotenv.config()`, which
+  injects the entire `.env` into `process.env`. In a real project that file holds every QA
+  account password plus ADO tokens (82 lines in one case) while these configs need a
+  handful of non-secret values. They now read an explicit key list with `dotenv.parse()`,
+  which returns a plain object and never touches `process.env`, and only fill keys the
+  environment has not already set, so shell and CI variables still win.
+- **`templates/automation-scaffold/playwright.config.ts`** - runner projects and auth are
+  generated from the lane table, replacing the commented-out
+  `chromium-user1` / `chromium-user2` block that sat outside the `projects` array and
+  could not have worked as written. `storageState` is derived through lane-lock rather
+  than hardcoded: a parallel hardcoded mapping caused real evidence corruption once, a run
+  recorded under the wrong account because the project was pinned to one lane while
+  `QA_LANE_ONLY` named another.
+- **`global-setup.ts`** - `resolveAuthUsers` resolved lanes by substring
+  (`storageState.includes('user-2')`, which also matches `user-20`) and had no branch for
+  a third lane. It now matches the lane table exactly and reads credentials from each
+  lane's declared account prefix.
+- **Agent behavior rules** - a BLOCKING lane-lock rule states the requirement only
+  (acquire before dispatching, release when done, dispatcher keeps the lane alive, queue
+  or reject at the cap, never force past it), agent-agnostic so each agent's adaptation
+  prescribes its own mechanism.
+- **`qa-test-plan` / `qa-test-cases`** - skill content consolidated into the templates;
+  `priority-and-feasibility.md` merged into `plan-de-pruebas-template.md`.
+- **Typographic characters** - em-dashes, en-dashes, arrows, smart quotes and ellipses
+  replaced with ASCII across `scripts/`, `skills/`, `templates/`, `docs/`, `examples/`,
+  `integrations/` and the PowerShell scripts. Substitution is context-sensitive: padded
+  prose dashes become ` - `, numeric and label ranges keep a tight hyphen, standalone
+  table cells become a bare `-`, and ASCII rules keep their original column width.
+  `CHANGELOG.md` keeps its historical occurrences deliberately - rewriting past entries to
+  satisfy a rule adopted later would falsify the log.
+
+### Fixed
+
+- **`scripts/init.js`** - module specs are scaffolded under
+  `qa/01-specifications/{module}/{submodule}/`. init wrote them to `qa/{module}/`, leaving
+  `01-specifications/` permanently empty while scattering specs as siblings of the
+  numbered folders. The existing tests ran with no config, so the module loop iterated
+  zero times and no spec path was ever asserted.
+- **`scripts/validate.js`** - check 2 walked all of `qa/`, treating every top-level
+  directory as a module, so it read `01-specifications/` as the module and demanded the 6
+  spec files one level above where they exist. The scan is now rooted at
+  `01-specifications/`, which also stops sibling folders such as `02-test-plans/` and
+  `memory/` from being mistaken for submodules; the `SKIP_DIRS` denylist is removed rather
+  than extended.
+- **`scripts/validate.js`** - `--strict` looked for automation specs at
+  `e2e/{module}/{submodule}.spec.ts`, a path nothing creates. `init.js` writes to
+  `e2e/tests/{module}/` and `upgrade.js` documents the v1.6.0 migration that moved them
+  there, so `--strict` emitted a permanently false warning for every submodule in all
+  three live projects.
+- **`scripts/validate.js`** - stopped requiring `05-test-plans`, a stale name from an
+  older convention; the current structure uses `05-test-execution` with test plans under
+  `02-test-plans`.
+- **`templates/*/fixtures` and both scaffolds** - the four remaining `fill(password)` call
+  sites are listed under Security below.
+- **`templates/agents/`** - the four Spanish-language agent templates shipped entirely
+  accent-stripped (144, 190, 88 and 52 Spanish markers, 0 to 2 accented characters between
+  them). This is functional, not cosmetic: page objects locate fields by visible label, so
+  a spec written as `Codigo` never matches a UI rendering the accented form. In one
+  project that cost 24 of 39 failing smoke tests and two wrong mitigations before the
+  cause was found.
+- **`templates/defect-report.md`** - the defect ID prefix is a placeholder. The template
+  hardcoded `DEF-{{NNN}}` while `defectIdPattern` carried `DEF-{NUM}`, and real projects
+  use a project prefix such as `DEF-SIS-014`.
+- **`templates/qa-framework.instructions.md` and `qa-framework.rules.md`** - referenced
+  `integrations.ado.enabled`, a config path that never existed. The real schema is
+  `integrations.azureDevOps.enabled`.
+- **`skills/qa-spec-generation`** - pointed at `references/spec-file-formats.md`, which
+  only exists under `qa-module-analysis/references/`, so Stage 2 could not find the
+  template it is told to use. `skills/qa-automation` referenced a `pom-template.md` that
+  did not exist.
+- **`qa-test-stabilization`** - the official suite is the only source of truth. A polling
+  diagnostic script saw a toast 4 of 4 times while the official suite saw none, 6 of 6
+  across two independent runs, and the defect had already been closed on that standalone
+  evidence. Standalone output is now diagnostic input, never a verdict.
+- **`templates/*/.env.example`** - both files carried a UTF-8 BOM and three em-dashes. A
+  BOM in a `.env` is not cosmetic: some parsers read the first key as `﻿QA_BASE_URL`
+  and silently fail to find it, and these files ship to every consuming project as the
+  template developers copy to `.env`. The character gate's extension list gains
+  `.example` and `.ps1`, both previous blind spots.
+- **CI** - the test script used `test/**/*.test.js`, which needs globstar the runner's
+  shell does not enable, and the follow-up fix kept the pattern quoted so node received a
+  literal path. The validate step ran against this repository's own gitignored `qa/`
+  directory and failed with four missing-folder errors; it now scaffolds a throwaway
+  project and validates that, which exercises the contract that actually matters - what
+  `init.js` generates must pass `validate.js`.
+
+### Security
+
+- **Password no longer reaches Playwright traces.** Both scaffolds typed the QA password
+  with `locator().fill(password)`, and the automation scaffold ships `trace` and `video`
+  set to `retain-on-failure`, so any failed CI run persisted an artifact containing the
+  plaintext password. All four call sites - `global-setup.ts` in both scaffolds,
+  `fixtures/base.ts` (TTL-aware reauth) and `fixtures/auth.ts` (`loginAs`) - now set the
+  value through `page.evaluate()`, the mechanism this package already documented as
+  "Pattern 7: Password Injection (Trace Safety)". The fixture sites carried more exposure
+  than `global-setup`, which runs once per run, since reauth runs for every test past the
+  TTL and `loginAs` for every test that logs in as a role. Bubbling `input` and `change`
+  events are dispatched after the assignment because a bare `.value` write does not notify
+  the Blazor/Radzen-style frameworks these scaffolds target, and an explicit visible
+  `waitFor` replaces the auto-wait `fill()` provided. Email `fill()` calls are left in
+  place: emails are not secret and aid debugging. There are no remaining
+  `fill(password)` call sites in `templates/`.
+- **`.env` is no longer loaded wholesale** by the Playwright configs or the lane lock. See
+  Changed above.
+
+---
+
+## [1.11.3] - 2026-06-24
+
+Reconstructed from `5507f1a..4fe32fb`. Release plumbing only.
+
+### Changed
+
+- **`.github/workflows/publish.yml`** - `actions/checkout` and `actions/setup-node` move
+  from v4 to v6, and the publish job's Node version from 20 to 24.
+
+### Removed
+
+- **`NODE_AUTH_TOKEN` / `secrets.NPM_TOKEN`** from the publish step, completing the move
+  to npm trusted publishing begun in 1.11.1: the job now authenticates with the
+  short-lived OIDC token the `id-token: write` permission grants, so no long-lived npm
+  token is stored in the repository.
+
+No package content changed. Nothing reached consuming projects.
+
+---
+
+## [1.11.2] - 2026-06-24
+
+Version bump only - a republish of 1.11.1 after a failed publish run. No source,
+template, skill or script change; the diff is `package.json` and `package-lock.json`.
+
+---
+
+## [1.11.1] - 2026-06-24
+
+Reconstructed from `3a29617..59f6fe0`. Release plumbing only.
+
+### Added
+
+- **`.github/workflows/publish.yml`** - `id-token: write` permission on the publish job,
+  the prerequisite for npm trusted publishing. The long-lived token it replaces is dropped in
+  1.11.3.
+
+No package content changed. Nothing reached consuming projects.
+
+---
+
 ## [1.11.0] - 2026-06-24
 
 ### Added

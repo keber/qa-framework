@@ -13,12 +13,39 @@ const targets = [
   path.join(rootDir, '.github', 'copilot-instructions.md'),
 ];
 
+// qa-framework.config.json is published and is the template init.js copies into every
+// consuming project, where its frameworkVersion is injected into {{VERSION}} of the
+// generated agent instructions. Left out of this sync it silently drifted to 1.10.0
+// while the package shipped 1.12.0, so every fresh install told its agent the wrong
+// version. It is patched by field, not by the loose vX.Y.Z pattern used for prose.
+const jsonTargets = [
+  { file: path.join(rootDir, 'qa-framework.config.json'), field: 'frameworkVersion' },
+];
+
 // templates/qa-framework.instructions.md and templates/qa-framework.rules.md contain a
 // literal {{VERSION}} placeholder substituted by init.js/upgrade.js in the consumer
 // project at install/upgrade time. That placeholder is NOT a hardcoded version string
 // and must never be touched here.
 
 const versionPattern = /v\d+\.\d+\.\d+/;
+
+for (const { file: filePath, field } of jsonTargets) {
+  const original = fs.readFileSync(filePath, 'utf8');
+  const fieldPattern = new RegExp(
+    `("${field}"\\s*:\\s*")\\d+\\.\\d+\\.\\d+(")`
+  );
+
+  if (!fieldPattern.test(original)) {
+    throw new Error(`sync-version: no "${field}" version field in ${filePath}`);
+  }
+
+  const updated = original.replace(fieldPattern, `$1${version}$2`);
+
+  if (updated !== original) {
+    fs.writeFileSync(filePath, updated, 'utf8');
+    console.log(`sync-version: updated ${path.relative(rootDir, filePath)} ${field} -> ${version}`);
+  }
+}
 
 for (const filePath of targets) {
   const original = fs.readFileSync(filePath, 'utf8');

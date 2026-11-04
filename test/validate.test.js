@@ -33,6 +33,9 @@ function makeTmpProject() {
 
 const MODULE_KEY = 'module-suppliers';
 const SUB_KEY = 'submodule-create';
+// Automation paths drop the prefix - see scripts/lib/module-keys.js.
+const MODULE_BARE = 'suppliers';
+const SUB_BARE = 'create';
 
 // Builds the authoritative spec layout: qa/01-specifications/{module}/{submodule}/.
 // This is what init.js writes, what all 8 skills declare, and what the three live
@@ -95,9 +98,10 @@ test('validate: missing spec files in a submodule are reported as errors', () =>
   }
 });
 
-// The automation-spec warning must point at e2e/tests/{module}/{submodule}.spec.ts,
-// matching where init.js writes the stub and where the v1.6.0 migration in
-// upgrade.js moved specs to.
+// The automation-spec warning must point at e2e/tests/{module}/{submodule}.spec.ts
+// keyed by the BARE name, matching where init.js writes the stub, what automationPath
+// declares and what the live projects contain. The spec tree keeps its module-/
+// submodule- prefix; the automation tree never had one.
 test('validate: --strict automation-spec warning points at the e2e/tests/ path', () => {
   const projectRoot = makeTmpProject();
   try {
@@ -107,7 +111,7 @@ test('validate: --strict automation-spec warning points at the e2e/tests/ path',
     assert.match(
       result.stdout,
       new RegExp(
-        `\\[STRICT\\] No automation spec found: qa/07-automation/e2e/tests/${MODULE_KEY}/${SUB_KEY}\\.spec\\.ts`
+        `\\[STRICT\\] No automation spec found: qa/07-automation/e2e/tests/${MODULE_BARE}/${SUB_BARE}\\.spec\\.ts`
       )
     );
     // Guard against a regression back to the pre-v1.6.0 e2e/{module}/ layout.

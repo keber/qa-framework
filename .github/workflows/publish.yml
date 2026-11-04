@@ -22,5 +22,12 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@keber'
 
+      # ci.yml runs on pushes to main and on pull requests - it never sees a tag.
+      # Publishing is triggered by a tag push, so until now nothing was verified on
+      # the path that actually reaches npm: a tag could ship code no suite had run.
+      # The package has no dependencies, so the suite runs without an install step.
+      - name: Run the test suite before publishing
+        run: npm test
+
       - run: npm publish --access public
 
