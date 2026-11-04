@@ -30,6 +30,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   consuming project, where the value is injected into `{{VERSION}}` of the generated
   agent instructions, so every fresh install since 1.11.0 reported the wrong version.
 
+- **`package.json`** - the npm `version` lifecycle script now also stages
+  `qa-framework.config.json`. sync-version.js rewrites it, but the staging list did not
+  include it, so the release commit and its tag would have carried the OLD
+  frameworkVersion - and the publish workflow builds from a clean checkout of that tag,
+  reintroducing the exact drift this change set out to fix.
+
 ### Added
 
 - **`scripts/lib/module-keys.js`** - single source of truth for how a module key maps
