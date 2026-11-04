@@ -282,10 +282,26 @@ test('init: an invalid lane config fails qa-investigador only, writes the other 
         assert.ok(fs.existsSync(agentPath(projectRoot, name)), `expected .claude/agents/${name}.md`);
       }
       // READ-008: the summary must not list an agent that was not generated.
-      const summaryLine = result.stdout.split(/\r?\n/).find((l) => l.includes('.claude/agents/'));
-      assert.ok(summaryLine, 'summary must still list the generated agents');
-      assert.doesNotMatch(summaryLine, /qa-investigador/);
-      assert.match(summaryLine, /qa-reporte-ejecucion/);
+      //
+      // Match either path separator. init.js prints these lines through
+      // path.relative, so the same output reads ".claude/agents/..." on Linux and
+      // ".claude\agents\..." on Windows. Keying on the forward-slash form alone,
+      // and taking the FIRST matching line, made this assertion land on the summary
+      // line on Windows (where the per-file "[created]" lines never matched) and on
+      // the first "[created] .claude/agents/qa-analisis.md" line on Linux - so it
+      // passed locally and failed on CI. Check every agent line instead of guessing
+      // which one carries the summary.
+      const agentLines = result.stdout
+        .split(/\r?\n/)
+        .filter((l) => /\.claude[\\\/]agents/.test(l));
+      assert.ok(agentLines.length, 'summary must still list the generated agents');
+      for (const line of agentLines) {
+        assert.doesNotMatch(line, /qa-investigador/);
+      }
+      assert.ok(
+        agentLines.some((l) => l.includes('qa-reporte-ejecucion')),
+        'the generated agents must include qa-reporte-ejecucion'
+      );
     } finally {
       fs.rmSync(projectRoot, { recursive: true, force: true });
     }
