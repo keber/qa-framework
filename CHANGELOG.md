@@ -7,6 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **`package.json`** - `docs/visuals/` no longer ships to npm. The `files` allow list
+  carried a blanket `docs/` entry, so the 25 presentation images added in `f1064e1`
+  started being published without anyone deciding to: the tarball went from 410 KB
+  unpacked in 1.11.3 to 51.8 MB in 1.12.0, and every `npm install` has paid for it
+  since. The entry is now `docs/**/*.md`, which keeps all eight documents - including
+  `docs/folder-structure-guide.md` and `docs/spec-driven-philosophy.md`, both named in
+  text that `scripts/` writes into consuming projects - and drops the images. The
+  images stay in the repository; they are reference material, not runtime content.
+  Unpacked size: 51.8 MB -> 630 KB. Exactly the 25 images leave the package and
+  nothing else moves.
+- **`package.json`** - removed `agent-instructions/` from `files`. The directory does
+  not exist, so the entry had been matching nothing.
+
+---
+
 ## [1.13.0] - 2026-11-04
 
 Dated by its release, not by its bump. `package.json` was moved to `1.13.0` on 2026-10-16,
