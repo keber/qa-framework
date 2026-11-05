@@ -16,7 +16,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
-const { AGENT_NAMES, isSprintCycleEnabled, buildAgentContent, agentFileName } = require('./lib/claude-agents');
+const { AGENT_NAMES, isSprintCycleEnabled, renderAllAgents } = require('./lib/claude-agents');
 
 // --- Parse args ---
 const args            = process.argv.slice(2);
@@ -360,12 +360,19 @@ writeIfMissing(claudeRulesPath, claudeRulesContent);
 // --- .claude/agents/qa-*.md - optional ANALISIS/PLAN sprint-cycle mode (Claude Code only) ---
 // Gated by integrations.azureDevOps.sprintCycle.enabled. No .github/ equivalent: Claude
 // Code subagents with per-agent tools/model frontmatter have no Copilot counterpart.
+// Each agent is rendered independently: an invalid lane config fails qa-investigador
+// only, the other agents are still written, and init exits 1 at the end.
+const agentFailures = [];
 if (isSprintCycleEnabled(config)) {
   const templatesDir = path.resolve(__dirname, '..', 'templates');
   const claudeAgentsDest = path.join(cwd, '.claude', 'agents');
   fs.mkdirSync(claudeAgentsDest, { recursive: true });
-  for (const agentName of AGENT_NAMES) {
-    writeIfMissing(path.join(claudeAgentsDest, agentFileName(agentName)), buildAgentContent(agentName, templatesDir, config));
+  for (const agent of renderAllAgents(templatesDir, config)) {
+    if (agent.error) {
+      agentFailures.push(agent);
+      continue;
+    }
+    writeIfMissing(path.join(claudeAgentsDest, agent.fileName), agent.content);
   }
 }
 
@@ -427,7 +434,11 @@ console.log('    .github/instructions/  qa-framework.instructions.md');
 console.log('    .claude/commands/      qa-*.md (Claude Code slash commands)');
 console.log('    .claude/rules/         qa-framework.md (Claude Code always-loaded rules)');
 if (isSprintCycleEnabled(config)) {
-  console.log('    .claude/agents/        qa-analisis/qa-plan/qa-asesoria/qa-informe-resultados.md (ANALISIS/PLAN mode)');
+  const failedAgents = new Set(agentFailures.map((a) => a.agentName));
+  const generatedAgents = AGENT_NAMES.filter((name) => !failedAgents.has(name));
+  if (generatedAgents.length) {
+    console.log(`    .claude/agents/        ${generatedAgents.join('/')}.md (ANALISIS/PLAN mode)`);
+  }
 }
 console.log('');
 console.log('  Optional integrations:');
@@ -450,6 +461,23 @@ if (azureReporterInstalled) {
 console.log('');
 console.log('  Next: edit qa/qa-framework.config.json, then read qa/AGENT-NEXT-STEPS.md');
 console.log('');
+
+if (agentFailures.length) {
+  if (skipIfExists) {
+    // Postinstall mode: a non-zero exit would make `npm install` of this package fail,
+    // which blocks the user from ever reaching the fix. Report loudly, exit 0.
+    for (const { agentName, fileName, error } of agentFailures) {
+      console.error(`[qa-framework/init] WARNING: agent ${agentName} (.claude/agents/${fileName}) was not generated. ${error.message}`);
+    }
+    console.error('[qa-framework/init] WARNING: fix qa-framework.config.json (run "npx qa-framework validate"), then run "npx qa-framework upgrade" to generate the missing agent.');
+  } else {
+    for (const { fileName, error } of agentFailures) {
+      console.error(`[qa-framework/init] ERROR: .claude/agents/${fileName} was not generated. ${error.message}`);
+    }
+    console.error('[qa-framework/init] Fix qa-framework.config.json (run "qa-framework validate") and run init or upgrade again.');
+    process.exitCode = 1;
+  }
+}
 
 // -----------------------------------------------------------------------
 // Helpers

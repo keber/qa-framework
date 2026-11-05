@@ -7,37 +7,33 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
+## [1.13.0] - 2026-11-04
 
-### Fixed
-
-- **`scripts/init.js`** - module spec folders are now scaffolded as
-  `qa/01-specifications/module-{name}/submodule-{name}/`, the layout declared by every
-  skill, by `docs/folder-structure-guide.md` and by the `specPath` field of
-  `qa-framework.config.json`. init.js wrote the bare key, so a freshly scaffolded
-  project violated the spec-path convention its own agent instructions impose.
-  Prefixing is idempotent: a config whose key already reads `module-suppliers` is not
-  turned into `module-module-suppliers`.
-- **`scripts/init.js`** - automation stubs and test case ids keep using the **bare**
-  key (`e2e/tests/suppliers/create.spec.ts`, `TC-SUPPLIERS-CREATE-001`), matching the
-  `automationPath` field and the live consuming projects. Only the spec tree is
-  prefixed.
-- **`scripts/validate.js`** - `--strict` strips the `module-` / `submodule-` prefix
-  before deriving the automation path. It was pointing the warning at
-  `e2e/tests/module-{name}/` , a folder no project has ever created.
-- **`qa-framework.config.json`** - `frameworkVersion` was stuck at `1.10.0` while the
-  package shipped `1.12.0`. The file is published and is the template copied into every
-  consuming project, where the value is injected into `{{VERSION}}` of the generated
-  agent instructions, so every fresh install since 1.11.0 reported the wrong version.
-
-- **`package.json`** - the npm `version` lifecycle script now also stages
-  `qa-framework.config.json`. sync-version.js rewrites it, but the staging list did not
-  include it, so the release commit and its tag would have carried the OLD
-  frameworkVersion - and the publish workflow builds from a clean checkout of that tag,
-  reintroducing the exact drift this change set out to fix.
+Dated by its release, not by its bump. `package.json` was moved to `1.13.0` on 2026-10-16,
+but the version was never tagged or published, so everything below ships together under
+this number. The infrastructure fixes listed in Added and Fixed were written later, on the
+branch that unblocked this release.
 
 ### Added
 
+- `templates/agents/qa-reporte-ejecucion.md` - new Claude Code agent that exports the ADO
+  test plan results, versions the raw export under `ado-export-<YYYY-MM-DD>/` and writes the
+  sprint `Reporte-de-Ejecucion-de-Pruebas-<project>-Sprint-<N>.md` (summary with executed,
+  success and coverage metrics, plus promoted findings).
+- `templates/agents/qa-investigador.md` - new Claude Code agent that investigates one root
+  cause against the real environment. Its tools are generated from `parallelLanes`: each lane
+  with an `mcpNamespace` adds 15 Playwright MCP browser tools, a lane table and the mandatory
+  heartbeat protocol; with no MCP lane it gets a no-browser section instead.
+- Agent template engine: `{{#if FLAG}}` / `{{#unless FLAG}}` blocks, single-pass placeholder
+  replacement and a guard that fails on any unresolved `{{...}}` token.
+- New placeholders: `INVESTIGATOR_TOOLS`, `LANE_MCP_TABLE`, `APPROVAL_THRESHOLD_PERCENT`,
+  `APPROVAL_THRESHOLD_RATIO`, `DECIMAL_SEPARATOR`, `TC_ID_PATTERN`, `QA_BASE_URL`,
+  `LOGIN_PATH`, `TECH_STACK`.
+- Config keys: `integrations.azureDevOps.sprintCycle.approvalThresholdPercent` (default 85),
+  optional `conventions.decimalSeparator` and `conventions.defectIdPrefix`. Documented in
+  `qa-framework.config.schema.json`, together with the `mcpNamespace` pattern.
+- `qa-framework validate` checks present-but-invalid values of those keys and of
+  `parallelLanes`, and now finds the config under `qa/` as well as at the project root.
 - **`scripts/lib/module-keys.js`** - single source of truth for how a module key maps
   to a spec folder (prefixed) and to an automation folder (bare). Shared by `init.js`
   and `validate.js` so the two cannot drift apart again.
@@ -52,7 +48,62 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   actually reaches npm. The drift guard above only protects a release once it runs
   there.
 
+### Changed
+
+- `init` and `upgrade` generate six agents (was four) when `sprintCycle.enabled` is true.
+  Agents are rendered independently: an invalid lane config fails `qa-investigador` only,
+  the other five are still written and the command exits 1.
+- As npm postinstall (`init --skip-if-exists`), an agent that cannot be rendered is reported
+  as a WARNING naming the agent and asking to fix the config and run
+  `npx qa-framework upgrade`; postinstall exits 0 so `npm install` does not fail. Explicit
+  `init` and `upgrade` keep exit code 1.
+- `qa-informe-resultados` reads its approval threshold from config instead of a hardcoded
+  85% and states the decimal separator rule.
+
+### Fixed
+
+- `qa-informe-resultados` looked for `Reporte-de-Ejecucion-de-Pruebas-...` and pointed to the
+  `qa-ado-integration` skill, which does not produce that file. It now names the
+  `qa-reporte-ejecucion` agent, the canonical filename (active and historical sprint folders)
+  and accepts the older `Reporte-ejecución-de-pruebas-*` files.
+- `templates/qa-framework.instructions.md` and `templates/qa-framework.rules.md` carried a
+  project-specific `DEF-SIS-NNN` example; it is now `DEF-{PREFIX}-NNN`.
+- **`scripts/init.js`** - module spec folders are now scaffolded as
+  `qa/01-specifications/module-{name}/submodule-{name}/`, the layout declared by every
+  skill, by `docs/folder-structure-guide.md` and by the `specPath` field of
+  `qa-framework.config.json`. init.js wrote the bare key, so a freshly scaffolded
+  project violated the spec-path convention its own agent instructions impose.
+  Prefixing is idempotent: a config whose key already reads `module-suppliers` is not
+  turned into `module-module-suppliers`.
+- **`scripts/init.js`** - automation stubs and test case ids keep using the **bare**
+  key (`e2e/tests/suppliers/create.spec.ts`, `TC-SUPPLIERS-CREATE-001`), matching the
+  `automationPath` field and the live consuming projects. Only the spec tree is
+  prefixed.
+- **`scripts/validate.js`** - `--strict` strips the `module-` / `submodule-` prefix
+  before deriving the automation path. It was pointing the warning at
+  `e2e/tests/module-{name}/`, a folder no project has ever created.
+- **`qa-framework.config.json`** - `frameworkVersion` was stuck at `1.10.0` while the
+  package shipped `1.12.0`. The file is published and is the template copied into every
+  consuming project, where the value is injected into `{{VERSION}}` of the generated
+  agent instructions, so every fresh install since 1.11.0 reported the wrong version.
+- **`package.json`** - the npm `version` lifecycle script now also stages
+  `qa-framework.config.json`. sync-version.js rewrites it, but the staging list did not
+  include it, so the release commit and its tag would have carried the OLD
+  frameworkVersion - and the publish workflow builds from a clean checkout of that tag,
+  reintroducing the exact drift this change set out to fix.
+- **`test/sync-version.test.js`** - two tests compared files against their starting bytes,
+  which assumed the tree was already synced. On a drifted tree one of them ran
+  `sync-version` and left `qa-framework.config.json` rewritten: the first run failed, the
+  retry passed, and the drift vanished from the working tree unnoticed. A suite that edits
+  tracked files turns a red run green on the retry and hides what it exists to catch.
+- **`test/init.test.js`** - the agent summary assertion matched only the forward-slash form
+  of `.claude/agents/` and took the first matching line. `init.js` prints those lines
+  through `path.relative`, so on Windows the per-file `[created]` lines never matched and it
+  landed on the summary line, while on Linux it landed on the first `[created]` line. The
+  test passed locally and failed the first time it ran on CI.
+
 ---
+
 ## [1.12.0] - 2026-09-08
 
 Reconstructed from `4fe32fb..f52257a` (39 commits). Minor rather than major: a project

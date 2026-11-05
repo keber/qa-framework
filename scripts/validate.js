@@ -8,6 +8,9 @@
  *   qa-framework validate --config ./my-config.json
  *
  * Checks:
+ *   0. Config values read by the sprint agents: approvalThresholdPercent (0 < x < 100),
+ *      decimalSeparator, defectIdPrefix and, when sprint agents and lanes are enabled,
+ *      parallelLanes / mcpNamespace (only present-but-invalid values are reported)
  *   1. Required top-level folders exist
  *   2. All submodule folders under 01-specifications/ contain the 6 required spec files
  *   3. No plaintext credentials in spec files (basic scan)
@@ -26,14 +29,21 @@ const { moduleBareName, submoduleBareName } = require('./lib/module-keys');
 const args       = process.argv.slice(2);
 const strict     = args.includes('--strict');
 const configFlag = args.indexOf('--config');
+const { validateAgentConfig } = require('./lib/claude-agents');
+
+// Same lookup order as init/upgrade: --config, then root, then qa/.
 const configPath = configFlag !== -1
   ? path.resolve(process.cwd(), args[configFlag + 1])
-  : path.resolve(process.cwd(), 'qa-framework.config.json');
+  : [
+      path.resolve(process.cwd(), 'qa-framework.config.json'),
+      path.resolve(process.cwd(), 'qa', 'qa-framework.config.json'),
+    ].find((candidate) => fs.existsSync(candidate));
 
 // --- Load config (optional) ---
 let qaRoot = path.resolve(process.cwd(), 'qa');
-if (fs.existsSync(configPath)) {
-  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+let config = null;
+if (configPath && fs.existsSync(configPath)) {
+  config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   qaRoot = path.resolve(process.cwd(), config.conventions?.qaRoot ?? 'qa');
 }
 
@@ -42,6 +52,15 @@ if (strict) console.log('[qa-framework/validate] Mode: STRICT');
 
 const errors   = [];
 const warnings = [];
+
+// -----------------------------------------------------------------------
+// Check 0: Config values (only present-but-invalid values are reported)
+// -----------------------------------------------------------------------
+if (config) {
+  for (const message of validateAgentConfig(config)) {
+    errors.push(`Invalid config (${path.relative(process.cwd(), configPath)}): ${message}`);
+  }
+}
 
 // -----------------------------------------------------------------------
 // Check 1: Required top-level folders

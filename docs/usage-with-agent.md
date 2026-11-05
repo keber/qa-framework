@@ -125,26 +125,31 @@ ad-hoc QA advisory chat, and a sprint closing results report. This mode is:
 
 - **Optional** - off by default.
 - **Gated** by `integrations.azureDevOps.sprintCycle.enabled` in
-  `qa/qa-framework.config.json` (it requires Azure DevOps enabled, since three of the
-  four agents depend on ADO work items or an ADO-generated execution report).
+  `qa/qa-framework.config.json` (it requires Azure DevOps enabled, since most of the
+  agents depend on ADO work items or an ADO-generated execution report).
 - **Claude Code only, by design, not by omission.** Each agent is a Claude Code subagent
   with its own `tools`/`model` frontmatter (e.g. `qa-asesoria` intentionally has no
   `Write`/`Bash`). GitHub Copilot has no equivalent primitive, so no `.github/` artifact
   is generated for this mode.
 
-When enabled, `init`/`upgrade` generate four subagents under `.claude/agents/`:
+When enabled, `init`/`upgrade` generate six subagents under `.claude/agents/`:
 
 | Agent | Purpose |
 |---|---|
 | `qa-analisis.md` | Analysis document: test universe, automation feasibility, P0-P3 prioritization, excluded universe, traceability matrix |
 | `qa-plan.md` | Default mode: executive summary + a trace-linked test case table, executable within the configured manual-testing timebox |
 | `qa-asesoria.md` | Chat-only QA advisory (no `Write`/`Bash`) - answers point questions, redirects to `qa-plan`/`qa-analisis` when a full document is actually needed |
-| `qa-informe-resultados.md` | Narrative sprint closing report built from an execution report already produced by the `qa-ado-integration` skill; updates incrementally, never overwrites prior sections |
+| `qa-reporte-ejecucion.md` | Exports the ADO test plan results, versions the raw export under `ado-export-<YYYY-MM-DD>/` and writes the sprint `Reporte-de-Ejecucion-de-Pruebas-<project>-Sprint-<N>.md` (summary + promoted findings) |
+| `qa-informe-resultados.md` | Narrative sprint closing report built from the Reporte produced by `qa-reporte-ejecucion`; updates incrementally, never overwrites prior sections |
+| `qa-investigador.md` | Investigates one concrete root cause against the real environment and returns a verdict with evidence. Gets Playwright MCP browser tools for every `parallelLanes` lane with an `mcpNamespace`; with no such lane it works without a browser |
 
-Sprint duration, manual-testing timebox, date format, and timezone are parameterized
-from `integrations.azureDevOps.sprintCycle` (with neutral defaults - 8-day sprint,
-2-day timebox, `dd-mm-aaaa`, `America/Santiago` - when a field is omitted). See
-[docs/installation.md](installation.md) for the config shape.
+Sprint duration, manual-testing timebox, date format, timezone and the approval threshold
+(`approvalThresholdPercent`, default 85) are parameterized from
+`integrations.azureDevOps.sprintCycle` (with neutral defaults - 8-day sprint, 2-day
+timebox, `dd-mm-aaaa`, `America/Santiago` - when a field is omitted). The optional
+`conventions.decimalSeparator` and `conventions.defectIdPrefix` override values otherwise
+derived from the locale and the project name. See [docs/installation.md](installation.md)
+for the config shape.
 
 ---
 

@@ -233,3 +233,99 @@ test('validate: --config points to a custom config file with a custom qaRoot', (
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Config value checks (v1.13.0)
+// ---------------------------------------------------------------------------
+
+function validateWithConfig(config, where = 'root') {
+  const projectRoot = makeTmpProject();
+  try {
+    makeCompleteQaStructure(projectRoot);
+    const configPath = where === 'root'
+      ? path.join(projectRoot, 'qa-framework.config.json')
+      : path.join(projectRoot, 'qa', 'qa-framework.config.json');
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    return runValidate([], projectRoot);
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+}
+
+const sprintCycle = (extra) => ({ integrations: { azureDevOps: { sprintCycle: { enabled: true, ...extra } } } });
+
+test('validate: absent optional config keys produce no config errors', () => {
+  const result = validateWithConfig({ project: { name: 'demo' }, ...sprintCycle({}) });
+  assert.equal(result.status, 0, result.stdout);
+  assert.doesNotMatch(result.stdout, /Invalid config/);
+});
+
+test('validate: valid optional config keys produce no config errors', () => {
+  const result = validateWithConfig({
+    conventions: { decimalSeparator: '.', defectIdPrefix: 'ACME-2' },
+    parallelLanes: {
+      enabled: true,
+      lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'mcp__playwright-qauser__' }],
+    },
+    ...sprintCycle({ approvalThresholdPercent: 99.5 }),
+  });
+  assert.equal(result.status, 0, result.stdout);
+});
+
+for (const bad of [0, 100, 150, -5, '85']) {
+  test(`validate: approvalThresholdPercent ${JSON.stringify(bad)} is an error`, () => {
+    const result = validateWithConfig(sprintCycle({ approvalThresholdPercent: bad }));
+    assert.equal(result.status, 1, result.stdout);
+    assert.match(result.stdout, /approvalThresholdPercent/);
+  });
+}
+
+test('validate: an invalid decimalSeparator is an error', () => {
+  const result = validateWithConfig({ conventions: { decimalSeparator: ';' } });
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stdout, /decimalSeparator/);
+});
+
+test('validate: an invalid defectIdPrefix is an error', () => {
+  const result = validateWithConfig({ conventions: { defectIdPrefix: 'acme prefix' } });
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stdout, /defectIdPrefix/);
+});
+
+test('validate: an invalid mcpNamespace is an error (config under qa/)', () => {
+  const result = validateWithConfig({
+    parallelLanes: {
+      enabled: true,
+      lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright-qauser' }],
+    },
+    ...sprintCycle({}),
+  }, 'qa');
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stdout, /mcpNamespace/);
+});
+
+test('validate: an invalid parallelLanes block is an error', () => {
+  const result = validateWithConfig({ parallelLanes: { enabled: true, lanes: [] }, ...sprintCycle({}) });
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stdout, /parallelLanes/);
+});
+
+// REL-007: lanes are only consumed by the generator when lanes AND sprint agents are on.
+const BAD_NS_LANES = [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright-qauser' }];
+
+test('validate: a bad mcpNamespace in a disabled lane block is not an error', () => {
+  const result = validateWithConfig({ parallelLanes: { enabled: false, lanes: BAD_NS_LANES }, ...sprintCycle({}) });
+  assert.equal(result.status, 0, result.stdout);
+  assert.doesNotMatch(result.stdout, /mcpNamespace/);
+});
+
+test('validate: a bad mcpNamespace or lane block is not an error when sprint agents are off', () => {
+  for (const parallelLanes of [{ enabled: true, lanes: BAD_NS_LANES }, { enabled: true, lanes: [] }]) {
+    const result = validateWithConfig({
+      parallelLanes,
+      integrations: { azureDevOps: { sprintCycle: { enabled: false } } },
+    });
+    assert.equal(result.status, 0, result.stdout);
+    assert.doesNotMatch(result.stdout, /Invalid config/);
+  }
+});

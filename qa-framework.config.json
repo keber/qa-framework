@@ -1,6 +1,6 @@
 {
   "$schema": "./qa-framework.config.schema.json",
-  "frameworkVersion": "1.12.0",
+  "frameworkVersion": "1.13.0",
 
   "project": {
     "name": "{{PROJECT_NAME}}",
@@ -89,7 +89,8 @@
         "sprintDurationDays": 8,
         "manualTestingTimeboxDays": 2,
         "dateFormat": "dd-mm-aaaa",
-        "timezone": "America/Santiago"
+        "timezone": "America/Santiago",
+        "approvalThresholdPercent": 85
       }
     }
   },

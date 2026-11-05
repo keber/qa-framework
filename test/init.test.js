@@ -205,3 +205,131 @@ test('init: --config with a missing path exits 1', () => {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// .claude/agents/ - sprint-cycle subagents
+// ---------------------------------------------------------------------------
+
+const SPRINT_AGENTS = [
+  'qa-analisis',
+  'qa-plan',
+  'qa-asesoria',
+  'qa-informe-resultados',
+  'qa-reporte-ejecucion',
+  'qa-investigador',
+];
+
+function writeRootConfig(projectRoot, config) {
+  fs.writeFileSync(path.join(projectRoot, 'qa-framework.config.json'), JSON.stringify(config, null, 2));
+}
+
+const agentPath = (root, name) => path.join(root, '.claude', 'agents', `${name}.md`);
+
+test('init: sprintCycle enabled generates the six agents without leftover placeholders', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    writeRootConfig(projectRoot, {
+      project: { name: 'demo', displayName: 'Demo' },
+      integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+    });
+    const result = runInit([], projectRoot);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    for (const name of SPRINT_AGENTS) {
+      assert.ok(fs.existsSync(agentPath(projectRoot, name)), `expected .claude/agents/${name}.md`);
+      assert.doesNotMatch(fs.readFileSync(agentPath(projectRoot, name), 'utf8'), /\{\{/);
+    }
+    assert.match(result.stdout, /qa-reporte-ejecucion/);
+    assert.match(result.stdout, /qa-investigador/);
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('init: sprintCycle disabled generates no agents', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    writeRootConfig(projectRoot, {
+      project: { name: 'demo' },
+      integrations: { azureDevOps: { sprintCycle: { enabled: false } } },
+    });
+    const result = runInit([], projectRoot);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    for (const name of SPRINT_AGENTS) {
+      assert.equal(fs.existsSync(agentPath(projectRoot, name)), false, `${name} must not be generated`);
+    }
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('init: an invalid lane config fails qa-investigador only, writes the other five, exits 1', () => {
+  for (const parallelLanes of [
+    { enabled: true, lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright' }] },
+    { enabled: true, lanes: [] },
+  ]) {
+    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+    try {
+      writeRootConfig(projectRoot, {
+        project: { name: 'demo' },
+        parallelLanes,
+        integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+      });
+      const result = runInit([], projectRoot);
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stderr, /qa-investigador/);
+      assert.equal(fs.existsSync(agentPath(projectRoot, 'qa-investigador')), false);
+      for (const name of SPRINT_AGENTS.filter((n) => n !== 'qa-investigador')) {
+        assert.ok(fs.existsSync(agentPath(projectRoot, name)), `expected .claude/agents/${name}.md`);
+      }
+      // READ-008: the summary must not list an agent that was not generated.
+      //
+      // Match either path separator. init.js prints these lines through
+      // path.relative, so the same output reads ".claude/agents/..." on Linux and
+      // ".claude\agents\..." on Windows. Keying on the forward-slash form alone,
+      // and taking the FIRST matching line, made this assertion land on the summary
+      // line on Windows (where the per-file "[created]" lines never matched) and on
+      // the first "[created] .claude/agents/qa-analisis.md" line on Linux - so it
+      // passed locally and failed on CI. Check every agent line instead of guessing
+      // which one carries the summary.
+      const agentLines = result.stdout
+        .split(/\r?\n/)
+        .filter((l) => /\.claude[\\\/]agents/.test(l));
+      assert.ok(agentLines.length, 'summary must still list the generated agents');
+      for (const line of agentLines) {
+        assert.doesNotMatch(line, /qa-investigador/);
+      }
+      assert.ok(
+        agentLines.some((l) => l.includes('qa-reporte-ejecucion')),
+        'the generated agents must include qa-reporte-ejecucion'
+      );
+    } finally {
+      fs.rmSync(projectRoot, { recursive: true, force: true });
+    }
+  }
+});
+
+// RES-001: as npm postinstall, a non-zero exit fails `npm install` of the package itself.
+test('init --skip-if-exists (postinstall): an agent render failure is a warning and exits 0', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    writeRootConfig(projectRoot, {
+      project: { name: 'demo' },
+      parallelLanes: {
+        enabled: true,
+        lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright' }],
+      },
+      integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+    });
+    const result = runInit(['--skip-if-exists'], projectRoot);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stderr, /WARNING/);
+    assert.match(result.stderr, /qa-investigador/);
+    assert.match(result.stderr, /npx qa-framework upgrade/);
+    assert.equal(fs.existsSync(agentPath(projectRoot, 'qa-investigador')), false);
+    for (const name of SPRINT_AGENTS.filter((n) => n !== 'qa-investigador')) {
+      assert.ok(fs.existsSync(agentPath(projectRoot, name)), `expected .claude/agents/${name}.md`);
+    }
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});

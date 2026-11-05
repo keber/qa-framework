@@ -402,3 +402,63 @@ test('upgrade: is idempotent - a second run changes nothing further', () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// .claude/agents/ - sprint-cycle subagents (v1.13.0)
+// ---------------------------------------------------------------------------
+
+const SPRINT_AGENTS = [
+  'qa-analisis',
+  'qa-plan',
+  'qa-asesoria',
+  'qa-informe-resultados',
+  'qa-reporte-ejecucion',
+  'qa-investigador',
+];
+
+const agentFile = (root, name) => path.join(root, '.claude', 'agents', `${name}.md`);
+
+test('upgrade: an existing project without the v1.13.0 keys gets all six agents with defaults', () => {
+  const root = tmpProject();
+  try {
+    fs.writeFileSync(path.join(root, 'qa-framework.config.json'), JSON.stringify({
+      project: { name: 'demo' },
+      integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+    }));
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    for (const name of SPRINT_AGENTS) {
+      assert.ok(fs.existsSync(agentFile(root, name)), `expected .claude/agents/${name}.md`);
+      assert.doesNotMatch(fs.readFileSync(agentFile(root, name), 'utf8'), /\{\{/);
+    }
+    const informe = fs.readFileSync(agentFile(root, 'qa-informe-resultados'), 'utf8');
+    assert.match(informe, /0\.85/);
+    const investigador = fs.readFileSync(agentFile(root, 'qa-investigador'), 'utf8');
+    assert.match(investigador, /^tools: Read, Write, Edit, Grep, Glob, Bash$/m);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: an invalid mcpNamespace fails qa-investigador only and exits 1', () => {
+  const root = tmpProject();
+  try {
+    fs.writeFileSync(path.join(root, 'qa-framework.config.json'), JSON.stringify({
+      project: { name: 'demo' },
+      parallelLanes: {
+        enabled: true,
+        lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'mcp__bad' }],
+      },
+      integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+    }));
+    const result = runUpgrade(root);
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stderr, /qa-investigador/);
+    assert.equal(fs.existsSync(agentFile(root, 'qa-investigador')), false);
+    for (const name of SPRINT_AGENTS.filter((n) => n !== 'qa-investigador')) {
+      assert.ok(fs.existsSync(agentFile(root, name)), `expected .claude/agents/${name}.md`);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

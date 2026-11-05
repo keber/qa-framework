@@ -44,11 +44,34 @@ test('sync-version: every published version surface agrees with package.json', (
   }
 });
 
-test('sync-version: running it on an already synced tree changes nothing', () => {
-  const before = fs.readFileSync(CONFIG_PATH, 'utf8');
-  const result = runSync();
-  assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.equal(fs.readFileSync(CONFIG_PATH, 'utf8'), before);
+// Idempotence, checked without assuming the tree is already synced and without leaving
+// it modified. The previous version ran sync-version once and compared against the
+// starting bytes, so on a drifted tree it REPAIRED qa-framework.config.json as a side
+// effect: the first run failed, the retry passed, and the drift vanished from the
+// working tree unnoticed. A suite that edits tracked files turns a red run green on
+// the retry and hides the very thing it exists to catch. Normalise first, then assert
+// the second run is a no-op, and restore every file sync-version can write.
+test('sync-version: a second run on a synced tree changes nothing', () => {
+  const TOUCHED = [CONFIG_PATH, README_PATH, COPILOT_PATH];
+  const before = new Map(TOUCHED.map(p => [p, fs.readFileSync(p, 'utf8')]));
+
+  try {
+    const first = runSync();
+    assert.equal(first.status, 0, first.stdout + first.stderr);
+    const synced = new Map(TOUCHED.map(p => [p, fs.readFileSync(p, 'utf8')]));
+
+    const second = runSync();
+    assert.equal(second.status, 0, second.stdout + second.stderr);
+    for (const p of TOUCHED) {
+      assert.equal(
+        fs.readFileSync(p, 'utf8'),
+        synced.get(p),
+        `${path.relative(ROOT, p)} changed on the second run`
+      );
+    }
+  } finally {
+    for (const [p, content] of before) fs.writeFileSync(p, content, 'utf8');
+  }
 });
 
 // The repair path: a drifted frameworkVersion must be rewritten in place, keeping the
@@ -69,7 +92,16 @@ test('sync-version: a drifted frameworkVersion is rewritten from package.json', 
 
     const after = fs.readFileSync(CONFIG_PATH, 'utf8');
     assert.equal(JSON.parse(after).frameworkVersion, VERSION);
-    assert.equal(after, before, 'only the version field may change');
+
+    // Compare against the starting bytes with only the version field substituted, not
+    // against the starting bytes themselves: the tree may legitimately start drifted
+    // (mid-release, or on a branch that bumped package.json), and this test is about
+    // sync-version touching nothing else - not about where the tree happened to be.
+    const expected = before.replace(
+      /("frameworkVersion"\s*:\s*")\d+\.\d+\.\d+(")/,
+      `$1${VERSION}$2`
+    );
+    assert.equal(after, expected, 'only the version field may change');
   } finally {
     fs.writeFileSync(CONFIG_PATH, before, 'utf8');
   }
