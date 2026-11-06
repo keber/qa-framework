@@ -28,10 +28,9 @@
     "version": "node scripts/sync-version.js && git add README.md .github/copilot-instructions.md qa-framework.config.json"
   },
   "files": [
-    "agent-instructions/",
     "skills/",
     "templates/",
-    "docs/",
+    "docs/**/*.md",
     "examples/",
     "integrations/",
     "scripts/",
