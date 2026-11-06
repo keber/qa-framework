@@ -1,6 +1,6 @@
 {
   "$schema": "./qa-framework.config.schema.json",
-  "frameworkVersion": "1.13.0",
+  "frameworkVersion": "1.13.1",
 
   "project": {
     "name": "{{PROJECT_NAME}}",
