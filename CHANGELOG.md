@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **`upgrade` no longer moves user-owned content during the legacy layout migrations.**
+  Section 5c used to move every unknown folder under `07-automation/e2e/` into `tests/`
+  (including `lib/`, `node_modules/`, `.auth/` and `test-results/`). It now moves a folder
+  only when it contains `*.spec.*` files and is not a tooling folder (`node_modules`, `lib`,
+  `test-results`, `playwright-report`, `blob-report`) or a dot-folder. Section 6 used to move
+  every flat `.md` in `02-test-plans/` to `sprints/legacy/`; it now moves only pre-v1.7.0
+  plans: files named `*-test-plan.md` or carrying the old `**Plan ID**: TP-` header.
+  A path that cannot be read is reported as a warning and left alone: unproven means
+  untouched.
+
+---
+
 ## [1.13.1] - 2026-11-06
 
 ### Fixed

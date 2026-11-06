@@ -19,13 +19,14 @@
  *     - qa/07-automation/.env.example          -> qa/07-automation/e2e/
  *     - qa/07-automation/fixtures/             -> qa/07-automation/e2e/fixtures/
  *     - qa/07-automation/e2e/{module}/         -> qa/07-automation/e2e/tests/{module}/
+ *       (only folders holding *.spec.* files; lib/, node_modules/, dot-folders stay)
  *     - Creates integration/ and load/ placeholders *     - Patches playwright.config.ts: testDir '.' -> './tests', adds testIgnore
  *     - Creates tests/helpers/debug/ and tests/seeds/ if absent
  *
  *   MIGRATES (v1.6.x -> v1.7.0, non-destructive):
  *     - qa/02-test-plans/automated/  -> qa/02-test-plans/sprints/legacy-automated/
  *     - qa/02-test-plans/manual/     -> qa/02-test-plans/sprints/legacy-manual/
- *     - qa/02-test-plans/*.md        -> qa/02-test-plans/sprints/legacy/
+ *     - qa/02-test-plans/*-test-plan.md (or "**Plan ID**: TP-" header) -> sprints/legacy/
  *     - Creates qa/02-test-plans/sprints/ if absent
  *     - Creates qa/03-test-cases/README.md optional marker if absent
  *
@@ -316,12 +317,37 @@ if (fs.existsSync(oldFixturesDir) && !fs.existsSync(newFixturesDir)) {
 }
 
 // 5c. Spec stubs: e2e/{module}/*.spec.ts -> e2e/tests/{module}/
-//     Moves any directory directly under e2e/ that is not a known non-module dir.
+//     Moves a directory directly under e2e/ only when it is provably a legacy module
+//     folder: not a known scaffold/tooling dir, not a dot-folder, and it contains at
+//     least one spec file. Anything else (lib/, node_modules/, docs/...) is user-owned.
 const testsDir = path.join(e2eDir, 'tests');
-const knownE2eDirs = new Set(['tests', 'page-objects', 'fixtures', 'diagnosis', 'scripts', 'seeds', 'helpers']);
+const knownE2eDirs = new Set([
+  'tests', 'page-objects', 'fixtures', 'diagnosis', 'scripts', 'seeds', 'helpers',
+  'node_modules', 'lib', 'test-results', 'playwright-report', 'blob-report',
+]);
+const SPEC_FILE_RE = /\.spec\.[cm]?[jt]s$/;
+
+function containsSpecFile(dir) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    // Unreadable means unproven: leave the folder where it is.
+    warnings.push(`Cannot inspect ${path.relative(cwd, dir)} (${err.code}) - not migrated.`);
+    return false;
+  }
+  for (const entry of entries) {
+    if (entry.isFile() && SPEC_FILE_RE.test(entry.name)) return true;
+    if (entry.isDirectory() && entry.name !== 'node_modules' && !entry.name.startsWith('.') &&
+        containsSpecFile(path.join(dir, entry.name))) return true;
+  }
+  return false;
+}
+
 if (fs.existsSync(e2eDir)) {
   for (const entry of fs.readdirSync(e2eDir, { withFileTypes: true })) {
-    if (!entry.isDirectory() || knownE2eDirs.has(entry.name)) continue;
+    if (!entry.isDirectory() || knownE2eDirs.has(entry.name) || entry.name.startsWith('.')) continue;
+    if (!containsSpecFile(path.join(e2eDir, entry.name))) continue;
     const oldModDir = path.join(e2eDir, entry.name);
     const newModDir = path.join(testsDir, entry.name);
     if (!fs.existsSync(newModDir)) {
@@ -442,12 +468,28 @@ if (fs.existsSync(testPlansDir)) {
     }
   }
 
-  // Move any .md files sitting flat in 02-test-plans/ (not in sprints/)
+  // Move flat .md files in 02-test-plans/ only when they are provably pre-v1.7.0 plans:
+  // named {module}-test-plan.md / {module}-{track}-test-plan.md (qa-test-plan <= v1.6.x),
+  // or generated from the old templates/test-plan.md (header "**Plan ID**: TP-...").
+  // Any other flat .md (README.md, plan-sprint-1.md, notes) is user-owned and stays.
+  const LEGACY_PLAN_NAME_RE   = /-test-plan\.md$/i;
+  const LEGACY_PLAN_HEADER_RE = /^\*\*Plan ID\*\*:\s*TP-/m;
+  const isLegacyPlan = (file) => {
+    if (LEGACY_PLAN_NAME_RE.test(path.basename(file))) return true;
+    try {
+      return LEGACY_PLAN_HEADER_RE.test(fs.readFileSync(file, 'utf8'));
+    } catch (err) {
+      warnings.push(`Cannot read 02-test-plans/${path.basename(file)} (${err.code}) - not migrated.`);
+      return false;
+    }
+  };
+
   if (fs.existsSync(testPlansDir)) {
     const legacyDir = path.join(sprintsDir, 'legacy');
     for (const entry of fs.readdirSync(testPlansDir, { withFileTypes: true })) {
       if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
       const oldFile = path.join(testPlansDir, entry.name);
+      if (!isLegacyPlan(oldFile)) continue;
       const newFile = path.join(legacyDir, entry.name);
       if (!fs.existsSync(newFile)) {
         if (!dryRun) {
