@@ -47,6 +47,7 @@ Stages must run in order. Never start a stage unless its prerequisite is met.
 | 3 | Generate test plan | `.github/skills/qa-test-plan/SKILL.md` | 05-test-scenarios.md exists |
 | 4 | Generate test cases | `.github/skills/qa-test-cases/SKILL.md` | Test plan exists |
 | 5 | Generate automation | `.github/skills/qa-automation/SKILL.md` | Specs approved, no PENDING-CODE |
+| 5 | Generate API tests | `.github/skills/qa-api-integration/SKILL.md` | Integration scaffold in qa/07-automation/integration/ |
 | 5b | Stabilize failing tests | `.github/skills/qa-test-stabilization/SKILL.md` | Failing tests exist |
 | 6 | Maintenance | `.github/skills/qa-maintenance/SKILL.md` | Application change delivered |
 | - | ADO integration | `.github/skills/qa-ado-integration/SKILL.md` | ADO enabled in config |

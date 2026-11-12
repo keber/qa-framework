@@ -30,6 +30,7 @@ const STANDARDS_DOCS = Object.freeze([
   Object.freeze({ file: 'execution-report-template.md', template: 'execution-report.md' }),
   Object.freeze({ file: 'test-data-guidelines.md', template: 'test-data-guidelines.md' }),
   Object.freeze({ file: 'write-safety-policy.md', template: 'write-safety-policy.md' }),
+  Object.freeze({ file: 'api-testing-conventions.md', template: 'api-testing-conventions.md' }),
 ]);
 
 /** The content a standards entry installs. */

@@ -43,6 +43,8 @@ Stage 4: qa-test-cases           (requires test plan)
    ▼
 Stage 5: qa-automation           (requires approved specs, no PENDING-CODE)
    │
+   ├─ Stage 5 (API track): qa-api-integration  (requires the integration scaffold)
+   │
    ├─ Stage 5b: qa-test-stabilization  (if tests fail)
    │
    ▼
@@ -64,6 +66,7 @@ Optional (any time after Stage 4):
 | `qa-test-plan` | Stage 3 - Plan de Pruebas generation | `plan-de-pruebas-template.md` (includes priority + feasibility rules) |
 | `qa-test-cases` | Stage 4 - TC document rules | `test-case-template.md` |
 | `qa-automation` | Stage 5 - patterns + completion checklist | `patterns.md`, `config-checklist.md` |
+| `qa-api-integration` | Stage 5, API track - catalog, contract, session, writes, ids | `enabling-writes.md`, `endpoint-discovery.md` |
 | `qa-test-stabilization` | Stage 5b - 8 steps + confidence scoring | `classification-protocol.md` (includes report template) |
 | `qa-ado-integration` | Optional ADO sync - 6 steps | `scripts-and-config.md` |
 | `qa-maintenance` | Stage 6 - update rules | `update-rules.md` |
