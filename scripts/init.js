@@ -182,6 +182,9 @@ writeIfMissing(path.join(stdDir, 'execution-report-template.md'), fs.readFileSyn
 writeIfMissing(path.join(stdDir, 'test-data-guidelines.md'), fs.readFileSync(
   path.resolve(__dirname, '..', 'templates', 'test-data-guidelines.md'), 'utf8'
 ));
+writeIfMissing(path.join(stdDir, 'write-safety-policy.md'), fs.readFileSync(
+  path.resolve(__dirname, '..', 'templates', 'write-safety-policy.md'), 'utf8'
+));
 
 // --- Per-module folders ---
 const modules = config.modules ?? [];
@@ -292,6 +295,20 @@ for (const file of ['auth.ts', 'test-helpers.ts', 'base.ts']) {
 // --- Integration scaffold (lives in 07-automation/integration/) ---
 const integrationDir      = path.join(automationDir, 'integration');
 const integrationScaffold = path.resolve(__dirname, '..', 'templates', 'integration-scaffold');
+const INTEGRATION_GUARD_FILES = [
+  'scripts/api-guard.js',
+  'scripts/hard-exclusions.js',
+  'scripts/run-write-tests.js',
+  'fixtures/base.ts',
+  'fixtures/read-catalog.ts',
+  'fixtures/write-catalog.ts',
+  'fixtures/project-exclusions.ts',
+  'fixtures/contract.ts',
+  'tests/security/read-only-guard.spec.ts',
+  'tests/security/catalogs.spec.ts',
+  'tests/security/no-session.spec.ts',
+  'tests/write/example-write-cycle.spec.ts',
+];
 fs.mkdirSync(integrationDir, { recursive: true });
 for (const file of ['package.json', 'playwright.config.ts', 'global-setup.ts', 'README.md', '.env.example']) {
   const dest = path.join(integrationDir, file);
@@ -306,6 +323,17 @@ const exampleSpec = path.join(integrationTestsDir, 'example.spec.ts');
 if (!fs.existsSync(exampleSpec)) {
   fs.copyFileSync(path.join(integrationScaffold, 'tests', 'example.spec.ts'), exampleSpec);
   console.log(`  [created] ${path.relative(cwd, exampleSpec)}`);
+}
+// Read-only guard and write gates (qa/00-standards/write-safety-policy.md): the guard
+// logic in plain CommonJS under scripts/, the Playwright fixtures and catalogs, and
+// the example security and write tests. Never overwrites an existing file.
+for (const rel of INTEGRATION_GUARD_FILES) {
+  const dest = path.join(integrationDir, ...rel.split('/'));
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(path.join(integrationScaffold, ...rel.split('/')), dest);
+    console.log(`  [created] ${path.relative(cwd, dest)}`);
+  }
 }
 
 // --- Load test placeholder ---

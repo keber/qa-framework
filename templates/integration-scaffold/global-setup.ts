@@ -5,15 +5,20 @@
  *
  * Two strategies, tried in order:
  *   1. Token-based: QA_API_TOKEN is set -> write a minimal storageState with the
- *      token in localStorage so the `request` fixture picks it up automatically.
+ *      token in localStorage. The API fixtures (fixtures/base.ts) send the token as
+ *      an `Authorization: Bearer` header.
  *   2. Browser login: QA_USER_EMAIL + QA_USER_PASSWORD are set -> launch Chromium,
  *      perform the login flow, and save the resulting storageState to
  *      .auth/api-session.json.
  *
- * Playwright's `storageState` mechanism handles cookies and localStorage for
- * APIRequestContext automatically when `use.storageState` is configured.
- * For token-only APIs that require an Authorization header, set the header
- * directly in each test or extend the `request` fixture in fixtures/base.ts.
+ * When QA_BASE_URL or the credentials are missing, it writes an EMPTY storageState
+ * and says so, instead of failing the whole run: tests that call the API skip
+ * (no QA_BASE_URL) or fail with instructions (no session), and the offline guard
+ * tests still run. The file always exists, because playwright.config.ts points
+ * `use.storageState` at it.
+ *
+ * Self-contained on purpose: this file requires nothing from scripts/ or fixtures/,
+ * so `qa-framework upgrade` can refresh it in a project that predates those files.
  */
 
 import * as fs   from 'fs';
@@ -21,19 +26,59 @@ import * as path from 'path';
 import { chromium } from '@playwright/test';
 import * as dotenv  from 'dotenv';
 
-dotenv.config();
+// Least privilege, as in playwright.config.ts: copy only the keys this file uses, so
+// other secrets in .env are never loaded into the process (and its workers).
+const ENV_KEYS = [
+  'QA_BASE_URL', 'QA_API_TOKEN', 'QA_USER_EMAIL', 'QA_USER_PASSWORD',
+  'QA_LOGIN_PATH', 'QA_LOGIN_EMAIL_SELECTOR', 'QA_LOGIN_PASSWORD_SELECTOR',
+  'QA_LOGIN_SUBMIT_SELECTOR', 'QA_LOGIN_SUCCESS_SELECTOR',
+] as const;
+const ENV_FILE = path.join(__dirname, '.env');
+if (fs.existsSync(ENV_FILE)) {
+  const parsed = dotenv.parse(fs.readFileSync(ENV_FILE));
+  for (const key of ENV_KEYS) {
+    if (process.env[key] === undefined && parsed[key] !== undefined) {
+      process.env[key] = parsed[key];
+    }
+  }
+}
 
 const AUTH_FILE = path.join(__dirname, '.auth', 'api-session.json');
 
 export default async function globalSetup(): Promise<void> {
   fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
 
-  if (process.env.QA_API_TOKEN) {
-    await setupWithToken(process.env.QA_API_TOKEN, process.env.QA_BASE_URL!);
+  if (process.env.QA_API_WRITE === '1') {
+    console.log('[integration-setup] WRITE RUN: only approved endpoints of fixtures/write-catalog.ts, through the four gates.');
+  }
+
+  const baseURL = (process.env.QA_BASE_URL ?? '').trim();
+  if (!baseURL) {
+    writeEmptyState();
+    console.log('[integration-setup] QA_BASE_URL is not set: tests that call the API will be skipped.');
     return;
   }
 
-  await setupWithBrowserLogin();
+  if (process.env.QA_API_TOKEN) {
+    await setupWithToken(process.env.QA_API_TOKEN, baseURL);
+    return;
+  }
+
+  if (process.env.QA_USER_EMAIL && process.env.QA_USER_PASSWORD) {
+    await setupWithBrowserLogin(baseURL);
+    return;
+  }
+
+  writeEmptyState();
+  console.log(
+    '[integration-setup] No auth configured (QA_API_TOKEN, or QA_USER_EMAIL + QA_USER_PASSWORD): ' +
+    'tests that need a session will fail with instructions; anonymous tests still run.',
+  );
+}
+
+/** An empty storageState: no cookies, no origins. Replaces any session of a previous run. */
+function writeEmptyState(): void {
+  fs.writeFileSync(AUTH_FILE, JSON.stringify({ cookies: [], origins: [] }, null, 2), 'utf-8');
 }
 
 /**
@@ -66,8 +111,8 @@ async function setupWithToken(token: string, baseURL: string): Promise<void> {
  * Configure login form selectors via env vars (see .env.example) or update the
  * defaults below to match your application's login page.
  */
-async function setupWithBrowserLogin(): Promise<void> {
-  const baseURL          = process.env.QA_BASE_URL!.replace(/\/$/, '');
+async function setupWithBrowserLogin(baseUrl: string): Promise<void> {
+  const baseURL          = baseUrl.replace(/\/$/, '');
   const email            = process.env.QA_USER_EMAIL!;
   const password         = process.env.QA_USER_PASSWORD!;
   const loginPath        = process.env.QA_LOGIN_PATH              ?? '/login';

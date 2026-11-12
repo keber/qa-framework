@@ -183,10 +183,12 @@ const SHIPPED_SCAFFOLD_HASHES = {
   'integration-scaffold/playwright.config.ts': [
     '7276ed4fda85f80e37381257bc559f4bb48055d359858f69f6b838f3671a9e2d', // v1.11.0 - v1.11.3
     '6eacaa9fe5bf660182cc4357b3a5fedd77958c7bf81897454443fd27378cc6c4', // v1.12.0 - v1.13.2
+    'f774a51f911e46f4ae6c7613c540b329d39f744b5a0af38b142b436ca1549085', // unreleased: WP2.2 write gates, no load-time URL/credential checks
   ],
   'integration-scaffold/global-setup.ts': [
     'f63f9588c4746a16e46345d1d4b781f2905b652481d563cfc075d9d8c8481bde', // v1.11.0 - v1.11.3
     'c212471c9a7eb9b6110c25d2823eb50114c4783cca9e1ab149134d96d7212403', // v1.12.0 - v1.13.2
+    'b8b0549cf0f0a368ad96a9b182d7a189b25e9a77db8f038a33ec7381654dd5c8', // unreleased: WP2.2 empty state without URL/credentials, least-privilege .env
   ],
   'integration-scaffold/.env.example': [
     '671461d7dc9883505cec314aefa1129a336b6a03b31a0eb2eb2ede2adda7c4ac', // v1.11.0 - v1.13.2

@@ -11,6 +11,41 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Write-safety policy (`qa/00-standards/write-safety-policy.md`).** One written policy
+  for every automated test that can change data, referenced by API and by load and
+  performance testing instead of two separate rule sets. Read-only by default; four write
+  gates in order (opt-in variable, catalog entry with recorded approval and scope, hard
+  exclusions in code independent of the catalog, writes only to records the test created,
+  with an ambiguous lookup failing); the `isolated` / `syncs` / `forbidden` scope taxonomy;
+  default exclusion categories that a project may extend but never shrink; the idempotent
+  lifecycle of a test record when the system has no delete, with its declared cost; writes
+  under load limited to a single timed call unless explicitly requested, capped and
+  confirmed; runs only against `project.qaBaseUrl`; and an explicit slot for each project
+  to name its write approver. Ported from the work of `marcela.berriosc` in a consumer
+  project. Installed by `init` for new projects; `upgrade` does not install standards
+  documents, so existing projects do not receive it yet.
+- **API integration scaffold implements the write-safety policy (`qa/07-automation/integration/`).**
+  The scaffold was a skeleton with one placeholder test; it is now a read-only API test
+  project with an explicit write opt-in. `scripts/api-guard.js` (plain JavaScript, unit-tested
+  with `node --test`) decides every call before anything is sent: reads only from
+  `fixtures/read-catalog.ts` with the catalogued method; writes only through the four gates
+  in the policy's order (`QA_API_WRITE=1`, set only by the new `npm run test:write`; an
+  approved entry in `fixtures/write-catalog.ts` with who, when, scope and revert, `forbidden`
+  never passing; hard exclusions; a target record carrying the test prefix), then the
+  policy's environment check (host of `project.qaBaseUrl`, never production). Each
+  rejection names its gate. The hard exclusions ship as five default categories in
+  `scripts/hard-exclusions.js`; a project adds its own patterns in
+  `fixtures/project-exclusions.ts` and cannot remove or narrow the framework's (frozen
+  list, snapshot at load, removal keys refused). Fixtures `api` (authenticated) and
+  `anonymous`; a configurable response contract in `fixtures/contract.ts` whose default
+  requires JSON, because a gateway or single-page app can answer an unknown route with
+  HTTP 200 and its HTML page; offline security tests that run on every `npm test`; a model
+  write cycle for systems without delete. Tests that call the API skip with a message when
+  `QA_BASE_URL` is not set, and the config no longer fails at load time without a URL or
+  credentials. Mechanism ported from the work of `marcela.berriosc` in a consumer
+  project. Installed by `init` for new projects; `upgrade` refreshes a pristine
+  `playwright.config.ts` and `global-setup.ts` (both kept self-contained for that reason)
+  but does not deliver the new files to existing projects yet.
 - **ADO work item full-content read protocol (`qa-ado-integration`).** New reference
   `skills/qa-ado-integration/references/ado-workitem-full-read-protocol.md`, linked from
   the skill as a BLOCKING read rule: before classifying, scoping or concluding anything
