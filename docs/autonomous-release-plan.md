@@ -221,8 +221,12 @@ Per release candidate:
 | 2 | WP2.3 `qa-api-integration` skill + conventions | merged to `dev`; no internal names | `b23cad2` | 1.14.0-rc.3 |
 | 2 | WP2.4 `upgrade` delivers new standards and integration files | merged to `dev`; simulated from a real v1.13.2 install, intact and edited; second run changes zero bytes | `eecbcef` | 1.14.0-rc.3 |
 | 2 | Release 1.14.0-rc.3 | **published under `next`**, verified; review request for Marcela in `docs/review-wave2.md` | `fa3a859`, tag `v1.14.0-rc.3` | 1.14.0-rc.3 |
-| 3 | WP3.1 `qa-performance-k6` skill | in progress | `claude/wp31-k6-skill` | next rc |
-| 3 | WP3.3 defect-suite polarity + `qa-automation` links | in progress | `claude/wp33-defect-polarity` | next rc |
+| 3 | WP3.1 `qa-performance-k6` skill + k6 load scaffold | merged to `dev`; scaffold installed by `init` only, skill delivered by `upgrade` | `f5e63c4` | 1.14.0-rc.4 |
+| 3 | WP3.3 defect-suite polarity + `qa-automation` links | merged to `dev`; upgrade simulated from v1.13.2, pristine and project-owned `defects.ts`; second run zero changes | `b41154e` | 1.14.0-rc.4 |
+| 3 | WP3.4 login only in global setup + opt-in projects | merged to `dev` after a coordinator fix (`d0e1948`); verified on real Playwright 1.65; upgrade simulated in 4 scenarios | `d0e1948` | 1.14.0-rc.4 |
+| 3 | WP3.5 `AGENTS.md` template | merged to `dev`; installed as `qa/00-standards/agents-md-template.md`, never as a root `AGENTS.md` | `3110f85` | 1.14.0-rc.4 |
+| 3 | WP3.2 Azure Load Testing research | merged to `dev`; proposal only, excluded from npm; recommends no build yet | `777467e` | (not shipped) |
+| 3 | WP3.6 `recommendations/` defect category + `qa-framework clock` | merged to `dev`; HTTP check removed (hard stop 6); upgrade simulated, `improvements/` respected | `83606f3` | 1.14.0-rc.4 |
 
 ## Decision log
 
@@ -250,3 +254,12 @@ Per release candidate:
 | 2026-11-12 | rc.3 note: tarball 852 kB unpacked, +34.4% against 1.13.2 (gate: explain above 20%) | All planned content, measured: 121 kB in 20 new files (API scaffold scripts, fixtures and tests 60 kB; `qa-api-integration` skill 25 kB; ADO full-read protocol 15 kB; write policy and API conventions 15 kB; `scripts/lib` 6 kB) plus growth of `upgrade.js` (+28 kB, delivery logic), `CHANGELOG.md` (+16 kB) and `qa-framework.rules.md` (+13 kB, lane protocol). No binary, no internal document |
 | 2026-11-12 | `integration-scaffold/.env.example` left as is; not bypassed | A permission rule blocks edits to `.env*` paths. The intended change was only a comment ("do not set `QA_API_WRITE` here"); the protection itself is in code. Left for Keber to apply if wanted |
 | 2026-11-12 | Release smoke test installs with `--prefer-online` | A failed install while the registry CDN was still propagating cached package metadata without the new version, and later installs kept failing with ETARGET from that local cache |
+| 2026-11-12 | The WP3.1 card started from `main`; the worker reset to `dev` on its own | Cards drop `source_branch`; every later start passes `source_branch: dev` explicitly |
+| 2026-11-12 | WP3.1: `upgrade` delivers the k6 skill and command, not the load scaffold | Kept WP3.1 off `upgrade.js` while WP3.3 owned it; the skill says how to copy the scaffold from the package. A later release can deliver it |
+| 2026-11-12 | **WP3.4 sent back.** A refreshed `playwright.config.ts` silently moved existing `*.slow/.writes/.login.spec.ts` out of `npm test`; `upgrade` now holds the config back and lists them | Found by the coordinator's upgrade simulation; same reason `*.api.spec.ts` was not adopted in wave 2. Where lane scripts were never installed, holding the config holds the whole lane group (all-or-nothing delivery) |
+| 2026-11-12 | WP3.4 premises verified on real Playwright 1.65: `QA_RUN_*`/`--project` selection, worker inheritance, `loginAs` refusal in a recording project | The worker had only tested with Playwright stand-ins |
+| 2026-11-12 | WP3.5 never writes a root `AGENTS.md` | Coding agents auto-load a root `AGENTS.md`; an unfilled template there would act as live instructions |
+| 2026-11-12 | WP3.2: Azure Load Testing does not run k6 (per cited Microsoft docs); recommendation is to build nothing yet | Needs human decisions (subscription, cost owner, network access) and Marcela should confirm the premise; parked |
+| 2026-11-12 | **WP3.6 `--check-http` removed before merge** | The coordinator's brief asked for it, but new network access in a shipped script is hard stop 6. Removed instead of stopping; a source test now forbids network modules in `scripts/clock.js`. Can return with Keber's OK |
+| 2026-11-12 | WP3.6 was built by an in-process subagent, not a session | The app refuses to start sessions in a turn started by another session's message |
+| 2026-11-12 | B3 category named `recommendations/` (`REC-` IDs); an existing `improvements/` folder is respected | Broader of the two converged names |
