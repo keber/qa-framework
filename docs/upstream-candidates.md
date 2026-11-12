@@ -2,6 +2,16 @@
 
 **Date**: 2026-11-11
 **Target framework version**: 1.13.2 (this repo)
+**Status**: point-in-time survey, not a living tracker.
+
+> This is the inventory as of 2026-11-11. It is not kept current and its rows
+> are not a to-do list: a `Pending` decision here means it was pending **on that
+> date**, not that nobody has acted since. The document spawns the artifacts that
+> do stay current, and should point at them rather than hold their state:
+> a resolved decision becomes a record in `docs/decisions/`, and a candidate that
+> moves into implementation becomes an entry in `openspec/changes/`. When the
+> picture has moved enough to matter, run a new survey and supersede this one
+> instead of editing it into a half-updated state.
 
 ## Purpose
 
@@ -807,17 +817,27 @@ deliberately not yet reported), `03-plan-automatizacion.md`. Related signal: in
 that project `qa/README.md` and `qa/memory/` were left untouched at their
 placeholders while all real state went to `AGENT-NEXT-STEPS.md` plus `docs/`.
 
-### 6D. Filed, still unresolved
+### 6D. Filed, still open in the consumer projects
 
-**D1. Who calls `heartbeat`?** (Exportadora v5 item 5.) On 2026-08-22 a subagent
-investigated for over 20 minutes without calling heartbeat; the sweep released
-lane 5 while it was still in use. Generalisable root cause: *a liveness protocol
-that depends on an uninstructed party is not a control.* Two options: the
-executor calls it, or the dispatcher calls it from its wait loop. The filing
-recommends the dispatcher and explicitly calls itself "a request for a decision,
-not a patch". **Neither the project nor the framework resolved it, and the
-framework already ships the sweep** - so every project that adopts it inherits
-the incident.
+**D1. Who calls `heartbeat`? Decided here, not implemented.** (Exportadora v5
+item 5.) On 2026-08-22 a subagent investigated for over 20 minutes without
+calling heartbeat; the sweep released lane 5 while it was still in use.
+Generalisable root cause: *a liveness protocol that depends on an uninstructed
+party is not a control.* The filing posed it as a fork - executor or dispatcher -
+and explicitly called itself "a request for a decision, not a patch".
+
+**That decision was taken in this repository**:
+[`docs/decisions/lane-heartbeat-caller.md`](decisions/lane-heartbeat-caller.md),
+dated 2026-09-08, status *accepted, not implemented*. The dispatcher calls
+`heartbeat` from its own wait loop; the executor is not required to call it and
+must not be relied upon to. Scope stated there: the N-lane work still pending
+upstream (v3 items 1-4, v5 items 1, 2, 4).
+
+So D1 is not an open question, it is unshipped work. The framework already
+ships the sweep while the decision that makes the sweep safe is not implemented,
+so every project that adopts the lane lock today still inherits the 2026-08-22
+incident. The consumer projects have no record of this decision at all: it was
+taken here and never travelled back to them.
 
 **D2. Lane capabilities are per-lane state.** There was a period where lanes 4-6
 had no MCP server, so handing lane 5 to a subagent handed it tools that did not
@@ -935,8 +955,9 @@ to keep and which disappeared upstream.
 - Where project-editable policy ends and non-editable guard code begins.
 - Whether skills may carry their own npm dependencies and binary assets.
 - One skip-state vocabulary (6E), one execution-report implementation (6E).
-- D1: who calls `heartbeat`. The framework already ships the sweep, so every
-  adopter inherits the 2026-08-22 incident until this is decided.
+- D1 needs no decision - `docs/decisions/lane-heartbeat-caller.md` took it on
+  2026-09-08 and it is still unimplemented. What is open is when it ships, and
+  whether the sweep should keep shipping without it.
 - Whether the framework publishes for Claude Code as well as Copilot, or keeps
   leaving each project to write its own bridge (C7).
 - Re-verify every candidate against 1.13.2 before porting. No consumer project
