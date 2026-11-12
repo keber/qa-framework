@@ -146,6 +146,7 @@ updates every command that references it - no regeneration needed, zero drift po
 | `write-safety-policy.md` | The single write policy for tests that can change data in a system under test (API, load, scripts) |
 | `api-testing-conventions.md` | The project's own API values and observations; the method lives in the `qa-api-integration` skill |
 | `agents-md-template.md` | Review rulebook template: ten sections of rules with citable IDs, a tracked exceptions register and a "what NOT to report" table. Copy it to `AGENTS.md` at the repository root and fill in the placeholders. The framework never writes or edits a root `AGENTS.md` |
+| `pr-review-rubric.md` | What QA certifies when it approves a pull request: the work item as review unit, criteria with citable codes in three escalation levels (Blocking, Warning, Informational) plus suspended criteria, the vote and comment rules, and the review report template. Project-owned: installed once, never overwritten |
 
 ---
 

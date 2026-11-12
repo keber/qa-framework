@@ -11,6 +11,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Credential policy for Azure DevOps access (guidance).** New reference
+  `skills/qa-ado-integration/references/credential-policy.md`, linked from the skill:
+  three tiers by lifetime and blast radius (identity: the organization-wide PAT;
+  context: non-secret project and variable names, versioned in
+  `qa/qa-framework.config.json`; secrets: per-project values), where each tier lives on
+  a developer machine and in CI (process environment variable, file outside the
+  repository or gitignored, vault or pipeline secret), least privilege, rotation and
+  revocation, and hard rules (no secret persisted as a user environment variable, no
+  credential file copied into a worktree, variables reported by name, never by value).
+  It defines the read/write split: `ADO_PROJECT_READ` / `ADO_PROJECT_WRITE` for the
+  target projects and `ADO_PAT_READ` / `ADO_PAT_WRITE` so read-only tooling never holds
+  write scope, with `ADO_PROJECT` / `ADO_PAT` set per process as the fallback the
+  current scripts read. No script reads the new variables yet.
+- **PR review rubric template: `qa/00-standards/pr-review-rubric.md`.** What QA
+  certifies when it approves a pull request: the work item (not the PR) as the review
+  unit, criteria with citable codes in three escalation levels (Blocking -> Waiting for
+  author, Warning -> approve with a warning, Informational -> measured only), promotion
+  by team agreement, a suspended-criteria table with the reason and the condition to
+  resume, vote and comment rules (one comment per PR; a warning comment is published
+  Closed or Resolved where policy requires resolved comments, or it blocks the merge),
+  and a review report template that keeps "Observations for QA" and "Limitations of
+  this analysis" apart from the verdict. `init` installs it when missing and `upgrade`
+  delivers it to existing projects when missing; neither ever overwrites it (a
+  `STANDARDS_DOCS` entry). The `qa-ado-integration` skill points to it.
+
 - **Fourth defect category: `qa/06-defects/recommendations/`.** For findings that
   violate no business rule (technical debt, usability, accessibility, testability,
   latent risk). A recommendation has its own `REC-{PREFIX}-NNN` numbering, never
