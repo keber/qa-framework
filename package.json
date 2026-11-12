@@ -35,6 +35,7 @@
     "!docs/autonomous-release-plan.md",
     "!docs/review-wave2.md",
     "!docs/review-wave3.md",
+    "!docs/release-report-1.14.0.md",
     "!docs/proposals/azure-load-testing.md",
     "examples/",
     "integrations/",
