@@ -11,6 +11,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Opt-in Playwright projects in the automation scaffold.** Suites that write, slow
+  suites and the login flow (`*.writes.spec.ts`, `*.slow.spec.ts`, `*.login.spec.ts`)
+  run in the projects `writes`, `slow` and `login-flow`, which `npm test` never
+  registers: they run only with `npm run test:<name>`, `--project <name>` or
+  `QA_RUN_<NAME>=1`. Every lane project ignores those suffixes. The new
+  `e2e/scripts/run-opt-in.js` launcher starts Playwright with `spawnSync` and no shell,
+  so the npm scripts work the same on Windows and Linux. The config writes the
+  selection back to the environment so Playwright workers register the same projects
+  (`resolveOptInProjects()` and `optInEnvVar()` in `global-setup-guards.js`). New
+  projects get the `test:login-flow`, `test:writes` and `test:slow` scripts from `init`;
+  `upgrade` never edits `package.json` and prints the lines to add instead.
+- **Login only in global setup.** `global-setup.ts` is documented as the only place a
+  login happens, in a browser that records nothing; tests start from the lane
+  `storageState`, so credentials and the login request never reach a trace, video or
+  screenshot. The `setup` project records nothing. `fixtures/auth.ts` `loginAs()` is
+  now only for tests of the login flow itself: it refuses to run, before touching the
+  page, in a project that records trace, video or screenshot, or outside a running test
+  (`capturedArtifacts()` is exported). Guide in `qa-automation`
+  (`references/session-and-opt-in-projects.md`).
+- **`upgrade` reports in-test logins.** Every `loginAs(` call outside a
+  `*.login.spec.ts` is listed with file and line ("Login safety"). While any exists, a
+  pristine `fixtures/auth.ts` is not refreshed, so those tests keep running until they
+  move to `storageState`. `run-opt-in.js` is delivered per file: installed when absent,
+  refreshed when pristine, kept with a warning when edited.
+
 - **Defect-suite polarity helper (`qa/07-automation/e2e/fixtures/defects.ts`).** A test
   asserts what the specification requires; when an open defect makes it fail, it is
   marked instead of being bent to the current behaviour, so the run stays green while

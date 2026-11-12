@@ -258,12 +258,12 @@ for (const file of ['playwright.config.ts', 'global-setup.ts', '.env.example', '
     console.log(`  [created] ${path.relative(cwd, dest)}`);
   }
 }
-// Lane scripts: the lane lock plus its config reader and global-setup guards. Plain
-// CommonJS so they run as a CLI and stay testable with `node --test` without pulling
+// Lane scripts: the lane lock plus its config reader and global-setup guards, and the
+// shell-free launcher of opt-in Playwright projects (run-opt-in.js). Plain CommonJS so they run as a CLI and stay testable with `node --test` without pulling
 // in a TypeScript test runner.
 const laneScriptsDir = path.join(e2eScaffoldDir, 'scripts');
 fs.mkdirSync(laneScriptsDir, { recursive: true });
-for (const file of ['lane-config.js', 'lane-lock.js', 'global-setup-guards.js']) {
+for (const file of ['lane-config.js', 'lane-lock.js', 'global-setup-guards.js', 'run-opt-in.js']) {
   const dest = path.join(laneScriptsDir, file);
   if (!fs.existsSync(dest)) {
     fs.copyFileSync(path.join(scaffoldSrc, 'scripts', file), dest);

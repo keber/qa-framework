@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import type { Project } from '@playwright/test';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 
@@ -99,11 +100,65 @@ function resolveStorageState(laneId: string): string {
     : LANE_INFO[laneId].storageState;
 }
 
+// -------------------------------------------------------------------
+// Login happens only in global setup
+// -------------------------------------------------------------------
+// global-setup.ts logs each lane in once, in its own browser that records nothing, and
+// saves the session as storageState. Tests start from that storageState and never log in
+// themselves. That is what makes trace/video/screenshot 'retain-on-failure' below safe:
+// a login inside a test would put the typed credentials and the login request, password
+// included, into the trace, the video and the screenshots of every failed run.
+//
+// The only exception is a test of the login flow itself. It lives in a *.login.spec.ts
+// file and runs only in the opt-in 'login-flow' project, which records nothing.
+// fixtures/auth.ts loginAs() refuses to run in a project that records anything.
+const NO_ARTIFACTS = { trace: 'off', video: 'off', screenshot: 'off' } as const;
+
+// Directories that hold no suite, ignored by every project. A project-level testIgnore
+// replaces the top-level one instead of adding to it, so each project repeats these.
+const BASE_TEST_IGNORE = ['**/helpers/debug/**', '**/seeds/**'];
+
+// -------------------------------------------------------------------
+// Opt-in projects
+// -------------------------------------------------------------------
+// Expensive or risky suites - writes, slow suites, the login flow - are registered only
+// when selected explicitly, so `npm test` never sees them:
+//   npm run test:<name>                  (node scripts/run-opt-in.js <name>, no shell)
+//   npx playwright test --project <name>
+//   QA_RUN_<NAME>=1 in the environment   ('login-flow' -> QA_RUN_LOGIN_FLOW)
+// Their files are picked by suffix, and every lane project ignores those suffixes, so an
+// opt-in test never runs by accident in the default suite.
+// To add one: add an entry here, name its files with the suffix, and add
+//   "test:<name>": "node scripts/run-opt-in.js <name>"
+// to package.json. Any project that writes follows qa/00-standards/write-safety-policy.md.
+type OptInProject = {
+  name: string;
+  testMatch: string;
+  lane: boolean;          // true: runs with a lane session (storageState) after 'setup'
+  use?: Project['use'];
+};
+const OPT_IN_PROJECTS: OptInProject[] = [
+  { name: 'login-flow', testMatch: '**/*.login.spec.ts',  lane: false, use: NO_ARTIFACTS },
+  { name: 'writes',     testMatch: '**/*.writes.spec.ts', lane: true },
+  { name: 'slow',       testMatch: '**/*.slow.spec.ts',   lane: true },
+];
+
+// Reads QA_RUN_<NAME> and --project from process.argv, and writes the selection back to
+// process.env so Playwright workers, which re-load this config without --project,
+// register the same projects (see resolveOptInProjects in global-setup-guards.js).
+const guards = require('./scripts/global-setup-guards.js');
+const selectedOptIn: string[] = guards.resolveOptInProjects(
+  OPT_IN_PROJECTS.map((p) => p.name),
+  process.env,
+  process.argv
+);
+
 // One Playwright project per configured lane. A lane that declares a runnerProject uses
 // that name; otherwise the project is named chromium-lane-<id>. With the single implicit
 // default lane this yields one project named 'chromium'.
 const laneProjects = Object.entries(LANE_INFO).map(([laneId, lane]) => ({
   name: lane.runnerProject || `chromium-lane-${laneId}`,
+  testIgnore: [...BASE_TEST_IGNORE, ...OPT_IN_PROJECTS.map((p) => p.testMatch)],
   use: {
     ...devices['Desktop Chrome'],
     storageState: resolveStorageState(laneId),
@@ -111,11 +166,31 @@ const laneProjects = Object.entries(LANE_INFO).map(([laneId, lane]) => ({
   dependencies: ['setup'],
 }));
 
+// An opt-in project with lane: true uses the lane QA_LANE_ONLY names, else the first
+// lane of the table, through the same resolver as the lane projects.
+const OPT_IN_LANE_ID = Object.keys(LANE_INFO)[0];
+const optInProjects = OPT_IN_PROJECTS
+  .filter((p) => selectedOptIn.includes(p.name))
+  .map((p) => (p.lane
+    ? {
+        name: p.name,
+        testMatch: p.testMatch,
+        testIgnore: BASE_TEST_IGNORE,
+        use: { ...devices['Desktop Chrome'], storageState: resolveStorageState(OPT_IN_LANE_ID), ...p.use },
+        dependencies: ['setup'],
+      }
+    : {
+        name: p.name,
+        testMatch: p.testMatch,
+        testIgnore: BASE_TEST_IGNORE,
+        use: { ...devices['Desktop Chrome'], ...p.use },
+      }));
+
 export default defineConfig({
   // ------ Test discovery ------
   testDir:  './tests',
   // Exclude non-suite directories from test runs
-  testIgnore: ['**/helpers/debug/**', '**/seeds/**'],
+  testIgnore: BASE_TEST_IGNORE,
   // Use any subdir pattern your project standardizes on, e.g.:
   // testMatch: ['**/*.spec.ts'],
 
@@ -136,6 +211,8 @@ export default defineConfig({
   ],
 
   // ------ Global settings ------
+  // Safe to keep failure artifacts only because no test logs in (see "Login happens
+  // only in global setup" above).
   use: {
     baseURL:            process.env.QA_BASE_URL,
     headless:           true,
@@ -147,20 +224,24 @@ export default defineConfig({
   },
 
   // ------ Auth setup ------
-  // global-setup.ts logs in once and saves storageState per role.
+  // global-setup.ts logs in once per lane and saves storageState. It is the only place
+  // a login happens.
   globalSetup: './global-setup.ts',
 
   // ------ Projects ------
   // To add a lane, add an entry to parallelLanes.lanes in qa-framework.config.json.
   // There is nothing to uncomment or copy-paste here: the lane projects are generated
   // from that table, so the config stays the only place a lane is defined.
+  // Opt-in projects are appended only when selected (see OPT_IN_PROJECTS above).
   projects: [
     {
       name: 'setup',
-      use:  { ...devices['Desktop Chrome'] },
+      // Records nothing: anything that authenticates here must never reach an artifact.
+      use:  { ...devices['Desktop Chrome'], ...NO_ARTIFACTS },
       testMatch: /global-setup\.ts/,
     },
     ...laneProjects,
+    ...optInProjects,
   ],
 
   // ------ Output directories ------

@@ -11,6 +11,9 @@
     "test:p0": "playwright test --grep @P0",
     "test:p1": "playwright test --grep \"@P0|@P1\"",
     "test:module": "playwright test --grep {{MODULE_PATTERN}}",
+    "test:login-flow": "node scripts/run-opt-in.js login-flow",
+    "test:writes": "node scripts/run-opt-in.js writes",
+    "test:slow": "node scripts/run-opt-in.js slow",
     "report": "playwright show-report",
     "validate": "npx keber/qa-framework validate"
   },
