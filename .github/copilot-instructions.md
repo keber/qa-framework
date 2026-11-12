@@ -22,7 +22,7 @@ npm install @keber/qa-framework
 
 **What the agent in the end-user project receives:**
 - `.github/instructions/qa-framework.instructions.md` - 11 behavioral rules + the 6-stage pipeline
-- `.github/skills/*.md` - 9 skills loaded on demand (not all at once, to conserve context)
+- `.github/skills/*.md` - 10 skills loaded on demand (not all at once, to conserve context)
 
 ### QA pipeline (6 stages)
 
@@ -35,6 +35,7 @@ npm install @keber/qa-framework
 | 5 - Automation | `qa-automation` | specs approved, no PENDING-CODE |
 | 5 - Automation (API track) | `qa-api-integration` | integration scaffold exists |
 | 6 - Maintenance | `qa-maintenance` | app change delivered |
+| - (optional) | `qa-performance-k6` | endpoints known, load scaffold in `qa/07-automation/load/k6/` |
 | - | ADO integration | `qa-ado-integration` | ADO enabled in config |
 
 ### Source layout
@@ -42,7 +43,7 @@ npm install @keber/qa-framework
 | Folder | Role |
 |---|---|
 | `scripts/` | CLI commands: `init`, `upgrade`, `generate`, `validate` |
-| `skills/` | 9 SKILL.md files - copied to end-user's `.github/skills/` |
+| `skills/` | 10 SKILL.md files - copied to end-user's `.github/skills/` |
 | `templates/` | Base templates: specs, test cases, defects, instructions.md |
 | `integrations/` | Optional: Playwright, ADO PowerShell, playwright-azure-reporter |
 | `qa/` | Live instance of the framework used for this repo's own QA work |

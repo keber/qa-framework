@@ -11,6 +11,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **`qa-performance-k6` skill and k6 load scaffold (`qa/07-automation/load/k6/`).** A tenth
+  skill, an optional stage with no pipeline order dependency, for targeted performance runs
+  of one or a few named endpoints: single-endpoint timing, or baseline vs candidate under
+  concurrent load. It carries the ISTQB (CT-PT) framing: the test type named before the run
+  (`testType` is required); percentiles and throughput, never the average alone; exit
+  criteria declared before the run, with their source, never fitted to the result; baseline
+  vs candidate with a declared comparison criterion; the data volume behind each result;
+  server-side monitoring. It implements sections 6 and 7 of the write-safety policy instead
+  of restating them, and the runner enforces them before k6 starts: the plan's `baseUrl`
+  must be on the host of `project.qaBaseUrl` and never contain `prod`; a write endpoint
+  (POST, PUT, PATCH, DELETE; a POST may be declared a query with who confirmed it and how)
+  runs as one call unless the plan carries a `concurrentWrite` authorization from the write
+  approver, dated the day of the run, with a cap on VUs and on iterations or duration that
+  the load must respect, the records it leaves behind and where the confirmation is
+  recorded; a plan with any write runs only with `--allow-writes`; a write names its write
+  catalog entry. Each refusal names the rule and the policy section. Credentials never go in
+  a plan: `auth.sessions` names an environment variable or a gitignored file (the runner
+  refuses a session file that git does not ignore), values reach k6 only through the child
+  process environment and are never printed. Without k6 the runner stops and installs
+  nothing. The report (summary against the exit criteria, baseline vs candidate,
+  configuration, per-endpoint avg/min/med/p90/p95/p99/max and throughput, status codes,
+  checks, global metrics, limitations, all metrics, the plan) marks an endpoint with any
+  failed call as INVALID, never met; it is rebuilt from saved files with `build-report.js`.
+  The k6 script imports no remote module. `init` installs the scaffold and the skill;
+  `upgrade` delivers the skill and its `/qa-performance-k6` command to existing projects,
+  but not the scaffold (the skill says how to copy it from the package). Ported from the
+  k6 performance skill written by `marcela.berriosc` in a consumer project; its
+  project-specific acceptance criteria were not carried over.
 - **`qa-api-integration` skill and API testing conventions (`qa/00-standards/api-testing-conventions.md`).**
   A ninth skill, for the API track of stage 5 (automation; not a new stage), written
   against the integration scaffold and the write-safety policy as they ship: adding a read

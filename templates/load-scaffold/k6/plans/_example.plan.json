@@ -1,0 +1,49 @@
+{
+  "_comment": "Example plan: baseline vs candidate of two read endpoints under light load. Copy it to plans/<topic>.plan.json and edit the copy. Schema: plans/plan.schema.json. Validate with: node run-perf.js plans/<topic>.plan.json --check",
+  "topic": "example-orders-list",
+  "testType": "load",
+  "baseUrl": "https://your-app.qa.example.com/api",
+  "goAhead": { "by": "QA lead (name or role)", "account": "lane 2 / qa-perf-user" },
+  "auth": {
+    "scheme": "cookie",
+    "sessions": [ { "env": "QA_PERF_SESSION" } ]
+  },
+  "load": {
+    "stages": [
+      { "duration": "30s", "target": 3 },
+      { "duration": "90s", "target": 3 },
+      { "duration": "15s", "target": 0 }
+    ]
+  },
+  "exitCriteria": {
+    "p95Ms": 3000,
+    "source": "Assumption stated by the QA lead before the run: listings answer in under 3 s at p95 with 3 concurrent users"
+  },
+  "comparison": {
+    "pairs": [ { "baseline": "orders_list_v1", "candidate": "orders_list_v2", "maxRegressionPct": 0 } ]
+  },
+  "context": [
+    "Both versions run in the same window with the same load, so they see the same environment activity."
+  ],
+  "serverMonitoring": "Not monitored in this example. Replace with what was watched (CPU, memory, errors) and where.",
+  "endpoints": [
+    {
+      "tag": "orders_list_v1",
+      "method": "POST",
+      "path": "orders/list",
+      "body": { "page": 1, "pageSize": 100 },
+      "query": { "confirmedBy": "QA lead", "evidence": "Listing endpoint: filters in the body, no record is created or changed (checked against the API documentation)" },
+      "expect": { "status": 200 },
+      "dataVolume": "About 5000 orders in the QA dataset"
+    },
+    {
+      "tag": "orders_list_v2",
+      "method": "POST",
+      "path": "v2/orders/list",
+      "body": { "page": 1, "pageSize": 100 },
+      "query": { "confirmedBy": "QA lead", "evidence": "Same query as v1 on the new implementation" },
+      "expect": { "status": 200 },
+      "dataVolume": "About 5000 orders in the QA dataset"
+    }
+  ]
+}

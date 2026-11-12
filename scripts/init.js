@@ -329,6 +329,22 @@ for (const rel of INTEGRATION_GUARD_FILES) {
 writeIfMissing(path.join(automationDir, 'load', 'README.md'),
 `# Load Tests\n\n> Placeholder for load and performance tests.\n> Each tool gets its own subdirectory (e.g. k6/, jmeter/).\n`);
 
+// --- k6 load scaffold (lives in 07-automation/load/k6/) ---
+// Runner, safety guard, k6 script, report builder, plan schema and example plan
+// (skills/qa-performance-k6). Never overwrites an existing file.
+const { LOAD_SCAFFOLD_FILES, LOAD_SCAFFOLD_GITIGNORE } = require('./lib/load-scaffold-files');
+const k6Dir       = path.join(automationDir, 'load', 'k6');
+const k6Scaffold  = path.resolve(__dirname, '..', 'templates', 'load-scaffold', 'k6');
+for (const rel of LOAD_SCAFFOLD_FILES) {
+  const dest = path.join(k6Dir, ...rel.split('/'));
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(path.join(k6Scaffold, ...rel.split('/')), dest);
+    console.log(`  [created] ${path.relative(cwd, dest)}`);
+  }
+}
+writeIfMissing(path.join(k6Dir, '.gitignore'), LOAD_SCAFFOLD_GITIGNORE);
+
 // --- ADO integration placeholder ---
 const adoDir = path.join(qaRoot, '08-azure-integration');
 writeIfMissing(path.join(adoDir, 'README.md'), `# ADO Integration\n\nSee keber/qa-framework integrations/ado-powershell/ for setup instructions.\n`);
