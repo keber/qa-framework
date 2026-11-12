@@ -146,8 +146,8 @@ test('skips node_modules when scanning a directory', () => {
 
 // Pins Part 1 of the character-safety fix: scripts/ writes template literals and
 // console output into every consuming project, so a regression there propagates.
-// templates/, skills/ and test/ still carry legacy violations by design of this
-// scoped change and are a documented follow-up, so they are not asserted here.
+// Everything the package publishes (templates/, skills/, docs/, ...) is asserted
+// by test/rule-11.test.js against the real npm pack file list.
 test('the package\'s own scripts/ and test/ are clean', () => {
   const root = path.join(__dirname, '..');
   const run = runCheck(['scripts', 'test'], root);
