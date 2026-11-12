@@ -6,7 +6,9 @@ description: >
   back into local spec files and configures the Playwright ADO reporter.
   Use when asked to sync with Azure DevOps, push test cases to ADO, create
   a test plan in ADO, configure ADO reporting, inject ADO IDs, or link
-  Playwright results to ADO.
+  Playwright results to ADO. Also use before classifying, scoping, or
+  concluding anything about an ADO work item (Task, Bug, Issue, User Story),
+  for example in gap analysis or coverage decisions: it must be read in full.
   Requires ADO enabled in qa-framework.config.json with valid PAT in env vars.
 ---
 
@@ -19,6 +21,21 @@ description: >
 
 > **Credential rule**: NEVER hardcode PAT, username, or organization URL in any file. Always read from env vars or `<PLACEHOLDER>` in documentation.
 > **Steps rule**: ADO Test Cases must have steps. Do not sync TCs from a Plan de Pruebas with empty or summary-only steps - run Stage 4 first to expand them.
+> **Work item read rule (BLOCKING)**: Never conclude anything about an ADO work item from its title or State. Read it in full first - see "Reading ADO work items" below.
+
+---
+
+## Reading ADO work items
+
+Whenever this skill, another stage, or a sub-agent reads an ADO work item (Task, Bug, Issue, User Story) to classify it, scope it, or decide coverage, apply `references/ado-workitem-full-read-protocol.md` before writing any verdict. In short, read all five:
+
+1. Type, Title, State **and Reason** (Reason separates "Completed" from "Removed", "Duplicate", "Cut")
+2. The full content fields: Description, ReproSteps (Bug), AcceptanceCriteria (User Story)
+3. Every embedded or attached image - look at each one
+4. All comments
+5. The parent/child hierarchy - the parent User Story is read with the same protocol
+
+The reference holds the reasons, the local cache convention, a PowerShell example (which depends on the separate `@keber/ado-powershell` package, not on `integrations/ado-powershell/`), and the equivalent REST calls. A verdict reached without all five points is provisional and must say so.
 
 ---
 
