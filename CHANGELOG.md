@@ -274,6 +274,33 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **ADO scripts: explicit session, UTF-8 request bodies, no truncated suite lists.**
+  Verified with mocks only; real Azure DevOps verification pending.
+  - `create-testplan-from-mapping.ps1` passes the session (`Org`, `Project`, `ApiV`,
+    `Headers`) explicitly to `New-AdoTestCase` and `Add-AdoTestCaseToSuite`. Their
+    defaults read `$script:AdoSession`, which they do not see in every call pattern, so
+    every Test Case failed with only a per-item warning. New optional `-Session`
+    parameter; without it a visible `$AdoSession` is used. With no usable session
+    (missing `Org`, `Project` or `Headers.Authorization`) the script now stops before
+    any ADO call with an error that names what is missing, instead of logging one
+    failure per Test Case and writing an empty `ado-ids.json`. A helper version without
+    the session parameters still runs, with a warning. The mapping is read as UTF-8.
+  - `sync-ado-titles.ps1` sends every request through one `Invoke-AdoRest` function that
+    encodes the body as UTF-8 bytes (Windows PowerShell 5.1 sent the raw string in the
+    system codepage), no longer uses the PowerShell 7-only `ConvertTo-Json -AsArray`
+    (the script failed on 5.1), reads spec files and the mapping as UTF-8 (accented
+    titles were corrupted on 5.1), and matches a `specFile` given with `/` on Windows.
+  - Suite listing: the shipped scripts never list suites (their only REST call is a
+    single-item PATCH). The README and the `qa-ado-integration` skill now prescribe
+    `suites/{parentSuiteId}?expand=children`, or following `x-ms-continuationtoken`,
+    because the flat suite list of a plan returns at most 200 suites and silently
+    truncates; they also warn that `Get-AdoTestSuites` in `@keber/ado-powershell` 1.5.0
+    uses that flat list. The usage examples in `references/scripts-and-config.md` now
+    show the scripts' real parameters.
+  - `test/ado-powershell.test.js`: static guards (BOM on every shipped `.ps1`, no raw
+    string REST body, no `-AsArray`, no flat suite listing without continuation) and
+    behaviour tests that run the scripts in PowerShell with every HTTP call and ADO
+    helper mocked; the behaviour tests skip when no PowerShell is installed.
 - **`upgrade` reported user-owned files as "already up to date".** A user-edited
   `playwright.config.ts` next to pristine lane scripts was left untouched (correct) but
   listed under "Skipped (already up to date)", telling the user there was nothing to do

@@ -34,10 +34,11 @@ All scripts are parameterized and project-agnostic.
   -PlanId     <PLAN_ID> `
   -SuiteId    <SUITE_ID>
 
-# 2. Create Test Cases in ADO from tc-mapping.json (session already loaded above)
+# 2. Create Test Cases in ADO from tc-mapping.json (session loaded above, passed explicitly)
 .\node_modules\@keber\qa-framework\integrations\ado-powershell\scripts\create-testplan-from-mapping.ps1 `
   -PlanId      <PLAN_ID> `
-  -MappingFile "qa/08-azure-integration/tc-mapping-e2e-mod-sub.json"
+  -MappingFile "qa/08-azure-integration/tc-mapping-e2e-mod-sub.json" `
+  -Session     $AdoSession
 
 # 2. Inject ADO IDs into spec files (idempotent)
 .\scripts\inject-ado-ids.ps1 `
@@ -47,13 +48,52 @@ All scripts are parameterized and project-agnostic.
 # 3. Run tests (ADO reporter publishes results automatically)
 npx playwright test
 
-# 4. (Optional) Sync titles back to ADO
+# 4. (Optional) Sync titles back to ADO (preview first with -WhatIf)
 .\scripts\sync-ado-titles.ps1 `
   -OrgUrl      "https://dev.azure.com/your-org" `
   -ProjectName "YourProject" `
   -MappingFile "qa/08-azure-integration/ado-ids.json" `
-  -Token       $env:AZURE_TOKEN
+  -SpecDir     "qa/07-automation/e2e" `
+  -Token       $env:AZURE_TOKEN `
+  -WhatIf
 ```
+
+## ADO session (create-testplan-from-mapping.ps1)
+
+The `@keber/ado-powershell` helpers default `Org`, `Project`, `ApiV` and `Headers` from
+`$script:AdoSession`, which they do not see in every call pattern (for example when
+`load.ps1` was dot-sourced inside another script): every Test Case then fails. The script
+therefore passes the session explicitly to `New-AdoTestCase` and `Add-AdoTestCaseToSuite`:
+
+1. `-Session` parameter: the `$AdoSession` returned by `Initialize-AdoSession`, or a
+   hashtable with `Org`, `Project`, `Headers` (with `Authorization`) and optionally `ApiV`
+   (default `7.1`).
+2. Otherwise, a `$AdoSession` variable visible from the script (set by `load.ps1`).
+
+If neither gives `Org`, `Project` and `Headers.Authorization`, the script stops before any
+ADO call and names what is missing. Keep the PAT in an environment variable; never write it
+into a script or a session literal.
+
+## Listing test suites (pagination)
+
+The flat suite list of a plan (`GET .../_apis/testplan/Plans/{planId}/suites`) returns at
+most 200 suites per call and silently truncates a larger plan. To find the child suites of
+a parent suite (for example to reuse an existing suite by name), read the parent with its
+children in one call:
+
+```
+GET https://dev.azure.com/{org}/{project}/_apis/testplan/Plans/{planId}/suites/{parentSuiteId}?expand=children&api-version=7.1
+```
+
+The children are in the `children` property of the response (absent when there are none).
+If you really need every suite of the plan, follow the `x-ms-continuationtoken` response
+header, passing it back as `continuationToken=` until no header is returned (on Windows
+PowerShell 5.1 use `Invoke-WebRequest`, since `Invoke-RestMethod` does not expose response
+headers there).
+
+The shipped scripts never list suites. `Get-AdoTestSuites` of `@keber/ado-powershell` 1.5.0
+uses the flat list without a continuation token: do not rely on it for plans with more than
+200 suites.
 
 ## Security rules
 

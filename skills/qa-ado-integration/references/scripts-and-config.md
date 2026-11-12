@@ -8,17 +8,42 @@
 
 ### create-testplan-from-mapping.ps1
 
-Creates a new ADO Test Plan with suites and test cases from the mapping JSON file.
+Creates ADO Test Cases from a `tc-mapping.json` file and adds them to an existing plan and
+suite. It needs the `@keber/ado-powershell` helpers and an ADO session; the session is passed
+explicitly to every helper call (the helpers' own `$script:AdoSession` lookup fails in some
+call patterns).
 
 ```powershell
+. .github/skills/ado-powershell/load.ps1    # creates $AdoSession from ADO_ORG, ADO_PROJECT, ADO_PAT
 .\integrations\ado-powershell\scripts\create-testplan-from-mapping.ps1 `
-  -Organization $env:ADO_ORG `
-  -Project $env:ADO_PROJECT `
-  -Token $env:ADO_PAT `
-  -MappingFile .\qa\08-azure-integration\ado-ids-mapping-{project}.json
+  -PlanId      <PLAN_ID> `
+  -SuiteId     <SUITE_ID> `
+  -MappingFile .\qa\08-azure-integration\tc-mapping-{module}.json `
+  -Session     $AdoSession
 ```
 
-Output: `TestPlanId` and `SuiteIds` - record in `module-registry.json`.
+- `-SuiteId` is optional: without it the `suiteId` of the mapping file is used.
+- `-Session` is optional when `$AdoSession` is visible from the script. With no usable session
+  (missing `Org`, `Project` or `Headers.Authorization`) the script stops before any ADO call
+  and names what is missing.
+
+Output: `ado-ids.json` (next to the mapping file, or `-OutputFile`) with the created WI IDs,
+the input of `inject-ado-ids.ps1`; record the plan and suite IDs in `module-registry.json`.
+
+### Listing test suites
+
+Never list the suites of a plan with the flat list (`.../_apis/testplan/Plans/{planId}/suites`)
+in a single call: it returns at most 200 suites and silently truncates a larger plan. To find
+the child suites of a parent (for example to reuse an existing suite by name instead of
+creating a duplicate), read the parent with its children:
+
+```
+GET https://dev.azure.com/{org}/{project}/_apis/testplan/Plans/{planId}/suites/{parentSuiteId}?expand=children&api-version=7.1
+```
+
+The children are in `children` (absent when there are none). If every suite of the plan is
+really needed, follow the `x-ms-continuationtoken` response header (pass it back as
+`continuationToken=`) until none is returned.
 
 ---
 
@@ -61,14 +86,16 @@ Syncs ADO TC titles with local spec file titles (detects drift):
 
 ```powershell
 .\integrations\ado-powershell\scripts\sync-ado-titles.ps1 `
-  -Organization $env:ADO_ORG `
-  -Project $env:ADO_PROJECT `
-  -Token $env:ADO_PAT `
-  -MappingFile .\qa\08-azure-integration\ado-ids-mapping-{project}.json `
-  -DryRun
+  -OrgUrl      "https://dev.azure.com/$env:ADO_ORG" `
+  -ProjectName $env:ADO_PROJECT `
+  -Token       $env:ADO_PAT `
+  -MappingFile .\qa\08-azure-integration\ado-ids.json `
+  -SpecDir     .\qa\07-automation\e2e `
+  -WhatIf
 ```
 
-Apply with `-DryRun:$false`.
+Apply without `-WhatIf`. Titles are read from the spec files as UTF-8 and sent as UTF-8 bytes,
+so accented titles arrive intact on Windows PowerShell 5.1.
 
 ---
 

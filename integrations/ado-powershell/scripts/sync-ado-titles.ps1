@@ -22,6 +22,14 @@
 .PARAMETER Token
     ADO Personal Access Token. Prefer $env:AZURE_TOKEN.
 
+.NOTES
+    Every HTTP call goes through Invoke-AdoRest, which sends request bodies as
+    UTF-8 bytes (Windows PowerShell 5.1 would otherwise encode a string body
+    with the system codepage and corrupt accented titles). Spec files and the
+    mapping are read as UTF-8. Use -WhatIf to preview without calling ADO.
+    The only ADO call is a single-item PATCH per work item: no list endpoint,
+    so there is no pagination to follow.
+
 .EXAMPLE
     .\sync-ado-titles.ps1 `
         -OrgUrl      "https://dev.azure.com/your-org" `
@@ -42,13 +50,28 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$b64     = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$Token"))
-$headers = @{
-    'Authorization' = "Basic $b64"
-    'Content-Type'  = 'application/json-patch+json'
+# Single entry point for every ADO HTTP call (tests replace Invoke-RestMethod).
+# A body is always sent as UTF-8 bytes, never as a raw [string].
+function Invoke-AdoRest {
+    param(
+        [Parameter(Mandatory)] [string]    $Method,
+        [Parameter(Mandatory)] [string]    $Uri,
+        [Parameter(Mandatory)] [hashtable] $Headers,
+        [string]                           $Body,
+        [string]                           $ContentType = 'application/json'
+    )
+    $restArgs = @{ Method = $Method; Uri = $Uri; Headers = $Headers }
+    if ($PSBoundParameters.ContainsKey('Body')) {
+        $restArgs.Body        = [Text.Encoding]::UTF8.GetBytes($Body)
+        $restArgs.ContentType = $ContentType
+    }
+    Invoke-RestMethod @restArgs
 }
 
-$mapping = Get-Content $MappingFile -Raw | ConvertFrom-Json
+$b64     = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$Token"))
+$headers = @{ 'Authorization' = "Basic $b64" }
+
+$mapping = Get-Content $MappingFile -Raw -Encoding UTF8 | ConvertFrom-Json
 $apiBase = "$OrgUrl/$ProjectName/_apis"
 
 $synced  = 0
@@ -57,7 +80,7 @@ $skipped = 0
 foreach ($entry in $mapping) {
     $adoId   = $entry.adoWiId
     $specFile = Get-ChildItem -Path $SpecDir -Recurse -Filter "*.spec.ts" |
-                Where-Object { $_.FullName -like "*$($entry.specFile)*" } |
+                Where-Object { ($_.FullName -replace '\\', '/') -like "*$($entry.specFile -replace '\\', '/')*" } |
                 Select-Object -First 1
 
     if (-not $specFile) {
@@ -67,7 +90,7 @@ foreach ($entry in $mapping) {
     }
 
     # Extract title from test() line that contains the adoId prefix
-    $content = Get-Content $specFile.FullName -Raw
+    $content = Get-Content $specFile.FullName -Raw -Encoding UTF8
     $match   = [regex]::Match($content, "test(?:\.skip)?\s*\(\s*['""](\[$adoId\][^'""]+)['""]")
 
     if (-not $match.Success) {
@@ -78,12 +101,14 @@ foreach ($entry in $mapping) {
 
     $newTitle = $match.Groups[1].Value.Trim()
     $patchUrl = "$apiBase/wit/workitems/$($adoId)?api-version=7.1"
-    $body     = @(
+    # -InputObject keeps the one-element array as a JSON array on PowerShell 5.1
+    # (-AsArray exists only in PowerShell 7).
+    $body     = ConvertTo-Json -Depth 5 -InputObject @(
         @{ op = 'replace'; path = '/fields/System.Title'; value = $newTitle }
-    ) | ConvertTo-Json -AsArray
+    )
 
     if ($PSCmdlet.ShouldProcess("WI #$adoId", "Update title to: $newTitle")) {
-        Invoke-RestMethod -Method Patch -Uri $patchUrl -Headers $headers -Body $body | Out-Null
+        Invoke-AdoRest -Method Patch -Uri $patchUrl -Headers $headers -Body $body -ContentType 'application/json-patch+json' | Out-Null
         Write-Host "  [SYNCED] WI #$adoId -> $newTitle"
         $synced++
     }

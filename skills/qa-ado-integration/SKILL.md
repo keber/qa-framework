@@ -131,6 +131,8 @@ Update `qa/08-azure-integration/module-registry.json` with:
 | TCs not appearing | Wrong suite parent ID | Check `module-registry.json` suite mapping |
 | Reporter not posting | Missing env var at runtime | Pass vars via CI pipeline or `.env` |
 | Duplicate TCs | Re-ran create script | Use `inject-ado-ids.ps1` idempotently |
+| "ADO session not found" or "incomplete" from `create-testplan-from-mapping.ps1` | No usable `$AdoSession` | Dot-source `load.ps1` with the `ADO_*` env vars set, or pass `-Session $AdoSession` |
+| Existing suites missing from a lookup in a large plan | Flat suite list pages at 200 | Read `suites/{parentSuiteId}?expand=children` (see `references/scripts-and-config.md`) |
 
 ---
 
