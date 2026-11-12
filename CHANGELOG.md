@@ -11,6 +11,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **ADO work item full-content read protocol (`qa-ado-integration`).** New reference
+  `skills/qa-ado-integration/references/ado-workitem-full-read-protocol.md`, linked from
+  the skill as a BLOCKING read rule: before classifying, scoping or concluding anything
+  about a Task, Bug, Issue or User Story, read Type, Title, State and Reason, the full
+  content fields, every embedded image, all comments and the parent/child hierarchy.
+  Three consumer projects had written this protocol separately after verdicts reached
+  from titles alone proved wrong. The contract is tool-agnostic; a PowerShell example
+  (depending on the separate `@keber/ado-powershell` package) and the equivalent REST
+  calls are given as one way to apply it.
 - **Rule 11 now ships both halves (`qa-framework.instructions.md` and `qa-framework.rules.md`).**
   The rule only listed forbidden characters, so agents read it as "produce ASCII" and wrote
   accent-free Spanish - a 98-99% incidence measured in four consumer projects, which each
@@ -37,6 +46,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   `TaskOutput`, which consumer projects' local rules still name and Claude Code removed in
   v2.1.277. `upgrade` overwrites the file, so existing projects receive it. Guarded by
   `test/claude-rules.test.js`.
+
+### Changed
+
+- **Encoding policy is per file type.** The formatting rules of
+  `qa-framework.instructions.md` and `qa-framework.rules.md` said UTF-8 without BOM for
+  everything. `.ps1` files now require UTF-8 WITH BOM, because Windows PowerShell 5.1
+  reads a BOM-less script with the ANSI codepage and corrupts every accented literal;
+  every other file stays without BOM. PowerShell request bodies must be sent as
+  `[Text.Encoding]::UTF8.GetBytes($json)`, never a raw string. The published `.ps1`
+  files gained the BOM (no other byte changed) and `test/bom-policy.test.js` guards
+  the policy over everything `npm pack` ships.
+- **Scaffold `playwright.config.ts` no longer needs credentials at load time.**
+  `QA_BASE_URL` from the environment wins; when it is missing the base URL comes from
+  `project.qaBaseUrl` in `qa/qa-framework.config.json`, and with neither the config
+  fails with a clear message. Requiring `QA_USER_EMAIL` and `QA_USER_PASSWORD` while
+  loading the config broke the parallel-lane model: a lane that is not logging in
+  should not need credentials. A missing credential now fails in `global-setup.ts`
+  when that lane logs in, naming the variable, never its value.
 
 ### Fixed
 

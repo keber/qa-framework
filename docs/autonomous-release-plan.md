@@ -208,7 +208,12 @@ Per release candidate:
 | 0 | WP0.2 prerelease-safe versions | merged to `dev`; four-bump simulation passes | `58e2b60` | 1.14.0-rc.1 |
 | 0 | Release 1.14.0-rc.1 | **published under `next`**, verified; `latest` still 1.13.2 | `4199602`, tag `v1.14.0-rc.1` | 1.14.0-rc.1 |
 | 1 | WP1.5 priority-and-feasibility | closed - already covered | - | - |
-| 1 | WP1.6 ADO full-read protocol | done, held until rc.1 is tagged | `2e59409` | 1.14.0-rc.2 |
+| 1 | WP1.6 ADO full-read protocol | merged to `dev` | `2e59409` | 1.14.0-rc.2 |
+| 1 | WP1.3 rule 11 complete + published-file scan | merged to `dev`; CHANGELOG lost no content (verified) | `98b87fa` | 1.14.0-rc.2 |
+| 1 | WP1.1 stale `{{VERSION}}` | merged to `dev`; was a live bug (cause b) | `e09b3d3` | 1.14.0-rc.2 |
+| 1 | WP1.4 encoding policy by file type | merged to `dev`; byte check: only the BOM changed | `aeeb28b` | 1.14.0-rc.2 |
+| 1 | WP1.2 scaffold config without load-time creds | merged to `dev`; upgrade simulated in 3 ownership scenarios | `df4172d` | 1.14.0-rc.2 |
+| 1 | WP1.7 upgrade misreports user-owned files | in progress | `claude/wp12-scaffold-config` | 1.14.0-rc.2 |
 
 ## Decision log
 
@@ -221,4 +226,8 @@ Per release candidate:
 | 2026-11-12 | WP1.6 ships the ADO full-read protocol as a skill reference only, not as a new agent rule | A new rule would renumber the rules files that WP1.3 also edits; the rule can follow once WP1.3 lands |
 | 2026-11-12 | `CHANGELOG.md` keeps `[Unreleased]` through every release candidate; it is renamed to `[X.Y.Z] - date` only in the promotion commit | Keep a Changelog has no convention for candidates, and renaming per rc would split one release's notes across several headings |
 | 2026-11-12 | **Incident, process fix.** Every branch push is now `git push --no-follow-tags`; a release tag is pushed only by an explicit `git push origin <tag>` after CI is green on its commit | The machine has `push.followTags = true` globally, so pushing the 1.14.0-rc.1 commit to `dev` also pushed its annotated tag and started the publish job at the same second as CI, not after it. No unverified code shipped - CI on that commit finished green 6 s before the publish step, and the publish job runs the suite itself - but the gate "CI green before tagging" held by timing, not by design. `latest` was not touched |
+| 2026-11-12 | WP1.1 changed code although the brief allowed a test-only outcome | The cause was live, not history: `init` and `upgrade` stamped the rules with the consumer's `frameworkVersion`, a one-time copy nothing updates, so a project that upgraded faithfully still kept its install-day version forever |
+| 2026-11-12 | Add WP1.7 (upgrade report) to wave 1 | Coordinator simulation of WP1.2: a user-edited `playwright.config.ts` is correctly left untouched but listed as "Skipped (already up to date)", which is false. Only what is reported changes, not what is touched |
+| 2026-11-12 | `sync-ado-titles.ps1` raw string request body moves to wave 4 | Found by WP1.4: it violates the new companion rule (bodies as UTF-8 bytes). It is an ADO-calling script, so it belongs with the human-verified ADO package, not here |
+| 2026-11-12 | Coordinator writes CHANGELOG entries when a worker omits them | WP1.2, WP1.4 and WP1.6 shipped without entries; documentation only |
 | 2026-11-12 | Release smoke test installs with `--prefer-online` | A failed install while the registry CDN was still propagating cached package metadata without the new version, and later installs kept failing with ETARGET from that local cache |
