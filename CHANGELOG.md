@@ -29,11 +29,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   perception of the current date and invent one when a report needs a stamp. The new
   command prints the OS time in an explicit IANA time zone and always names it
   (`--tz`, else `QA_TIMEZONE`, else the OS zone; an invalid zone is an error, never a
-  silent fallback); `--date` prints `YYYY-MM-DD`, `--json` the full record. It works
-  offline and uses no network unless `--check-http <url>` is given: one `HEAD` request,
-  redirects not followed, with a timeout, that reports the skew between the OS clock and
-  the server's `Date` header (exit 2 above `--max-skew`, exit 3 when the server cannot be
-  reached; the OS stamp is printed either way). Ships with the package CLI, so there is
+  silent fallback); `--date` prints `YYYY-MM-DD`, `--json` the full record. It is fully
+  offline: it reads the OS clock only and loads no network module (a test reads the
+  source to keep it that way). Ships with the package CLI, so there is
   no scaffold file to upgrade. Documented in `qa-maintenance`, `qa-test-stabilization`,
   the `AGENTS.md` template (rule H1) and the `qa-reporte-ejecucion` agent.
 

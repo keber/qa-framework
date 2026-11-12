@@ -2,22 +2,22 @@
 
 // C2 - real-clock helper. Agents have no perception of the current date and will invent
 // one. `qa-framework clock` reads the OS clock and names the IANA time zone it used.
-// It never touches the network unless --check-http <url> is given.
+// It is fully offline: it never touches the network.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
-const http = require('node:http');
-const { spawn, spawnSync } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const CLI_PATH = path.join(REPO_ROOT, 'scripts', 'cli.js');
+const CLOCK_PATH = path.join(REPO_ROOT, 'scripts', 'clock.js');
 
 const {
   formatStamp,
   resolveTimeZone,
   isIanaTimeZone,
-  checkHttpDate,
   parseArgs,
   run,
 } = require('../scripts/clock');
@@ -34,23 +34,26 @@ function capture() {
   };
 }
 
-function noNetwork() {
-  throw new Error('network must not be used');
-}
+// --- no network, by construction -------------------------------------------------------
 
-function fakeFetch({ date, status = 200, reject } = {}) {
-  const calls = [];
-  const impl = async (url, init) => {
-    calls.push({ url, init });
-    if (reject) throw reject;
-    return {
-      status,
-      headers: { get: (name) => (name.toLowerCase() === 'date' ? date ?? null : null) },
-    };
-  };
-  impl.calls = calls;
-  return impl;
-}
+test('clock source: no network module, no fetch', () => {
+  const source = fs.readFileSync(CLOCK_PATH, 'utf8');
+  const required = [...source.matchAll(/require\(\s*['"`]([^'"`]+)['"`]\s*\)/g)].map((m) => m[1]);
+  const imported = [...source.matchAll(/\bimport\s*(?:[^'"`]*\bfrom\s*)?\(?\s*['"`]([^'"`]+)['"`]/g)].map((m) => m[1]);
+  const network = /^(node:)?(http|https|http2|net|tls|dgram|dns|undici)(\/.*)?$/;
+  for (const mod of [...required, ...imported]) {
+    assert.doesNotMatch(mod, network, `clock.js loads network module "${mod}"`);
+  }
+  assert.doesNotMatch(source, /\bfetch\b/, 'clock.js must not use fetch');
+  assert.doesNotMatch(source, /\bXMLHttpRequest\b|\bWebSocket\b/, 'clock.js must not open connections');
+});
+
+test('clock help documents no network option', () => {
+  const c = capture();
+  assert.equal(run(['--help'], c.io), 0);
+  assert.doesNotMatch(c.stdout(), /check-http|max-skew|--timeout/);
+  assert.match(c.stdout(), /never the network/);
+});
 
 // --- formatStamp -----------------------------------------------------------------------
 
@@ -129,123 +132,53 @@ test('resolveTimeZone: an OS that reports no IANA zone is an error asking for --
 // --- argument parsing --------------------------------------------------------------------
 
 test('parseArgs: flags and values', () => {
-  assert.deepEqual(parseArgs([]), { tz: undefined, json: false, dateOnly: false, checkHttp: undefined, maxSkew: 120, timeoutMs: 5000, help: false });
-  const a = parseArgs(['--tz', 'UTC', '--json', '--check-http', 'https://example.test/', '--max-skew', '30', '--timeout', '2000']);
+  assert.deepEqual(parseArgs([]), { tz: undefined, json: false, dateOnly: false, help: false });
+  const a = parseArgs(['--tz', 'UTC', '--json']);
   assert.equal(a.tz, 'UTC');
   assert.equal(a.json, true);
-  assert.equal(a.checkHttp, 'https://example.test/');
-  assert.equal(a.maxSkew, 30);
-  assert.equal(a.timeoutMs, 2000);
   assert.equal(parseArgs(['--date']).dateOnly, true);
   assert.equal(parseArgs(['--tz=UTC']).tz, 'UTC');
 });
 
-test('parseArgs: unknown flags and missing values are usage errors', () => {
+test('parseArgs: unknown flags, missing values and conflicting outputs are usage errors', () => {
   assert.throws(() => parseArgs(['--bogus']), /Unknown option/);
+  assert.throws(() => parseArgs(['--check-http', 'https://example.test/']), /Unknown option/);
   assert.throws(() => parseArgs(['--tz']), /--tz/);
-  assert.throws(() => parseArgs(['--max-skew', 'abc']), /--max-skew/);
-  assert.throws(() => parseArgs(['--timeout', '0']), /--timeout/);
+  assert.throws(() => parseArgs(['--date', '--json']), /cannot be combined/);
 });
 
-// --- run: offline by default -------------------------------------------------------------
+// --- run ---------------------------------------------------------------------------------
 
-test('run: default prints the stamp and the zone, and never uses the network', async () => {
+test('run: default prints the stamp and the zone', () => {
   const c = capture();
-  const code = await run(['--tz', 'America/Santiago'], { now: () => FIXED, env: {}, fetchImpl: noNetwork, ...c.io });
+  const code = run(['--tz', 'America/Santiago'], { now: () => FIXED, env: {}, ...c.io });
   assert.equal(code, 0);
   assert.equal(c.stdout(), '2026-11-12T10:15:30-03:00 America/Santiago\n');
 });
 
-test('run: --date prints only the local date', async () => {
+test('run: --date prints only the local date', () => {
   const c = capture();
-  const code = await run(['--date', '--tz', 'Asia/Tokyo'], { now: () => new Date('2026-11-12T20:00:00Z'), env: {}, fetchImpl: noNetwork, ...c.io });
+  const code = run(['--date', '--tz', 'Asia/Tokyo'], { now: () => new Date('2026-11-12T20:00:00Z'), env: {}, ...c.io });
   assert.equal(code, 0);
   assert.equal(c.stdout(), '2026-11-13\n');
 });
 
-test('run: --json prints the full record, zone source included', async () => {
+test('run: --json prints the full record, zone source included', () => {
   const c = capture();
-  const code = await run(['--json'], { now: () => FIXED, env: { QA_TIMEZONE: 'UTC' }, fetchImpl: noNetwork, ...c.io });
+  const code = run(['--json'], { now: () => FIXED, env: { QA_TIMEZONE: 'UTC' }, ...c.io });
   assert.equal(code, 0);
   const rec = JSON.parse(c.stdout());
   assert.equal(rec.iso, '2026-11-12T13:15:30+00:00');
   assert.equal(rec.timeZone, 'UTC');
   assert.equal(rec.timeZoneSource, 'QA_TIMEZONE');
-  assert.equal(rec.httpCheck, undefined);
 });
 
-test('run: an invalid zone exits 1 with a message and prints no stamp', async () => {
+test('run: an invalid zone exits 1 with a message and prints no stamp', () => {
   const c = capture();
-  const code = await run(['--tz', 'Mars/Olympus'], { now: () => FIXED, env: {}, fetchImpl: noNetwork, ...c.io });
+  const code = run(['--tz', 'Mars/Olympus'], { now: () => FIXED, env: {}, ...c.io });
   assert.equal(code, 1);
   assert.equal(c.stdout(), '');
   assert.match(c.stderr(), /Mars\/Olympus/);
-});
-
-// --- opt-in HTTP Date check --------------------------------------------------------------
-
-test('checkHttpDate: rejects non-http URLs and URLs carrying credentials', async () => {
-  await assert.rejects(checkHttpDate('file:///etc/passwd', { fetchImpl: noNetwork }), /http/);
-  await assert.rejects(checkHttpDate('ftp://example.test/', { fetchImpl: noNetwork }), /http/);
-  await assert.rejects(checkHttpDate('https://user:pw@example.test/', { fetchImpl: noNetwork }), /credentials/);
-  await assert.rejects(checkHttpDate('not a url', { fetchImpl: noNetwork }), /URL/);
-});
-
-test('checkHttpDate: HEAD without following redirects, skew measured against the OS clock', async () => {
-  const fetchImpl = fakeFetch({ date: 'Thu, 12 Nov 2026 13:15:40 GMT' });
-  const r = await checkHttpDate('https://example.test/', { fetchImpl, now: () => FIXED, timeoutMs: 1000 });
-  assert.equal(fetchImpl.calls.length, 1);
-  assert.equal(fetchImpl.calls[0].init.method, 'HEAD');
-  assert.equal(fetchImpl.calls[0].init.redirect, 'manual');
-  assert.ok(fetchImpl.calls[0].init.signal, 'request must carry a timeout signal');
-  assert.equal(r.status, 'ok');
-  assert.equal(r.serverDate, '2026-11-12T13:15:40Z');
-  assert.equal(r.skewSeconds, 10);
-});
-
-test('run --check-http: within tolerance exits 0 and keeps the stamp first on stdout', async () => {
-  const c = capture();
-  const fetchImpl = fakeFetch({ date: 'Thu, 12 Nov 2026 13:15:00 GMT' });
-  const code = await run(['--tz', 'UTC', '--check-http', 'https://example.test/'], { now: () => FIXED, env: {}, fetchImpl, ...c.io });
-  assert.equal(code, 0);
-  assert.equal(c.stdout(), '2026-11-12T13:15:30+00:00 UTC\n');
-  assert.match(c.stderr(), /http-date: ok/);
-  assert.match(c.stderr(), /skew -30 s/);
-});
-
-test('run --check-http: skew beyond --max-skew exits 2', async () => {
-  const c = capture();
-  const fetchImpl = fakeFetch({ date: 'Thu, 12 Nov 2026 14:15:30 GMT' });
-  const code = await run(['--tz', 'UTC', '--json', '--max-skew', '60', '--check-http', 'https://example.test/'], { now: () => FIXED, env: {}, fetchImpl, ...c.io });
-  assert.equal(code, 2);
-  const rec = JSON.parse(c.stdout());
-  assert.equal(rec.httpCheck.status, 'skew');
-  assert.equal(rec.httpCheck.skewSeconds, 3600);
-  assert.match(c.stderr(), /3600 s/);
-});
-
-test('run --check-http: offline exits 3 but still prints the OS stamp', async () => {
-  const c = capture();
-  const fetchImpl = fakeFetch({ reject: new TypeError('fetch failed') });
-  const code = await run(['--tz', 'UTC', '--check-http', 'https://example.test/'], { now: () => FIXED, env: {}, fetchImpl, ...c.io });
-  assert.equal(code, 3);
-  assert.equal(c.stdout(), '2026-11-12T13:15:30+00:00 UTC\n');
-  assert.match(c.stderr(), /http-date: unavailable/);
-});
-
-test('run --check-http: a response without a Date header exits 3', async () => {
-  const c = capture();
-  const fetchImpl = fakeFetch({ date: null });
-  const code = await run(['--tz', 'UTC', '--check-http', 'https://example.test/'], { now: () => FIXED, env: {}, fetchImpl, ...c.io });
-  assert.equal(code, 3);
-  assert.match(c.stderr(), /no Date header/);
-});
-
-test('run --check-http: a bad URL is a usage error (exit 1), not a network attempt', async () => {
-  const c = capture();
-  const code = await run(['--tz', 'UTC', '--check-http', 'file:///x'], { now: () => FIXED, env: {}, fetchImpl: noNetwork, ...c.io });
-  assert.equal(code, 1);
-  assert.equal(c.stdout(), '');
 });
 
 // --- end to end through the package CLI --------------------------------------------------
@@ -272,17 +205,21 @@ test('cli clock: default output names the zone', () => {
   assert.match(result.stdout, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2} America\/Santiago\n$/);
 });
 
+test('cli clock: an invalid zone exits 1', () => {
+  const result = runCli(['clock', '--tz', 'Mars/Olympus']);
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, '');
+});
+
 test('cli clock --help and the main help both document the command', () => {
   const own = runCli(['clock', '--help']);
   assert.equal(own.status, 0);
-  assert.match(own.stdout, /--check-http/);
   assert.match(own.stdout, /--tz/);
   const main = runCli(['--help']);
   assert.match(main.stdout, /clock/);
 });
 
 test('the skills that stamp dates point agents at the clock command', () => {
-  const fs = require('node:fs');
   for (const rel of [
     'skills/qa-maintenance/SKILL.md',
     'skills/qa-test-stabilization/SKILL.md',
@@ -291,29 +228,5 @@ test('the skills that stamp dates point agents at the clock command', () => {
   ]) {
     const text = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
     assert.match(text, /npx qa-framework clock/, rel);
-  }
-});
-
-test('cli clock --check-http: reads the Date header of a local server', async () => {
-  const server = http.createServer((req, res) => {
-    assert.equal(req.method, 'HEAD');
-    res.setHeader('Date', new Date().toUTCString());
-    res.end();
-  });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address();
-  try {
-    const child = spawn(process.execPath, [CLI_PATH, 'clock', '--tz', 'UTC', '--json', '--check-http', `http://127.0.0.1:${port}/`]);
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (d) => (stdout += d));
-    child.stderr.on('data', (d) => (stderr += d));
-    const code = await new Promise((resolve) => child.on('close', resolve));
-    assert.equal(code, 0, stderr);
-    const rec = JSON.parse(stdout);
-    assert.equal(rec.httpCheck.status, 'ok');
-    assert.ok(Math.abs(rec.httpCheck.skewSeconds) <= 2);
-  } finally {
-    await new Promise((resolve) => server.close(resolve));
   }
 });
