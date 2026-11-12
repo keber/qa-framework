@@ -11,6 +11,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Write-safety policy (`qa/00-standards/write-safety-policy.md`).** One written policy
+  for every automated test that can change data, referenced by API and by load and
+  performance testing instead of two separate rule sets. Read-only by default; four write
+  gates in order (opt-in variable, catalog entry with recorded approval and scope, hard
+  exclusions in code independent of the catalog, writes only to records the test created,
+  with an ambiguous lookup failing); the `isolated` / `syncs` / `forbidden` scope taxonomy;
+  default exclusion categories that a project may extend but never shrink; the idempotent
+  lifecycle of a test record when the system has no delete, with its declared cost; writes
+  under load limited to a single timed call unless explicitly requested, capped and
+  confirmed; runs only against `project.qaBaseUrl`; and an explicit slot for each project
+  to name its write approver. Ported from the work of `marcela.berriosc` in a consumer
+  project. Installed by `init` for new projects; `upgrade` does not install standards
+  documents, so existing projects do not receive it yet.
 - **ADO work item full-content read protocol (`qa-ado-integration`).** New reference
   `skills/qa-ado-integration/references/ado-workitem-full-read-protocol.md`, linked from
   the skill as a BLOCKING read rule: before classifying, scoping or concluding anything

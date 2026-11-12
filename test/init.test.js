@@ -333,3 +333,33 @@ test('init --skip-if-exists (postinstall): an agent render failure is a warning 
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });
+
+test('init: installs the write-safety policy in qa/00-standards/ from the template', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    const result = runInit([], projectRoot);
+    assert.equal(result.status, 0, result.stderr);
+    const installed = path.join(projectRoot, 'qa', '00-standards', 'write-safety-policy.md');
+    assert.ok(fs.existsSync(installed), 'write-safety-policy.md not installed');
+    const template = fs.readFileSync(
+      path.join(__dirname, '..', 'templates', 'write-safety-policy.md'), 'utf8'
+    );
+    assert.equal(fs.readFileSync(installed, 'utf8'), template);
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('init: never overwrites a project-edited write-safety policy', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    runInit([], projectRoot);
+    const installed = path.join(projectRoot, 'qa', '00-standards', 'write-safety-policy.md');
+    fs.writeFileSync(installed, '# Edited by the project\n', 'utf8');
+    const result = runInit([], projectRoot);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(fs.readFileSync(installed, 'utf8'), '# Edited by the project\n');
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});

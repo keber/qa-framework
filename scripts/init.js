@@ -182,6 +182,9 @@ writeIfMissing(path.join(stdDir, 'execution-report-template.md'), fs.readFileSyn
 writeIfMissing(path.join(stdDir, 'test-data-guidelines.md'), fs.readFileSync(
   path.resolve(__dirname, '..', 'templates', 'test-data-guidelines.md'), 'utf8'
 ));
+writeIfMissing(path.join(stdDir, 'write-safety-policy.md'), fs.readFileSync(
+  path.resolve(__dirname, '..', 'templates', 'write-safety-policy.md'), 'utf8'
+));
 
 // --- Per-module folders ---
 const modules = config.modules ?? [];
