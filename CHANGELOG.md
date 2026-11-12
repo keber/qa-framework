@@ -11,6 +11,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Rule 11 now ships both halves (`qa-framework.instructions.md` and `qa-framework.rules.md`).**
+  The rule only listed forbidden characters, so agents read it as "produce ASCII" and wrote
+  accent-free Spanish - a 98-99% incidence measured in four consumer projects, which each
+  patched it locally. Rule 11 (same number and title) now also requires content in the
+  project language (`conventions.language`) to be written correctly with its accents and
+  signs, says both halves travel together when the rule is restated for a sub-agent, skill,
+  agent definition or rubric, and defines verification as running
+  `check-forbidden-chars.js` and `check-spanish-accents.js` from
+  `node_modules/@keber/qa-framework/scripts/` and reporting their output. Guarded by
+  `test/rule-11.test.js`.
+
 - **Lane lock rule for Claude Code projects (`.claude/rules/qa-framework.md`).** Claude
   Code does not read `.github/instructions/`, and the rules file it does read did not
   mention lanes, so Claude Code projects got the stale-lane sweep with no rule saying who
@@ -28,6 +39,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   `test/claude-rules.test.js`.
 
 ### Fixed
+
+- **Published files violated rule 11.** `test/rule-11.test.js` now runs the forbidden-character
+  check over every file in the real `npm pack` list, so a template, skill or doc can no
+  longer ship with an em-dash again (1.10.0 shipped `qa-framework.instructions.md` with
+  em-dashes). The only published file still in violation was `CHANGELOG.md` (90
+  occurrences in pre-1.12 entries: em-dashes, one en-dash, arrows), now ASCII.
 
 - **`lane-lock.js` `heartbeat` and `release` can check the holder.** After a sweep and a
   re-acquisition by someone else, a late `heartbeat` from the previous owner kept the new
@@ -454,53 +471,53 @@ No package content changed. Nothing reached consuming projects.
 
 ### Added
 
-- **`templates/automation-scaffold/fixtures/base.ts`** — new fixture with TTL-aware session
+- **`templates/automation-scaffold/fixtures/base.ts`** - new fixture with TTL-aware session
   refresh. Replaces the plain `@playwright/test` import in long-running suites where the
   server-side session may expire before the suite finishes.
-- **`templates/automation-scaffold/global-setup.ts`** — hardened login flow:
+- **`templates/automation-scaffold/global-setup.ts`** - hardened login flow:
   - `resolveVar()` with source logging (`param` / `env:KEY` / `default`)
   - Login retry loop (up to 3 attempts) with crash-page detection and recovery
-  - `resolveAuthUsers()` — derives which users to authenticate from `QA_AUTH_USER` env var
+  - `resolveAuthUsers()` - derives which users to authenticate from `QA_AUTH_USER` env var
     or from configured `storageState` paths in `playwright.config.ts`
-  - `dismissOnboardingFlow()` — configurable via `QA_DISMISS_ONBOARDING_LABELS`
+  - `dismissOnboardingFlow()` - configurable via `QA_DISMISS_ONBOARDING_LABELS`
     (comma-separated button labels); no-op by default
   - Support for a second test user (`.auth/user-2.json`) via `QA_USER2_EMAIL` /
     `QA_USER2_PASSWORD`
-- **`templates/automation-scaffold/playwright.config.ts`** — exports `SESSION_TTL_MS`
+- **`templates/automation-scaffold/playwright.config.ts`** - exports `SESSION_TTL_MS`
   (default 2 h, overridable via `QA_SESSION_TTL_MS`); commented-out parallel 2-user variant
   (`chromium-user1` / `chromium-user2`).
-- **`templates/automation-scaffold/.env.example`** — new variables: `QA_SESSION_TTL_MS`,
+- **`templates/automation-scaffold/.env.example`** - new variables: `QA_SESSION_TTL_MS`,
   `QA_AUTH_USER`, `QA_USER2_EMAIL`, `QA_USER2_PASSWORD`, `QA_DISMISS_ONBOARDING_LABELS`,
   `PLAYWRIGHT_SERVICE_URL`.
-- **`templates/integration-scaffold/`** — new scaffold for API testing with Playwright
+- **`templates/integration-scaffold/`** - new scaffold for API testing with Playwright
   `APIRequestContext`. Includes `package.json`, `playwright.config.ts`, `global-setup.ts`
   (token-based or browser-login auth), `tests/example.spec.ts`, `README.md`, `.env.example`.
   Deployed to `qa/07-automation/integration/` on `init` and `upgrade`.
-- **`templates/memory/`** — three semi-guided operational memory templates:
+- **`templates/memory/`** - three semi-guided operational memory templates:
   `ci-pipeline-findings.md`, `e2e-stabilization-patterns.md`, `data-volatility-strategies.md`.
   Seeded into `qa/memory/` on `init` and `upgrade`.
-- **`qa/06-defects/disputed/`** — third defect state for cases where QA has evidence but the
+- **`qa/06-defects/disputed/`** - third defect state for cases where QA has evidence but the
   business or dev team disputes the expected behavior. Created on `init` and `upgrade`.
-- **`integrations/ado-powershell/pipelines/azure-pipeline-qa.yml`** — operational hardening:
+- **`integrations/ado-powershell/pipelines/azure-pipeline-qa.yml`** - operational hardening:
   - `suiteFilter` pipeline parameter (default `all`); auto-overridden to `all` on scheduled runs
   - Bash array (`GREP_ARGS`) for safe grep pattern expansion with bracket characters
   - `PublishTestResults@2` scoped to exact XML path instead of `**/*.xml`
   - `publishRunAttachments: false` on both E2E and API stages
   - Artifact names suffixed with `$(System.JobAttempt)` to prevent collision on retries
   - `QA_AUTH_USER` documented as commented example for the 2-job parallel model
-- **`integrations/playwright/README.md`** — new section: Visual AI helper optional pattern.
-- **`templates/qa-readme.md`** — new fields: `ADO Project`, `Last Run` summary table,
+- **`integrations/playwright/README.md`** - new section: Visual AI helper optional pattern.
+- **`templates/qa-readme.md`** - new fields: `ADO Project`, `Last Run` summary table,
   `Flaky Tests` inline annotation convention.
 
 ### Changed
 
-- **`scripts/init.js`** — `fixtures/base.ts` added to e2e scaffold copy list; integration
+- **`scripts/init.js`** - `fixtures/base.ts` added to e2e scaffold copy list; integration
   scaffold replaces the `integration/README.md` placeholder; memory template files seeded
   from `templates/memory/` via `fs.readFileSync`.
-- **`scripts/upgrade.js`** — integration scaffold, `disputed/` defect folder, and memory
+- **`scripts/upgrade.js`** - integration scaffold, `disputed/` defect folder, and memory
   templates are all seeded idempotently on upgrade for existing projects.
-- **`docs/folder-structure-guide.md`** — `06-defects/` updated to document `disputed/`.
-- **`templates/defect-report.md`** — `Status` field extended with `Disputed` value.
+- **`docs/folder-structure-guide.md`** - `06-defects/` updated to document `disputed/`.
+- **`templates/defect-report.md`** - `Status` field extended with `Disputed` value.
 - **`qa/memory/INDEX.md`** template updated to pre-populate rows for the three new memory
   template files.
 
@@ -510,19 +527,19 @@ No package content changed. Nothing reached consuming projects.
 
 ### Added
 
-- **`integrations/ado-powershell/pipelines/azure-pipeline-qa.yml`** — pipeline template
+- **`integrations/ado-powershell/pipelines/azure-pipeline-qa.yml`** - pipeline template
   significantly expanded:
-  - New **Stage 3: API Integration Tests** — separate stage for `qa/07-automation/integration`,
+  - New **Stage 3: API Integration Tests** - separate stage for `qa/07-automation/integration`,
     with its own `PublishTestResults` and `PublishPipelineArtifact` tasks.
   - **Cross-project repository checkout** via `resources.repositories` block; each stage
     now performs an explicit `checkout: source`.
-  - **Smoke test step** in the E2E stage — validates `QA_BASE_URL` is reachable via `curl`
+  - **Smoke test step** in the E2E stage - validates `QA_BASE_URL` is reachable via `curl`
     before running the suite.
   - **Commented placeholder** for `AzureCLI@2` login task (Playwright Workspaces / Entra ID)
     in both E2E and API stages, with `PLAYWRIGHT_SERVICE_URL` env var placeholder.
   - Optional nightly schedule block (commented out).
   - `PublishPipelineArtifact` tasks for HTML report and trace artifacts in both stages.
-- **`integrations/playwright-azure-reporter/README.md`** — fully rewritten:
+- **`integrations/playwright-azure-reporter/README.md`** - fully rewritten:
   - Variables split into local (PAT) vs CI/CD (`SYSTEM_ACCESSTOKEN`) sections.
   - Config snippet updated to use `ADO_ORG`, `ADO_PROJECT`, `orgUrl` constructed from
     `ADO_ORG`, and `SYSTEM_ACCESSTOKEN ?? AZURE_TOKEN` token fallback.
@@ -532,18 +549,18 @@ No package content changed. Nothing reached consuming projects.
 
 ### Changed
 
-- **`azure-pipeline-qa.yml`** — variable names aligned with current conventions:
+- **`azure-pipeline-qa.yml`** - variable names aligned with current conventions:
   `AZURE_TOKEN` / `ADO_ORG_URL` / `ADO_PROJECT_NAME` replaced by `ADO_ORG` / `ADO_PROJECT`;
   `ADO_PLAN_ID` split into `ADO_E2E_PLAN_ID` / `ADO_API_PLAN_ID`; `SYSTEM_ACCESSTOKEN`
   replaces PAT for ADO reporter authentication.
-- **`azure-pipeline-qa.yml`** — E2E job `timeoutInMinutes` increased from 60 to 90.
-- **`azure-pipeline-qa.yml`** — trigger reduced to `main` only (removed `qa` and
+- **`azure-pipeline-qa.yml`** - E2E job `timeoutInMinutes` increased from 60 to 90.
+- **`azure-pipeline-qa.yml`** - trigger reduced to `main` only (removed `qa` and
   `release/*` branches); trigger rationale documented in comments.
-- **`azure-pipeline-qa.yml`** — E2E test run consolidated from two `@grep`-tag steps
+- **`azure-pipeline-qa.yml`** - E2E test run consolidated from two `@grep`-tag steps
   (P0 + P1/P2) into a single `--grep-invert "_inspect|_diag"` run with `continueOnError: true`.
-- **`azure-pipeline-qa.yml`** — cache target changed from `~/.cache/ms-playwright` to
+- **`azure-pipeline-qa.yml`** - cache target changed from `~/.cache/ms-playwright` to
   `node_modules` per workspace; `cacheHitVar` added to both cache tasks.
-- **`azure-pipeline-qa.yml`** — `pool` block moved above `variables` for readability;
+- **`azure-pipeline-qa.yml`** - `pool` block moved above `variables` for readability;
   `ADO_SYNC_DISABLED` variable removed.
 
 ---
@@ -552,7 +569,7 @@ No package content changed. Nothing reached consuming projects.
 
 ### Added
 
-- **`integrations/ado-powershell/scripts/md-to-tc-mapping.ps1`** — new script that parses a
+- **`integrations/ado-powershell/scripts/md-to-tc-mapping.ps1`** - new script that parses a
   Plan-de-Pruebas markdown file and generates `tc-mapping.json`. Reads the Tabla de Pruebas
   table, detects columns dynamically, skips Bloqueado rows (PENDING-CODE), splits steps by
   `<br>`, and strips leading numbering. Supports a `-TableSection` parameter for plans with
@@ -561,14 +578,14 @@ No package content changed. Nothing reached consuming projects.
 
 ### Fixed
 
-- **`create-testplan-from-mapping.ps1`** — removed Unicode characters that caused
+- **`create-testplan-from-mapping.ps1`** - removed Unicode characters that caused
   `MissingArrayIndexExpression` parser errors in PowerShell 5.1.
-- **`create-testplan-from-mapping.ps1`** — added auto-load of `ado-powershell` skill when
+- **`create-testplan-from-mapping.ps1`** - added auto-load of `ado-powershell` skill when
   `New-AdoTestCase` is not yet in scope; script no longer requires manual dot-sourcing before
   invocation.
-- **`create-testplan-from-mapping.ps1`** — added fallback to `$mapping.items` when
+- **`create-testplan-from-mapping.ps1`** - added fallback to `$mapping.items` when
   `$mapping.testCases` is absent, for compatibility with mappings generated by older sessions.
-- **`inject-ado-ids.ps1`** — fixed broken regex (`\Q...\E` is not valid PowerShell); replaced
+- **`inject-ado-ids.ps1`** - fixed broken regex (`\Q...\E` is not valid PowerShell); replaced
   with `[regex]::Escape()`. Added `-AdonIdsDir` parameter to process all `ado-ids-*.json`
   files in a directory in one pass. Added `-DryRun` switch. Fixed UTF-8 encoding on write.
 
@@ -578,29 +595,29 @@ No package content changed. Nothing reached consuming projects.
 
 ### Changed
 
-- **`create-testplan-from-mapping.ps1` refactored** — removed all ADO-specific logic (auth headers,
+- **`create-testplan-from-mapping.ps1` refactored** - removed all ADO-specific logic (auth headers,
   `Invoke-RestMethod` calls, XML step construction). The script now delegates to `New-AdoTestCase`
   and `Add-AdoTestCaseToSuite` from `@keber/ado-powershell`, keeping `qa-framework` free of
   ADO implementation details. Requires `@keber/ado-powershell` ≥ 1.3.0.
-- **Script parameters simplified** — `-OrgUrl`, `-ProjectName`, and `-Token` removed from
+- **Script parameters simplified** - `-OrgUrl`, `-ProjectName`, and `-Token` removed from
   `create-testplan-from-mapping.ps1`. Caller is responsible for loading the ADO session via
   `. .github/skills/ado-powershell/load.ps1` before invoking the script.
-- **`tc-mapping.json` schema extended** — added optional `steps` (string array) and
+- **`tc-mapping.json` schema extended** - added optional `steps` (string array) and
   `expectedResult` (string) fields per test case. When present, steps are sent to ADO as
   `Microsoft.VSTS.TCM.Steps`; all steps except the last are `ActionStep`, the last is
   `ValidateStep` with `expectedResult`.
-- **`qa-ado-integration` SKILL.md updated** — Step 3 now specifies exactly how to parse the
+- **`qa-ado-integration` SKILL.md updated** - Step 3 now specifies exactly how to parse the
   Tabla de Pruebas columns (`Steps` split on `<br>`, strip numbering prefix) to produce
   `tc-mapping.json` with steps.
 
 ### Added
 
-- **Guard in `create-testplan-from-mapping.ps1`** — fails fast with a clear message if
+- **Guard in `create-testplan-from-mapping.ps1`** - fails fast with a clear message if
   `New-AdoTestCase` is not available (ADO session not loaded).
 
 ### Requires
 
-- `@keber/ado-powershell` ≥ **1.3.0** — adds `$ExpectedResult` parameter to `New-AdoTestCase`
+- `@keber/ado-powershell` ≥ **1.3.0** - adds `$ExpectedResult` parameter to `New-AdoTestCase`
   and `ValidateStep` support in the generated TCM steps XML.
 
 ---
@@ -609,36 +626,36 @@ No package content changed. Nothing reached consuming projects.
 
 ### Changed
 
-- **Pipeline Stage 3 now produces "Plan de Pruebas"** — a single document per sprint+module
+- **Pipeline Stage 3 now produces "Plan de Pruebas"** - a single document per sprint+module
   that combines test plan context (scope, strategy, preconditions, test data) with a full TC
   table including numbered steps and expected results. Replaces the previous split between a
   high-level plan and separate TC-{ID}.md files for most workflows.
-- **Stage 4 (`qa-test-cases`) role redefined** — from "generate TC-{ID}.md files" to
+- **Stage 4 (`qa-test-cases`) role redefined** - from "generate TC-{ID}.md files" to
   "expand steps in Plan de Pruebas table when Stage 3 produced summary-level steps". Standalone
   `TC-{ID}.md` files are now optional and used only for complex/reusable TCs.
-- **ADO integration prerequisite updated** — `qa-ado-integration` now reads from
+- **ADO integration prerequisite updated** - `qa-ado-integration` now reads from
   `Plan-de-Pruebas-{proyecto}-Sprint-{N}-{modulo}.md` (Tabla de Pruebas) instead of
-  `qa/03-test-cases/automated/`. Each module file → one ADO Test Suite; each table row → one
+  `qa/03-test-cases/automated/`. Each module file -> one ADO Test Suite; each table row -> one
   ADO Test Case with steps.
-- **`02-test-plans/` restructured** — from flat `automated/` and `manual/` subdirectories to
+- **`02-test-plans/` restructured** - from flat `automated/` and `manual/` subdirectories to
   `sprints/Sprint-{N}/` per-sprint structure. Both tracks share the same Plan de Pruebas document.
 
 ### Added
 
-- **`templates/test-plan-sprint.md`** — new primary Plan de Pruebas template. Includes header,
+- **`templates/test-plan-sprint.md`** - new primary Plan de Pruebas template. Includes header,
   12 sections, and Tabla de Pruebas with column guide. Uses `{{PLACEHOLDERS}}` throughout.
-- **`skills/qa-test-plan/references/plan-de-pruebas-template.md`** — full template with example
+- **`skills/qa-test-plan/references/plan-de-pruebas-template.md`** - full template with example
   table rows, steps writing conventions, priority decision tree, and automation feasibility rules.
   Replaces `references/priority-and-feasibility.md` (old file kept for reference, now legacy).
-- **`upgrade` Section 6** — non-destructive migration of old `02-test-plans/` structure:
-  moves `automated/` → `sprints/legacy-automated/`, `manual/` → `sprints/legacy-manual/`, and
-  flat `.md` plan files → `sprints/legacy/`. Creates `03-test-cases/README.md` if missing.
+- **`upgrade` Section 6** - non-destructive migration of old `02-test-plans/` structure:
+  moves `automated/` -> `sprints/legacy-automated/`, `manual/` -> `sprints/legacy-manual/`, and
+  flat `.md` plan files -> `sprints/legacy/`. Creates `03-test-cases/README.md` if missing.
 
 ### Deprecated
 
-- **`templates/test-plan.md`** — use `templates/test-plan-sprint.md` instead.
+- **`templates/test-plan.md`** - use `templates/test-plan-sprint.md` instead.
   Old file kept for reference; contains deprecation notice at top.
-- **`02-test-plans/automated/` and `02-test-plans/manual/` subdirectory convention** —
+- **`02-test-plans/automated/` and `02-test-plans/manual/` subdirectory convention** -
   replaced by `02-test-plans/sprints/Sprint-{N}/` per-sprint structure.
 
 ### Migration
@@ -654,7 +671,7 @@ migration non-destructively: existing plan files are moved, not deleted.
 
 - **`init` no longer overwrites `qa/AGENT-NEXT-STEPS.md`** on already-initialized projects.
   The file was written with a bare `fs.writeFileSync` (no existence check), causing active sprint
-  checklists to be silently replaced. Changed to `writeIfMissing` — consistent with all other
+  checklists to be silently replaced. Changed to `writeIfMissing` - consistent with all other
   project-owned files.
 
 ---
@@ -663,11 +680,11 @@ migration non-destructively: existing plan files are moved, not deleted.
 
 ### Fixed
 
-- **Agent instructions template extracted** — `templates/qa-framework.instructions.md` is now
+- **Agent instructions template extracted** - `templates/qa-framework.instructions.md` is now
   the single source of truth for QA agent rules. Both `init` and `upgrade` read and interpolate
   this file instead of maintaining separate hardcoded strings, eliminating the rule divergence
   that caused `upgrade` to deploy only 7 rules instead of 11.
-- `upgrade.js` — removed `buildCopilotInstructions()` function (dead code after template extraction).
+- `upgrade.js` - removed `buildCopilotInstructions()` function (dead code after template extraction).
 
 ---
 
@@ -675,7 +692,7 @@ migration non-destructively: existing plan files are moved, not deleted.
 
 ### Changed
 
-- **Agent instructions moved to `.github/instructions/qa-framework.instructions.md`** — the
+- **Agent instructions moved to `.github/instructions/qa-framework.instructions.md`** - the
   framework no longer writes to `.github/copilot-instructions.md`. The new file is a VS Code
   `*.instructions.md` file with `applyTo: '**'` frontmatter, which Copilot loads automatically.
   This eliminates the conflict between framework-owned rules and project-owned custom instructions:
@@ -683,16 +700,16 @@ migration non-destructively: existing plan files are moved, not deleted.
 
 ### Added
 
-- **`upgrade` step 2b — automatic migration of old `copilot-instructions.md`**:
-  - If the file contains only QA Framework content (any previous version) → the file is deleted.
-  - If the file contains custom instructions and a QA Framework section → the QA section is stripped and the custom content is preserved.
-  - If the file contains no QA Framework content → the file is left untouched.
+- **`upgrade` step 2b - automatic migration of old `copilot-instructions.md`**:
+  - If the file contains only QA Framework content (any previous version) -> the file is deleted.
+  - If the file contains custom instructions and a QA Framework section -> the QA section is stripped and the custom content is preserved.
+  - If the file contains no QA Framework content -> the file is left untouched.
   The detection marker is the heading `# QA Framework Instructions`, consistent across all versions.
 
 ### Migration
 
 Run `npx qa-framework upgrade`. No manual steps required.
-See `MIGRATION-NOTES.md` — section "Upgrading from a version that used `.github/copilot-instructions.md`".
+See `MIGRATION-NOTES.md` - section "Upgrading from a version that used `.github/copilot-instructions.md`".
 
 ---
 
@@ -700,25 +717,25 @@ See `MIGRATION-NOTES.md` — section "Upgrading from a version that used `.githu
 
 ### Added
 
-- **`tests/helpers/debug/`** — diagnostic scripts directory created by `init` and `upgrade` inside
+- **`tests/helpers/debug/`** - diagnostic scripts directory created by `init` and `upgrade` inside
   `07-automation/e2e/tests/`. Scripts here are excluded from test runs via `testIgnore`.
-- **`tests/seeds/`** — data seeding specs directory created by `init` and `upgrade` inside
+- **`tests/seeds/`** - data seeding specs directory created by `init` and `upgrade` inside
   `07-automation/e2e/tests/`. Excluded from test runs via `testIgnore`.
-- **`testIgnore`** in `playwright.config.ts` template — excludes `**/helpers/debug/**` and
+- **`testIgnore`** in `playwright.config.ts` template - excludes `**/helpers/debug/**` and
   `**/seeds/**` from Playwright test discovery.
-- **`upgrade` step 5e** — patches existing `playwright.config.ts` in `e2e/`: replaces
+- **`upgrade` step 5e** - patches existing `playwright.config.ts` in `e2e/`: replaces
   `testDir: '.'` with `'./tests'`, injects `testIgnore` if missing, creates `helpers/debug/`
   and `seeds/` if absent.
 - **Dual-Track Pipeline** section in `docs/folder-structure-guide.md` and `qa/QA-STRUCTURE-GUIDE.md`
-  — documents the automation track and manual track as parallel paths sharing `01-specifications/`
+  - documents the automation track and manual track as parallel paths sharing `01-specifications/`
   as source of truth. Includes entry point table (3 scenarios) and track selection guidance.
   Clarifies that `03-test-cases/` is the manual track artifact and `04-test-data/` is optional.
 
 ### Fixed
 
-- `qa/QA-STRUCTURE-GUIDE.md` — removed stale reference to deleted `docs/generalization-decisions.md`
+- `qa/QA-STRUCTURE-GUIDE.md` - removed stale reference to deleted `docs/generalization-decisions.md`
   from the `06-defects/` section.
-- `README.md` — pipeline table updated with Track column; `03-test-cases/` and `04-test-data/`
+- `README.md` - pipeline table updated with Track column; `03-test-cases/` and `04-test-data/`
   annotated as manual-track / optional in the directory tree.
 
 ---
@@ -737,37 +754,37 @@ See `MIGRATION-NOTES.md` — section "Upgrading from a version that used `.githu
 
 ### Removed
 
-- `agent-instructions/` directory (legacy monolithic per-task instruction files) — superseded by `skills/`
+- `agent-instructions/` directory (legacy monolithic per-task instruction files) - superseded by `skills/`
   architecture since v1.5.0. All behavior is now in `skills/*/SKILL.md` + `references/`.
-- `docs/comparison-matrix.md` — superseded by `docs/skills-architecture.md`.
-- `docs/generalization-decisions.md` — internal design notes; no longer relevant.
+- `docs/comparison-matrix.md` - superseded by `docs/skills-architecture.md`.
+- `docs/generalization-decisions.md` - internal design notes; no longer relevant.
 
 ### Documentation
 
-- `docs/architecture.md` — updated for v1.6.0: correct 07-automation/e2e/ tree, removed blazor-radzen
+- `docs/architecture.md` - updated for v1.6.0: correct 07-automation/e2e/ tree, removed blazor-radzen
   stub, added `.github/skills/` and `memory/` to target project box.
-- `docs/installation.md` — rewritten: correct `npm install` command, no interactive prompts, correct
+- `docs/installation.md` - rewritten: correct `npm install` command, no interactive prompts, correct
   directory tree with e2e/integration/load, added `upgrade` command section.
-- `docs/usage-with-agent.md` — rewritten: all `00-guides/` references replaced with `.github/skills/`,
+- `docs/usage-with-agent.md` - rewritten: all `00-guides/` references replaced with `.github/skills/`,
   session workflows updated to reflect skills model, DO/DON'T list corrected (e2e/ is now correct run location).
-- `README.md` — version bumped, `agent-instructions/` entry removed from package tree.
+- `README.md` - version bumped, `agent-instructions/` entry removed from package tree.
 
 ### Added
 
-- `07-automation/integration/` — placeholder for API/integration tests (k6, JMeter, Azure Load Testing);
+- `07-automation/integration/` - placeholder for API/integration tests (k6, JMeter, Azure Load Testing);
   created on `init` and `upgrade`.
-- `07-automation/load/` — placeholder for load and performance tests; created on `init` and `upgrade`.
-- **`scripts/upgrade.js` migration section 5** — detects old v1.5.x structure and relocates all
+- `07-automation/load/` - placeholder for load and performance tests; created on `init` and `upgrade`.
+- **`scripts/upgrade.js` migration section 5** - detects old v1.5.x structure and relocates all
   affected files non-destructively (moves only when destination does not exist; warns on conflict).
-- **Stage 5b - Test Stabilization** (`skills/qa-test-stabilization/`) — skill for exhaustively
+- **Stage 5b - Test Stabilization** (`skills/qa-test-stabilization/`) - skill for exhaustively
   reviewing and stabilizing generated Playwright tests before ADO integration. Covers baseline
   collection, failure classification (9 categories), false-positive validation, confidence scoring
   (>=90% exit threshold), `STABILIZATION-REPORT.md` schema, and upstream artifact update rules.
 
 ### Planned
 
-- `qa-framework generate spec <module-name>` — scaffold a full spec set from CLI
-- `qa-framework validate` — check `qa/` structure for compliance with conventions
+- `qa-framework generate spec <module-name>` - scaffold a full spec set from CLI
+- `qa-framework validate` - check `qa/` structure for compliance with conventions
 - Integration: `jest` support alongside Playwright
 - Integration: GitHub Actions pipeline template (alongside existing Azure Pipelines template)
 
@@ -777,14 +794,14 @@ See `MIGRATION-NOTES.md` — section "Upgrading from a version that used `.githu
 
 ### Added
 
-- **Framework scaffold** — initial `qa/` directory tree with 9 numbered folders (00–08)
-- **6-file submodule template set** — `00-inventory` through `05-test-scenarios`
-- **Agent instructions** — 7 purpose-specific Markdown instruction files for IDE agents
-- **Standards** — naming conventions, bug report template, test case template, test data guidelines
-- **Automation scaffold** — generalized Playwright `playwright.config.ts`, `global-setup.ts`, `.env.example`, `fixtures/auth.ts`
-- **Optional integrations** — stubs and READMEs for Playwright, `playwright-azure-reporter`, and ADO PowerShell
-- **CLI entry point** — `qa-framework init`, `generate`, `validate` commands
-- **Documentation** — architecture, comparison matrix, generalization decisions, installation guide, usage-with-agent guide, spec-driven philosophy, folder structure guide
-- **Migration notes** — `MIGRATION-NOTES.md` for projects moving from embedded to package-based framework
+- **Framework scaffold** - initial `qa/` directory tree with 9 numbered folders (00-08)
+- **6-file submodule template set** - `00-inventory` through `05-test-scenarios`
+- **Agent instructions** - 7 purpose-specific Markdown instruction files for IDE agents
+- **Standards** - naming conventions, bug report template, test case template, test data guidelines
+- **Automation scaffold** - generalized Playwright `playwright.config.ts`, `global-setup.ts`, `.env.example`, `fixtures/auth.ts`
+- **Optional integrations** - stubs and READMEs for Playwright, `playwright-azure-reporter`, and ADO PowerShell
+- **CLI entry point** - `qa-framework init`, `generate`, `validate` commands
+- **Documentation** - architecture, comparison matrix, generalization decisions, installation guide, usage-with-agent guide, spec-driven philosophy, folder structure guide
+- **Migration notes** - `MIGRATION-NOTES.md` for projects moving from embedded to package-based framework
 
 ---
