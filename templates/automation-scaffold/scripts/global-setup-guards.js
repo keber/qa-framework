@@ -201,10 +201,49 @@ function laneCredentials(laneId, lane, env) {
   return { email: env[emailKey], password: env[passwordKey], emailKey, passwordKey };
 }
 
+/**
+ * Name of the variable that registers an opt-in project: QA_RUN_<NAME>, with the
+ * project name upper-cased and '-' turned into '_' ('login-flow' -> QA_RUN_LOGIN_FLOW).
+ * scripts/run-opt-in.js derives the same name; a test pins that both agree.
+ */
+function optInEnvVar(name) {
+  return `QA_RUN_${String(name).toUpperCase().replace(/-/g, '_')}`;
+}
+
+/**
+ * Decides which opt-in projects playwright.config.ts registers for this run.
+ *
+ * An opt-in project (writes, a slow suite, the login flow) is expensive or risky, so
+ * `npm test` must never see it. It is registered only when selected explicitly:
+ *   - its variable is exactly '1' (QA_RUN_WRITES=1), or
+ *   - its name is passed with --project, read from argv because Playwright refuses a
+ *     --project naming a project the config did not register. Matched without regard
+ *     to case, like Playwright's own --project matching.
+ *
+ * The selection is written back to `env`. Playwright workers re-load the config with
+ * their own argv, which holds no --project, but they inherit the runner's environment.
+ * Without the write-back a project selected only by --project would exist in the
+ * runner and be missing in the worker.
+ *
+ * Returns the selected names in the order of `names`.
+ */
+function resolveOptInProjects(names, env, argv) {
+  env = env || process.env;
+  argv = argv || process.argv;
+  const requested = selectedProjectNamesFromArgv(argv).map((n) => n.toLowerCase());
+  const selected = (names || []).filter(
+    (name) => env[optInEnvVar(name)] === '1' || requested.includes(String(name).toLowerCase())
+  );
+  for (const name of selected) env[optInEnvVar(name)] = '1';
+  return selected;
+}
+
 module.exports = {
   assertColdSetupIsIntentional,
   assertLaneIsLocked,
   selectedProjectNamesFromArgv,
   assertProjectsMatchLane,
   laneCredentials,
+  optInEnvVar,
+  resolveOptInProjects,
 };

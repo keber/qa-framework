@@ -2,13 +2,21 @@
  * global-setup.ts
  *
  * Runs ONCE before all test files.
- * Logs in as the default QA user and saves storageState so each test
- * doesn't need to repeat the login flow.
+ * Logs in each lane this run needs and saves its storageState, so no test ever
+ * repeats the login.
  *
- * For multi-role projects:
- *   - Add additional loginAs() calls below, one per role.
- *   - Save each to `.auth/user-{role}.json`.
- *   - Reference the matching storageState in playwright.config.ts projects[].
+ * THIS IS THE ONLY PLACE A LOGIN HAPPENS. Tests start from the saved storageState and
+ * never log in themselves: with trace/video/screenshot 'retain-on-failure', a login
+ * inside a test would store the typed credentials and the login request, password
+ * included, in the artifacts of every failed run. The login below runs in its own
+ * browser, outside the test runner, so the `use` options of playwright.config.ts do
+ * not apply to it and nothing is recorded. Keep it that way: never start tracing,
+ * record video or HAR, or take screenshots in this file, and do not move the login
+ * into a setup test, where the project's trace options would apply.
+ *
+ * For multi-role projects: one role per lane. Add a lane with that role's account to
+ * parallelLanes.lanes in qa-framework.config.json; its storageState is wired into the
+ * lane projects of playwright.config.ts automatically.
  *
  * Environment variables:
  *   QA_BASE_URL           - Base URL of the application under test. Optional:

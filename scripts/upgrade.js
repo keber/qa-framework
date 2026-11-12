@@ -151,12 +151,14 @@ const SHIPPED_SCAFFOLD_HASHES = {
     'f145fda0a7215942b5431a779188609f8958e51a048b161ede605576efba3ef8', // v1.11.0 - v1.11.3
     '59acff16e745ccd802254e65a1a5f8ddec549328c9c1fa94f715fb9daf449a1a', // v1.12.0 - v1.14.0-rc.1
     'c4b43b3075bcb283e4d1a32ad91b53395ea1930a24fd44afef554422f002903b', // unreleased: WP1.2 qaBaseUrl fallback, credentials checked at login
+    'd9f06d5066438dc34241c7a6960b0aaedf157510c4ef407f71a4d0e6bf4bf9e3', // unreleased: WP3.4 login only in global setup, opt-in projects
   ],
   'automation-scaffold/global-setup.ts': [
     '077580914881ee71ac082d47579dc4cffa01e8348b0744fced6b8de2863e0bd1', // v1.0.1 - v1.10.0
     '7b3e7ca54929e525055d19ba8cd9643de722c7092c67b1a2e273072dd712ec7a', // v1.11.0 - v1.11.3
     '849b265ac82ffd082c96b68f9542331f3083d81e61709abf009450c35da39948', // v1.12.0 - v1.14.0-rc.1
     '2f44cb447c5e5e8248c50cbda91ee66192cb14eb8f73761651f94fa8e5116a10', // unreleased: WP1.2 qaBaseUrl fallback, credentials checked at login
+    '090e38911281de0fa13705555c49d15f7db4f17e090484086149442beb24ec1b', // unreleased: WP3.4 login only in global setup, opt-in projects
   ],
   'automation-scaffold/.env.example': [
     '18fab7c165085a4a585a6911b42c49b97177265d46261c8362c3508a7436c65c', // v1.0.1 - v1.10.0
@@ -166,6 +168,7 @@ const SHIPPED_SCAFFOLD_HASHES = {
   'automation-scaffold/fixtures/auth.ts': [
     'a856df26d80d521a0ad349879096698191ed6a2f919fac96d85980ab1d435c3e', // v1.0.1 - v1.11.3
     '7b84947aa078d96a99fed4d4f662c1b34305595b9f5ee7fe73c993f5a30d74a5', // v1.12.0 - v1.13.2
+    'd53e1ee1d3fb1f889d3ed6c1bf0c1b1fbbe34f9f4f42fab5f0b266bc709ba216', // unreleased: WP3.4 login only in global setup, opt-in projects
   ],
   'automation-scaffold/fixtures/base.ts': [
     '7c52ea17fad732825e327af59a7f0f3bf53db166f7191932ae51c97fd2825a39', // v1.11.0 - v1.11.3
@@ -192,6 +195,12 @@ const SHIPPED_SCAFFOLD_HASHES = {
   'automation-scaffold/scripts/global-setup-guards.js': [
     'f8584209a241222552c9f34a6e5535265e8903782131e216e6b68c717e360da8', // v1.12.0 - v1.14.0-rc.1
     '8c360139a27e9117aef444e0e1855f8f98167309f273c2648a0c07fa2823b7b9', // unreleased: WP1.2 qaBaseUrl fallback, credentials checked at login
+    'f786718b6a6abdc184cba59f7b19a41fbb41a2128515ca695c26e2a7903b4678', // unreleased: WP3.4 login only in global setup, opt-in projects
+  ],
+  // Introduced by WP3.4. A copy matching none of these is user-authored.
+  'automation-scaffold/scripts/run-opt-in.js': [
+
+    '9bb5962e6d47371a936df1c0b1b4a0592f6599a2af3a7334e685f128b021034a', // unreleased: WP3.4 login only in global setup, opt-in projects
   ],
   'integration-scaffold/playwright.config.ts': [
     '7276ed4fda85f80e37381257bc559f4bb48055d359858f69f6b838f3671a9e2d', // v1.11.0 - v1.11.3
@@ -810,6 +819,10 @@ if (fs.existsSync(qaRoot)) {
 //      c) .env.example is a reference template, never live config (the real file is
 //         .env, which this migration never touches). Overwritten when pristine.
 //
+//      d) scripts/run-opt-in.js (opt-in project launcher) is per-file like a fixture:
+//         it requires nothing from the scaffold. auth.ts is held back while tests
+//         still call loginAs() outside *.login.spec.ts (see section (b)).
+//
 //    "Pristine" means the file's normalised sha256 matches a hash this framework
 //    actually shipped in some earlier release (SHIPPED_SCAFFOLD_HASHES). Anything
 //    else is user-owned and is only ever warned about. The project's recorded
@@ -833,6 +846,9 @@ const hasAutomationScaffold = ['playwright.config.ts', 'global-setup.ts', 'packa
 
 if (hasAutomationScaffold) {
   const scaffoldSrc = path.resolve(__dirname, '..', 'templates', 'automation-scaffold');
+
+  // Scaffold files (relative to e2e/) written by this run, dry runs included.
+  const automationRefreshed = new Set();
 
   // --- (a) the atomic lane group -------------------------------------------
   const groupMembers = [
@@ -872,6 +888,7 @@ if (hasAutomationScaffold) {
       for (const m of scriptMembers) {
         forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
         console.log(`  [updated]  e2e/${m.rel}`);
+        automationRefreshed.add(m.rel);
       }
       // Host files follow only when pristine; a user-owned one keeps working because
       // every export it was written against is still there.
@@ -879,6 +896,7 @@ if (hasAutomationScaffold) {
         if (!fs.existsSync(m.dest) || isPristine(m.dest, m.key)) {
           forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
           console.log(`  [updated]  e2e/${m.rel}`);
+          automationRefreshed.add(m.rel);
         } else {
           warnUserOwned(m.dest, m.src, `e2e/${m.rel}`, m.key);
         }
@@ -899,6 +917,7 @@ if (hasAutomationScaffold) {
     for (const m of groupMembers) {
       forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
       console.log(`  [updated]  e2e/${m.rel}`);
+      automationRefreshed.add(m.rel);
     }
   } else {
     const heldBack = reportHeldBackGroup(groupMembers, blockers);
@@ -914,14 +933,46 @@ if (hasAutomationScaffold) {
   }
 
   // --- (b) fixtures, per file ----------------------------------------------
+  // Tests that log in themselves (C5). From this release fixtures/auth.ts loginAs()
+  // refuses to run in a project that records trace, video or screenshot - every lane
+  // project does - so refreshing a pristine auth.ts under such a test would turn a
+  // working suite red on upgrade. The old auth.ts is kept until those tests move to
+  // storageState or to *.login.spec.ts, and the call sites are reported either way.
+  const inTestLogins = findInTestLogins(path.join(e2eDir, 'tests'));
   for (const file of AUTOMATION_FIXTURES) {
     const dest = path.join(e2eDir, 'fixtures', file);
     const key  = `automation-scaffold/fixtures/${file}`;
+    if (file === 'auth.ts' && inTestLogins.length && fs.existsSync(dest) &&
+        isPristine(dest, key) && !sameAsTemplate(dest, path.join(scaffoldSrc, 'fixtures', file))) {
+      warnings.push(
+        `e2e/fixtures/auth.ts NOT refreshed: tests still log in inside the test (listed under\n` +
+          `    "Login safety"), and this release's loginAs() refuses to run in a project that\n` +
+          `    records artifacts. Move those tests to storageState, then run upgrade again.`
+      );
+      continue;
+    }
     if (!fs.existsSync(dest) || isPristine(dest, key)) {
       forceWrite(dest, fs.readFileSync(path.join(scaffoldSrc, 'fixtures', file), 'utf8'));
       console.log(`  [updated]  e2e/fixtures/${file}`);
     } else {
       warnUserOwned(dest, path.join(scaffoldSrc, 'fixtures', file), `e2e/fixtures/${file}`, key);
+    }
+  }
+
+  // --- (d) opt-in launcher, per file -----------------------------------------
+  // run-opt-in.js requires nothing from the scaffold (it only starts the Playwright
+  // CLI), so like a fixture it is delivered on its own, outside the lane group.
+  {
+    const rel  = 'scripts/run-opt-in.js';
+    const dest = path.join(e2eDir, 'scripts', 'run-opt-in.js');
+    const src  = path.join(scaffoldSrc, 'scripts', 'run-opt-in.js');
+    const key  = `automation-scaffold/${rel}`;
+    if (!fs.existsSync(dest) || isPristine(dest, key)) {
+      forceWrite(dest, fs.readFileSync(src, 'utf8'));
+      console.log(`  [updated]  e2e/${rel}`);
+      automationRefreshed.add(rel);
+    } else {
+      warnUserOwned(dest, src, `e2e/${rel}`, key);
     }
   }
 
@@ -935,6 +986,12 @@ if (hasAutomationScaffold) {
 
   // --- trace safety on everything left user-owned ---------------------------
   reportTraceSafety(e2eDir);
+  reportInTestLogins(inTestLogins);
+  reportOptInScripts(
+    path.join(e2eDir, 'package.json'),
+    automationRefreshed.has('playwright.config.ts') ||
+      sameAsTemplate(path.join(e2eDir, 'playwright.config.ts'), path.join(scaffoldSrc, 'playwright.config.ts'))
+  );
 }
 
 // --- integration scaffold: no lane coupling, so purely per-file -------------
@@ -1349,6 +1406,69 @@ function deliverApiGuard(srcDir, current) {
       );
     }
   }
+}
+
+// C5 - login only in global setup. Returns "file:line" of every loginAs( call in a
+// spec under tests/, except *.login.spec.ts, which the opt-in 'login-flow' project runs
+// with trace, video and screenshot off. Report only, never patched.
+function findInTestLogins(testsDir) {
+  const found = [];
+  (function walk(dir) {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (/\.ts$/.test(entry.name) && !/\.login\.spec\.ts$/.test(entry.name)) {
+        fs.readFileSync(full, 'utf8').split(/\r?\n/).forEach((line, i) => {
+          if (/\bloginAs\s*\(/.test(line)) found.push(`${path.relative(cwd, full)}:${i + 1}`);
+        });
+      }
+    }
+  })(testsDir);
+  return found;
+}
+
+function reportInTestLogins(found) {
+  if (!found.length) return;
+  warnings.push(
+    `Login safety: these tests log in inside the test, so with trace/video/screenshot\n` +
+      `    'retain-on-failure' a failed run stores the typed credentials and the login\n` +
+      `    request in its artifacts. Start them from the storageState that global-setup.ts\n` +
+      `    saves (one lane per role); a test of the login flow itself goes in a\n` +
+      `    *.login.spec.ts file, run by the opt-in 'login-flow' project\n` +
+      `    (.github/skills/qa-automation/references/session-and-opt-in-projects.md):\n` +
+      found.map((f) => `      ${f}`).join('\n')
+  );
+}
+
+// C8 - opt-in projects. npm run test:<name> lives in package.json, which upgrade never
+// edits. Only meaningful when the project's config is the framework's current one: a
+// user-owned config declares no opt-in projects, so the scripts would select nothing.
+function reportOptInScripts(pkgPath, configCurrent) {
+  // The names of OPT_IN_PROJECTS in templates/automation-scaffold/playwright.config.ts.
+  const OPT_IN_SCRIPTS = ['login-flow', 'writes', 'slow'];
+  if (!configCurrent || !fs.existsSync(pkgPath)) return;
+  let scripts = {};
+  try {
+    scripts = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).scripts || {};
+  } catch {
+    return; // an unreadable package.json is reported elsewhere, not guessed at here
+  }
+  const missing = OPT_IN_SCRIPTS.filter((name) => !scripts[`test:${name}`]);
+  if (!missing.length) return;
+  warnings.push(
+    `e2e/package.json has no script for these opt-in Playwright projects, which\n` +
+      `    \`npm test\` never runs. Add them to "scripts" by hand (shell-free, the same on\n` +
+      `    Windows and Linux):\n` +
+      missing.map((name) => `      "test:${name}": "node scripts/run-opt-in.js ${name}"`).join(',\n')
+  );
 }
 
 // Trace safety (see skills/qa-automation/references/patterns.md, "Pattern 7"):

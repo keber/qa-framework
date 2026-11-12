@@ -29,7 +29,7 @@ description: >
 
 1. `qa/01-specifications/{module}/` - full spec set for target submodule
 2. `qa/07-automation/e2e/playwright.config.ts` - confirm project name maps to submodule tag
-3. `qa/07-automation/e2e/fixtures/auth.ts` - identify available auth fixtures
+3. `qa/qa-framework.config.json` -> `parallelLanes` - the lanes (one account and role each) whose `storageState` the tests start from
 4. TC list (from test plan or Stage 4) - defines which TCs to automate in this session
 5. `qa/qa-framework.config.json` -> screenshotPath, automationRoot
 
@@ -68,7 +68,8 @@ The cost of one inspection run is far lower than 10+ debugging iterations.**
 Before writing a line of code:
 - Search all spec files for `PENDING-CODE` - stop and flag if found
 - Confirm `playwright.config.ts` exists; scaffold it if missing using `references/config-checklist.md`
-- Verify `fixtures/auth.ts` has the roles required by this submodule
+- Verify a lane exists for every role this submodule needs; a missing role is a new lane, never a login inside the test
+- Decide whether each test belongs to the default suite or to an opt-in project (`*.writes.spec.ts`, `*.slow.spec.ts`, `*.login.spec.ts`): `references/session-and-opt-in-projects.md`
 
 ### Step 1b - Decide POM vs inline locators
 
@@ -89,7 +90,7 @@ Required scaffold elements:
 - `import { test, expect } from '@playwright/test'`
 - `const EXEC_IDX = Math.floor(Date.now() / 60_000) % 100_000` (prevents DB conflicts in parallel runs)
 - `test.describe('{Submodule Name}', () => { ... })`
-- Use fixture-based auth (never hardcode credentials)
+- Start from the lane `storageState`: **tests never log in**. Login happens only in `global-setup.ts`, so no credential reaches a trace, video or screenshot. Only a test of the login flow itself calls `loginAs()`, in a `*.login.spec.ts` file run by the opt-in `login-flow` project (`references/session-and-opt-in-projects.md`)
 
 ### Step 3 - Implement tests in priority order
 
@@ -174,7 +175,8 @@ Before marking the submodule as ✅ Automation Complete:
 | Pattern | When to use |
 |---|---|
 | `EXEC_IDX` | Any TC that creates persistent data |
-| `auth-fixture` | All authenticated TCs |
+| `auth-fixture` | All authenticated TCs: lane `storageState` from global setup, never a login in the test (`references/session-and-opt-in-projects.md`) |
+| `opt-in-project` | TCs that write, are slow, or test the login flow: file suffix + `npm run test:<name>` |
 | `fast-fail` | Element state checks where the default timeout would cause silent hangs |
 | `email-intercept` | Email verification flows |
 | `skip-conditional` | TCs that cannot run at all because of a known app defect (DEF-xxx) |

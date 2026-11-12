@@ -45,6 +45,8 @@
     "assertLaneIsLocked",
     "selectedProjectNamesFromArgv",
     "assertProjectsMatchLane",
-    "laneCredentials"
+    "laneCredentials",
+    "optInEnvVar",
+    "resolveOptInProjects"
   ]
 }
