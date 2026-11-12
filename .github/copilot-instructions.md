@@ -1,6 +1,6 @@
 ## About this repository
 
-This is the **source code** of `@keber/qa-framework` v1.14.0-rc.2 - a spec-driven, agent-oriented QA framework published to npm.
+This is the **source code** of `@keber/qa-framework` v1.14.0-rc.3 - a spec-driven, agent-oriented QA framework published to npm.
 
 ### What this repo is
 
