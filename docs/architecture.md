@@ -77,7 +77,7 @@
 │  ├── 03-test-cases/              <- generated (project work)                │
 │  ├── 04-test-data/               <- project data (project work)             │
 │  ├── 05-test-execution/          <- execution reports (project work)        │
-│  ├── 06-defects/open|resolved/   <- optional defect cache                   │
+│  ├── 06-defects/                 <- open|disputed|resolved|recommendations  │
 │  ├── 07-automation/e2e/          <- Playwright project (self-contained)     │
 │  ├── 07-automation/integration/  <- API/integration tests                   │
 │  ├── 07-automation/load/         <- load/performance tests                  │

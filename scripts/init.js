@@ -17,6 +17,7 @@ const path = require('path');
 
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
 const { AGENT_NAMES, isSprintCycleEnabled, renderAllAgents } = require('./lib/claude-agents');
+const { DEFECT_CATEGORIES, DISPUTED_README, RECOMMENDATIONS_README } = require('./lib/defect-categories');
 
 // Version stamped into the installed agent rules and qa/README.md. Always the package
 // doing the install: the consumer's frameworkVersion is a one-time copy that nothing
@@ -91,9 +92,7 @@ const topLevelFolders = [
   '03-test-cases',
   '04-test-data',
   '05-test-execution',
-  '06-defects/open',
-  '06-defects/disputed',
-  '06-defects/resolved',
+  ...DEFECT_CATEGORIES.map((category) => `06-defects/${category}`),
   '07-automation/e2e/tests',
   '07-automation/e2e/tests/helpers/debug',
   '07-automation/e2e/tests/seeds',
@@ -107,17 +106,9 @@ for (const folder of topLevelFolders) {
   console.log(`  [created] ${path.relative(cwd, fullPath)}/`);
 }
 
-// --- 06-defects/disputed/README.md ---
-writeIfMissing(path.join(qaRoot, '06-defects', 'disputed', 'README.md'),
-`# 06-defects/disputed/
-
-Use this folder for defects where QA has reproducible evidence but the business or
-development team disputes whether the observed behavior is actually a defect.
-
-A defect stays here while the functional decision is pending. Once the team reaches
-a formal conclusion, move the file to open/ (confirmed defect) or resolved/ (accepted
-behavior or won't fix).
-`);
+// --- 06-defects/disputed/README.md and 06-defects/recommendations/README.md ---
+writeIfMissing(path.join(qaRoot, '06-defects', 'disputed', 'README.md'), DISPUTED_README);
+writeIfMissing(path.join(qaRoot, '06-defects', 'recommendations', 'README.md'), RECOMMENDATIONS_README);
 
 // --- qa/README.md ---
 const qaReadmeTemplate = path.resolve(__dirname, '..', 'templates', 'qa-readme.md');

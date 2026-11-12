@@ -27,6 +27,7 @@ closed. A test rewritten to assert the wrong behaviour hides the defect forever.
 | The environment, the session, the data or the test itself is broken | `throw new InfraError(kind, message)` - never a defect marker |
 | A test whose data was patched but whose root cause is still live | Keep it as a read-only health guard and say in its title that green does NOT mean the cause is fixed |
 | The spec itself is unclear | Do not mark anything: resolve the spec first (`PENDING-CODE`) |
+| The app could be better, but no business rule requires anything else | Not a defect: file it in `qa/06-defects/recommendations/`. No marker, no failing assertion |
 
 ## The three parts
 

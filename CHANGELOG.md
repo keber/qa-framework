@@ -11,6 +11,32 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Fourth defect category: `qa/06-defects/recommendations/`.** For findings that
+  violate no business rule (technical debt, usability, accessibility, testability,
+  latent risk). A recommendation has its own `REC-{PREFIX}-NNN` numbering, never
+  justifies a `test.fail()` or a defect marker and is not opened as a Bug; a defect
+  reclassified as a recommendation leaves its `DEF-` number retired. `init` creates the
+  folder with a README; `upgrade` adds it to existing projects that have `06-defects/`
+  (only a missing folder or README is written, nothing existing is touched) and skips it
+  when the project already keeps the same category in `06-defects/improvements/`.
+  Rule 8 of `qa-framework.instructions.md` and `.claude/rules/qa-framework.rules.md`,
+  `qa-automation` (Step 4b and `references/defect-polarity.md`), `qa-maintenance`
+  (`references/update-rules.md`), `qa-test-cases`, `qa-test-stabilization`, the defect
+  report template, the `AGENTS.md` template, the `qa-reporte-ejecucion` agent and the
+  docs now list the four categories. The folder list and READMEs live in
+  `scripts/lib/defect-categories.js`, shared by `init` and `upgrade`.
+- **`qa-framework clock`: real date and time from the OS clock.** Agents have no
+  perception of the current date and invent one when a report needs a stamp. The new
+  command prints the OS time in an explicit IANA time zone and always names it
+  (`--tz`, else `QA_TIMEZONE`, else the OS zone; an invalid zone is an error, never a
+  silent fallback); `--date` prints `YYYY-MM-DD`, `--json` the full record. It works
+  offline and uses no network unless `--check-http <url>` is given: one `HEAD` request,
+  redirects not followed, with a timeout, that reports the skew between the OS clock and
+  the server's `Date` header (exit 2 above `--max-skew`, exit 3 when the server cannot be
+  reached; the OS stamp is printed either way). Ships with the package CLI, so there is
+  no scaffold file to upgrade. Documented in `qa-maintenance`, `qa-test-stabilization`,
+  the `AGENTS.md` template (rule H1) and the `qa-reporte-ejecucion` agent.
+
 - **Opt-in Playwright projects in the automation scaffold.** Suites that write, slow
   suites and the login flow (`*.writes.spec.ts`, `*.slow.spec.ts`, `*.login.spec.ts`)
   run in the projects `writes`, `slow` and `login-flow`, which `npm test` never

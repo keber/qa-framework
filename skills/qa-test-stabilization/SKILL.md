@@ -102,6 +102,10 @@ If a failure cannot be fixed without application code change:
 
 **BLOCKING - before creating any defect file under `qa/06-defects/open/`:**
 
+First confirm that a source (spec, business rule, functional document, code) requires the
+behavior the app does not deliver. If none does, it is not a defect: file it in
+`qa/06-defects/recommendations/` (`REC-{PREFIX}-NNN`) and stop here. Otherwise:
+
 1. Search the project's known-issues record for this module. Where a defect tracker is integrated,
    that means the tracker's already-filed items; where the project keeps a local known-issues file,
    search that too. Use the symptom, not the TC ID - the same defect reaches different TCs.
@@ -151,6 +155,7 @@ Required sections:
 | Spec is ground truth | Never change spec to match wrong behavior |
 | Unresolvable -> skip | With PENDING-CODE annotation |
 | Report required | Every stabilization session produces a report |
+| Real dates only | The run date, the `{date}` in the report name and every "Date reported" come from `npx qa-framework clock` (`--date` for `YYYY-MM-DD`, `--tz <IANA zone>` to fix the zone), never from memory |
 | Official suite is source of truth | Only `npx playwright test`, run with the project's real config and fixtures, determines a test's or a defect's status. Standalone diagnostic scripts provide complementary evidence only - never grounds to close a defect or flip a `test.fail()` |
 
 ---

@@ -29,6 +29,7 @@
 | Terms searched | {{symptom terms, not the TC ID}} |
 | Matches found | {{item IDs and their state, or "none"}} |
 | Classification | New defect / Regression of {{ID}} / Duplicate of {{ID}} |
+| Rule violated | {{RN-ID or source that requires the behavior}} - if no source requires it, this is not a defect: file it in `qa/06-defects/recommendations/` as `REC-{{PREFIX}}-{{NNN}}` |
 
 ---
 
