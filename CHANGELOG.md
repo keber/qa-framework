@@ -11,6 +11,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **`qa-api-integration` skill and API testing conventions (`qa/00-standards/api-testing-conventions.md`).**
+  A ninth skill, for the API track of stage 5 (automation; not a new stage), written
+  against the integration scaffold and the write-safety policy as they ship: adding a read
+  endpoint (append at the end when ids follow catalog order; stable ids derived from the
+  route for generated catalogs); the response contract and why "responds 200" proves
+  nothing; asserting what the specification requires, with `test.fail()` and an open
+  defect when the API departs from it; the session (its validity decided by the server,
+  not by the age of a file; tests that need it fail instead of skipping); enabling a
+  write for a new entity (`references/enabling-writes.md`); the four-step endpoint
+  discovery method with its known limits (`references/endpoint-discovery.md`, a
+  documented method, no shipped code); case ids `API-{GROUP}-{NNN}` and file names. The
+  conventions document holds the project's own values and observations and refers to the
+  skill and the policy instead of restating them. Listed in the pipeline tables of both
+  rules templates, with its `/qa-api-integration` command. Ported from the API testing
+  conventions written by `marcela.berriosc` in a consumer project. `init` installs both;
+  `upgrade` delivers the skill and its command to existing projects, but not the
+  conventions document (standards documents are not handled by `upgrade` yet).
 - **Write-safety policy (`qa/00-standards/write-safety-policy.md`).** One written policy
   for every automated test that can change data, referenced by API and by load and
   performance testing instead of two separate rule sets. Read-only by default; four write

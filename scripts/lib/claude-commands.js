@@ -21,6 +21,7 @@ const STAGE_PREREQUISITES = {
   'qa-test-plan': 'Prerequisite: `05-test-scenarios.md` exists.',
   'qa-test-cases': 'Prerequisite: Test plan exists.',
   'qa-automation': 'Prerequisite: Specs approved, no PENDING-CODE.',
+  'qa-api-integration': 'Prerequisite: Integration scaffold in `qa/07-automation/integration/`.',
   'qa-test-stabilization': 'Prerequisite: Failing or flaky tests exist in `qa/07-automation/e2e/`.',
   'qa-maintenance': 'Prerequisite: Application change delivered.',
   'qa-ado-integration': 'Prerequisite: ADO enabled in `qa/qa-framework.config.json`.',

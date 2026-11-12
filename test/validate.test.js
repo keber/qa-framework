@@ -38,7 +38,7 @@ const MODULE_BARE = 'suppliers';
 const SUB_BARE = 'create';
 
 // Builds the authoritative spec layout: qa/01-specifications/{module}/{submodule}/.
-// This is what init.js writes, what all 8 skills declare, and what the three live
+// This is what init.js writes, what every pipeline skill declares, and what the three live
 // consuming projects actually contain.
 function makeCompleteQaStructure(projectRoot) {
   const qaRoot = path.join(projectRoot, 'qa');

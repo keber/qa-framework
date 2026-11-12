@@ -101,6 +101,7 @@ two tracks that can run in parallel or independently depending on team maturity.
 | `qa-test-plan/` | 3 | Creating a test plan document |
 | `qa-test-cases/` | 4 | Writing TC-*.md files |
 | `qa-automation/` | 5 | Implementing Playwright specs |
+| `qa-api-integration/` | 5 | Writing API tests in `qa/07-automation/integration/` |
 | `qa-test-stabilization/` | 5b | Diagnosing and fixing failing tests |
 | `qa-ado-integration/` | opt | Syncing with Azure DevOps Test Plans |
 | `qa-maintenance/` | 6 | Updating specs and tests after app changes |

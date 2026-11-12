@@ -105,6 +105,7 @@ qa-framework/
 │   ├── qa-test-plan/                 <- Stage 3: Plan de Pruebas (plan + TC table with steps)
 │   ├── qa-test-cases/                <- Stage 4: expand steps in Plan de Pruebas table
 │   ├── qa-automation/                <- Stage 5: implement Playwright automation
+│   ├── qa-api-integration/           <- Stage 5 (API track): API tests, catalog, contract, writes
 │   ├── qa-test-stabilization/        <- Stage 5b: stabilize failing tests
 │   ├── qa-maintenance/               <- Stage 6: update artifacts after app changes
 │   └── qa-ado-integration/           <- Optional: sync with Azure DevOps
@@ -237,6 +238,7 @@ Skills map to the pipeline stages enforced by `.github/instructions/qa-framework
 | 3 | `qa-test-plan` | Generate Plan de Pruebas (plan + TC table with steps) | Both | `05-test-scenarios.md` exists |
 | 4 | `qa-test-cases` | Expand steps in Plan de Pruebas table | Both (optional) | Plan de Pruebas exists |
 | 5 | `qa-automation` | Implement Playwright tests | Automation | Specs approved, no PENDING-CODE |
+| 5 | `qa-api-integration` | Implement API tests (no browser) | Automation | Integration scaffold in `qa/07-automation/integration/` |
 | 5b | `qa-test-stabilization` | Stabilize failing tests | Automation | Failing tests exist |
 | 6 | `qa-maintenance` | Update artifacts after app changes | Both | Delivered change |
 | - | `qa-ado-integration` | Sync with Azure DevOps Test Plans | Both | Plan de Pruebas with steps exists |

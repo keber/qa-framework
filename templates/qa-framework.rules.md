@@ -126,6 +126,7 @@ Stages must run in order. Never start a stage unless its prerequisite is met.
 | 3 | Generate test plan | `/qa-test-plan` | 05-test-scenarios.md exists |
 | 4 | Generate test cases | `/qa-test-cases` | Test plan exists |
 | 5 | Generate automation | `/qa-automation` | Specs approved, no PENDING-CODE |
+| 5 | Generate API tests | `/qa-api-integration` | Integration scaffold in qa/07-automation/integration/ |
 | 5b | Stabilize failing tests | `/qa-test-stabilization` | Failing tests exist |
 | 6 | Maintenance | `/qa-maintenance` | Application change delivered |
 | - | ADO integration | `/qa-ado-integration` | ADO enabled in config |
