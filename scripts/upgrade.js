@@ -12,18 +12,26 @@
  *     - .github/copilot-instructions.md <- Pipeline sequencer; framework-owned
  *     - qa/QA-STRUCTURE-GUIDE.md    <- Folder reference; framework-owned
  *
+ *   Every move below needs positive evidence that the source is a framework leftover.
+ *   Without it the path is left where it is and reported as a warning: an upgrade that
+ *   migrates too little and says so beats one that relocates user work.
+ *
  *   MIGRATES (v1.5.x -> v1.6.0, non-destructive):
+ *     Only when qa/07-automation/playwright.config.ts exists (the v1.5.x location):
  *     - qa/07-automation/playwright.config.ts  -> qa/07-automation/e2e/
  *     - qa/07-automation/global-setup.ts       -> qa/07-automation/e2e/
  *     - qa/07-automation/package.json          -> qa/07-automation/e2e/
  *     - qa/07-automation/.env.example          -> qa/07-automation/e2e/
  *     - qa/07-automation/fixtures/             -> qa/07-automation/e2e/fixtures/
+ *     Only while playwright.config.ts still has the v1.5.x testDir '.':
  *     - qa/07-automation/e2e/{module}/         -> qa/07-automation/e2e/tests/{module}/
  *       (only folders holding *.spec.* files; lib/, node_modules/, dot-folders stay)
- *     - Creates integration/ and load/ placeholders *     - Patches playwright.config.ts: testDir '.' -> './tests', adds testIgnore
+ *     - Creates integration/ and load/ placeholders
+ *     - Patches playwright.config.ts: testDir '.' -> './tests', adds testIgnore
  *     - Creates tests/helpers/debug/ and tests/seeds/ if absent
  *
  *   MIGRATES (v1.6.x -> v1.7.0, non-destructive):
+ *     Only folders holding at least one pre-v1.7.0 plan (see below):
  *     - qa/02-test-plans/automated/  -> qa/02-test-plans/sprints/legacy-automated/
  *     - qa/02-test-plans/manual/     -> qa/02-test-plans/sprints/legacy-manual/
  *     - qa/02-test-plans/*-test-plan.md (or "**Plan ID**: TP-" header) -> sprints/legacy/
@@ -273,12 +281,28 @@ if (fs.existsSync(oldGuidesDir)) {
 const automationDir  = path.join(qaRoot, '07-automation');
 const e2eDir         = path.join(automationDir, 'e2e');
 
+// Evidence of the pre-v1.6.0 layout: v1.5.x kept playwright.config.ts directly in
+// 07-automation/. Without it, files and folders found there (a workspace package.json,
+// a shared fixtures/ folder) are user-owned and are reported, never moved.
+const legacyRootConfig = path.join(automationDir, 'playwright.config.ts');
+const isV15Layout      = fs.existsSync(legacyRootConfig);
+// The testDir value v1.5.x shipped. Section 5e rewrites it to './tests'.
+const LEGACY_TESTDIR_RE = /testDir\s*:\s*['"]\.['"]/;
+
+function warnNotMigrated(rel, reason) {
+  warnings.push(`${rel} left in place - ${reason}. Move it by hand if it is a v1.5.x leftover.`);
+}
+
 // 5a. Scaffold files: 07-automation/*.* -> 07-automation/e2e/*.*
 const scaffoldFiles = ['playwright.config.ts', 'global-setup.ts', 'package.json', '.env.example', 'package-lock.json'];
 for (const file of scaffoldFiles) {
   const oldPath = path.join(automationDir, file);
   const newPath = path.join(e2eDir, file);
   if (fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
+    if (!isV15Layout) {
+      warnNotMigrated(`qa/07-automation/${file}`, 'no v1.5.x qa/07-automation/playwright.config.ts proves it is legacy');
+      continue;
+    }
     if (!dryRun) {
       fs.mkdirSync(e2eDir, { recursive: true });
       fs.renameSync(oldPath, newPath);
@@ -294,7 +318,7 @@ const fixtureFiles = ['auth.ts', 'test-helpers.ts', 'base.ts'];
 for (const file of fixtureFiles) {
   const oldPath = path.join(automationDir, 'fixtures', file);
   const newPath = path.join(scaffoldFixturesDir, file);
-  if (fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
+  if (isV15Layout && fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
     if (!dryRun) {
       fs.mkdirSync(scaffoldFixturesDir, { recursive: true });
       fs.renameSync(oldPath, newPath);
@@ -307,7 +331,9 @@ for (const file of fixtureFiles) {
 // 5b. fixtures/: 07-automation/fixtures/ -> 07-automation/e2e/fixtures/
 const oldFixturesDir = path.join(automationDir, 'fixtures');
 const newFixturesDir = path.join(e2eDir, 'fixtures');
-if (fs.existsSync(oldFixturesDir) && !fs.existsSync(newFixturesDir)) {
+if (fs.existsSync(oldFixturesDir) && !isV15Layout) {
+  warnNotMigrated('qa/07-automation/fixtures/', 'no v1.5.x qa/07-automation/playwright.config.ts proves it is legacy');
+} else if (fs.existsSync(oldFixturesDir) && !fs.existsSync(newFixturesDir)) {
   if (!dryRun) {
     fs.mkdirSync(e2eDir, { recursive: true });
     fs.renameSync(oldFixturesDir, newFixturesDir);
@@ -344,10 +370,36 @@ function containsSpecFile(dir) {
   return false;
 }
 
+// Holding specs is not enough: since v1.6.0 testDir is './tests', so a spec folder
+// beside tests/ (temp/, archive/...) was put there on purpose and must stay. Folders
+// are moved only while the project still runs on the v1.5.x testDir '.', where every
+// e2e/{module}/ was part of the suite. In dry-run, 5a has not moved the root config yet.
+function hasLegacyTestDir() {
+  const e2eConfig = path.join(e2eDir, 'playwright.config.ts');
+  const cfgPath = fs.existsSync(e2eConfig) ? e2eConfig : isV15Layout ? legacyRootConfig : null;
+  if (!cfgPath) return false;
+  try {
+    return LEGACY_TESTDIR_RE.test(fs.readFileSync(cfgPath, 'utf8'));
+  } catch (err) {
+    warnings.push(`Cannot read ${path.relative(cwd, cfgPath)} (${err.code}) - e2e/ folders not migrated.`);
+    return false;
+  }
+}
+
 if (fs.existsSync(e2eDir)) {
-  for (const entry of fs.readdirSync(e2eDir, { withFileTypes: true })) {
-    if (!entry.isDirectory() || knownE2eDirs.has(entry.name) || entry.name.startsWith('.')) continue;
-    if (!containsSpecFile(path.join(e2eDir, entry.name))) continue;
+  const specFolders = fs.readdirSync(e2eDir, { withFileTypes: true }).filter((entry) =>
+    entry.isDirectory() && !knownE2eDirs.has(entry.name) && !entry.name.startsWith('.') &&
+    containsSpecFile(path.join(e2eDir, entry.name)));
+  const legacyLayout = specFolders.length > 0 && hasLegacyTestDir();
+
+  for (const entry of specFolders) {
+    if (!legacyLayout) {
+      warnings.push(
+        `e2e/${entry.name}/ holds spec files outside e2e/tests/ - left in place (the project is ` +
+        `not on the v1.5.x testDir '.' layout). Move it into tests/ by hand if it should run.`
+      );
+      continue;
+    }
     const oldModDir = path.join(e2eDir, entry.name);
     const newModDir = path.join(testsDir, entry.name);
     if (!fs.existsSync(newModDir)) {
@@ -411,7 +463,7 @@ if (fs.existsSync(playwrightConfigPath)) {
   let cfgChanged = false;
 
   // Fix testDir: '.' -> './tests'
-  if (/testDir\s*:\s*['"]\.['"]/.test(cfg)) {
+  if (LEGACY_TESTDIR_RE.test(cfg)) {
     cfg = cfg.replace(/testDir\s*:\s*['"]\.['"]/g, "testDir:  './tests'");
     cfgChanged = true;
     console.log(`  [patched] e2e/playwright.config.ts - testDir: '.' -> './tests'`);
@@ -454,11 +506,42 @@ const testPlansDir = path.join(qaRoot, '02-test-plans');
 const sprintsDir   = path.join(testPlansDir, 'sprints');
 
 if (fs.existsSync(testPlansDir)) {
+  // A file is a provable pre-v1.7.0 plan when it is
+  // named {module}-test-plan.md / {module}-{track}-test-plan.md (qa-test-plan <= v1.6.x),
+  // or generated from the old templates/test-plan.md (header "**Plan ID**: TP-...").
+  const LEGACY_PLAN_NAME_RE   = /-test-plan\.md$/i;
+  const LEGACY_PLAN_HEADER_RE = /^\*\*Plan ID\*\*:\s*TP-/m;
+  const isLegacyPlan = (file) => {
+    if (LEGACY_PLAN_NAME_RE.test(path.basename(file))) return true;
+    try {
+      return LEGACY_PLAN_HEADER_RE.test(fs.readFileSync(file, 'utf8'));
+    } catch (err) {
+      warnings.push(`Cannot read ${path.relative(cwd, file)} (${err.code}) - not migrated.`);
+      return false;
+    }
+  };
+  // qa-test-plan <= v1.6.x wrote into automated/ and manual/; init never created them.
+  // A folder with that name but no legacy plan inside was made by the user after v1.7.0.
+  const holdsLegacyPlan = (dir) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (err) {
+      warnings.push(`Cannot inspect ${path.relative(cwd, dir)} (${err.code}) - not migrated.`);
+      return false;
+    }
+    return entries.some((e) => e.isFile() && e.name.endsWith('.md') && isLegacyPlan(path.join(dir, e.name)));
+  };
+
   const legacySubdirs = ['automated', 'manual'];
   for (const sub of legacySubdirs) {
     const oldDir = path.join(testPlansDir, sub);
     const newDir = path.join(sprintsDir, `legacy-${sub}`);
     if (fs.existsSync(oldDir) && !fs.existsSync(newDir)) {
+      if (!holdsLegacyPlan(oldDir)) {
+        warnNotMigrated(`qa/02-test-plans/${sub}/`, 'it holds no pre-v1.7.0 test plan');
+        continue;
+      }
       if (!dryRun) {
         fs.mkdirSync(sprintsDir, { recursive: true });
         fs.renameSync(oldDir, newDir);
@@ -468,22 +551,8 @@ if (fs.existsSync(testPlansDir)) {
     }
   }
 
-  // Move flat .md files in 02-test-plans/ only when they are provably pre-v1.7.0 plans:
-  // named {module}-test-plan.md / {module}-{track}-test-plan.md (qa-test-plan <= v1.6.x),
-  // or generated from the old templates/test-plan.md (header "**Plan ID**: TP-...").
+  // Move flat .md files in 02-test-plans/ only when they are provably pre-v1.7.0 plans.
   // Any other flat .md (README.md, plan-sprint-1.md, notes) is user-owned and stays.
-  const LEGACY_PLAN_NAME_RE   = /-test-plan\.md$/i;
-  const LEGACY_PLAN_HEADER_RE = /^\*\*Plan ID\*\*:\s*TP-/m;
-  const isLegacyPlan = (file) => {
-    if (LEGACY_PLAN_NAME_RE.test(path.basename(file))) return true;
-    try {
-      return LEGACY_PLAN_HEADER_RE.test(fs.readFileSync(file, 'utf8'));
-    } catch (err) {
-      warnings.push(`Cannot read 02-test-plans/${path.basename(file)} (${err.code}) - not migrated.`);
-      return false;
-    }
-  };
-
   if (fs.existsSync(testPlansDir)) {
     const legacyDir = path.join(sprintsDir, 'legacy');
     for (const entry of fs.readdirSync(testPlansDir, { withFileTypes: true })) {

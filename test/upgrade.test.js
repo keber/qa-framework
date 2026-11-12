@@ -509,10 +509,39 @@ test('upgrade: non-module folders under e2e/ are never moved into tests/', () =>
   }
 });
 
+/**
+ * Turn a freshly initialised project into the pre-v1.6.0 layout: playwright.config.ts,
+ * global-setup.ts, package.json and .env.example live directly in qa/07-automation/
+ * with testDir '.', and specs sit in e2e/{module}/ (what init.js generated up to v1.5.x).
+ */
+function makeV15Layout(root) {
+  const automation = path.join(root, 'qa', '07-automation');
+  for (const file of ['playwright.config.ts', 'global-setup.ts', 'package.json', '.env.example']) {
+    fs.renameSync(path.join(e2e(root), file), path.join(automation, file));
+  }
+  const cfg = path.join(automation, 'playwright.config.ts');
+  fs.writeFileSync(
+    cfg,
+    fs.readFileSync(cfg, 'utf8').replace(/testDir\s*:\s*'\.\/tests'/, "testDir:  '.'"),
+    'utf8'
+  );
+}
+
+/** Point e2e/playwright.config.ts at testDir '.' - the pre-v1.6.0 value, mid-migration. */
+function setLegacyTestDir(root) {
+  const cfg = path.join(e2e(root), 'playwright.config.ts');
+  fs.writeFileSync(
+    cfg,
+    fs.readFileSync(cfg, 'utf8').replace(/testDir\s*:\s*'\.\/tests'/, "testDir:  '.'"),
+    'utf8'
+  );
+}
+
 test('upgrade: a legacy e2e/{module}/ folder holding specs is still moved into tests/', () => {
   const root = tmpProject();
   try {
     assert.equal(runInit(root).status, 0);
+    setLegacyTestDir(root);
     write(path.join(e2e(root), 'login', 'login.spec.ts'));
     write(path.join(e2e(root), 'billing', 'invoices', 'list.spec.ts'));
 
@@ -581,6 +610,7 @@ test('upgrade: --dry-run reports legacy module and plan moves but moves nothing'
   const root = tmpProject();
   try {
     assert.equal(runInit(root).status, 0);
+    makeV15Layout(root);
     write(path.join(e2e(root), 'login', 'login.spec.ts'));
     write(path.join(testPlans(root), 'login-test-plan.md'), '# Test Plan\n');
     const before = snapshot(path.join(root, 'qa'));
@@ -591,6 +621,165 @@ test('upgrade: --dry-run reports legacy module and plan moves but moves nothing'
     assert.match(result.stdout, /\[migrated\] e2e\/login\//);
     assert.match(result.stdout, /\[migrated\] 02-test-plans\/login-test-plan\.md/);
     assert.deepEqual(snapshot(path.join(root, 'qa')), before, 'dry-run must not move any file');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// A1 regression (field report against v1.12.0, qa/memory/framework-known-issues.md
+// in a consumer project): upgrade relocated user folders it did not recognise.
+// Every shape below is taken from a real consumer installation.
+// ---------------------------------------------------------------------------
+
+test('upgrade A1: field-report shapes (lib/, node_modules/, flat plans) are left byte-identical', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    // Page-object library (lib/core + lib/screens), and a lib/ that holds its own
+    // specs because a Playwright project points testDir at './lib/fixtures/cli'.
+    write(path.join(e2e(root), 'lib', 'core', 'base-page.ts'));
+    write(path.join(e2e(root), 'lib', 'screens', 'login.screen.ts'));
+    write(path.join(e2e(root), 'lib', 'db', 'read-only-guard.ts'));
+    write(path.join(e2e(root), 'lib', 'fixtures', 'cli', 'agr.spec.ts'));
+    write(path.join(e2e(root), 'node_modules', '@playwright', 'test', 'index.js'));
+    write(path.join(e2e(root), 'node_modules', 'some-dep', 'self.spec.js'));
+    write(path.join(testPlans(root), 'Plan-de-Pruebas-Proyecto-DOT.md'), '# Plan de Pruebas\n');
+    write(path.join(testPlans(root), 'README.md'), '# Planes\n');
+
+    const before = {
+      lib: snapshot(path.join(e2e(root), 'lib')),
+      nodeModules: snapshot(path.join(e2e(root), 'node_modules')),
+    };
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    assert.deepEqual(snapshot(path.join(e2e(root), 'lib')), before.lib, 'e2e/lib/ must not change');
+    assert.deepEqual(
+      snapshot(path.join(e2e(root), 'node_modules')),
+      before.nodeModules,
+      'e2e/node_modules/ must not change'
+    );
+    assert.ok(!fs.existsSync(path.join(e2e(root), 'tests', 'lib')));
+    assert.ok(!fs.existsSync(path.join(e2e(root), 'tests', 'node_modules')));
+    for (const name of ['Plan-de-Pruebas-Proyecto-DOT.md', 'README.md']) {
+      assert.ok(fs.existsSync(path.join(testPlans(root), name)), `${name} must stay in place`);
+    }
+    assert.ok(!fs.existsSync(path.join(testPlans(root), 'sprints', 'legacy')));
+    assert.doesNotMatch(result.stdout, /\[migrated\]/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade A1: unknown spec folders in a post-v1.6.0 project (testDir ./tests) are not moved', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    // Specs deliberately kept outside testDir: scratch probes, parked suites.
+    write(path.join(e2e(root), 'temp', 'probe.spec.ts'));
+    write(path.join(e2e(root), 'archive', 'old-login.spec.ts'));
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    for (const rel of [path.join('temp', 'probe.spec.ts'), path.join('archive', 'old-login.spec.ts')]) {
+      assert.ok(fs.existsSync(path.join(e2e(root), rel)), `e2e/${rel} must stay where it is`);
+      assert.ok(!fs.existsSync(path.join(e2e(root), 'tests', rel)));
+    }
+    assert.doesNotMatch(result.stdout, /\[migrated\] e2e\//);
+    // Left alone, but reported so the user can decide.
+    assert.match(result.stdout, /e2e\/temp\//);
+    assert.match(result.stdout, /e2e\/archive\//);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade A1: spec folders are not moved when no playwright.config.ts proves the layout', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    fs.rmSync(path.join(e2e(root), 'playwright.config.ts'));
+    write(path.join(e2e(root), 'login', 'login.spec.ts'));
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    assert.ok(fs.existsSync(path.join(e2e(root), 'login', 'login.spec.ts')));
+    assert.ok(!fs.existsSync(path.join(e2e(root), 'tests', 'login')));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade A1: a real v1.5.x layout is still migrated end to end', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    makeV15Layout(root);
+    write(path.join(e2e(root), 'login', 'login.spec.ts'));
+    write(path.join(e2e(root), 'lib', 'helpers.ts'));
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    for (const file of ['playwright.config.ts', 'global-setup.ts', 'package.json', '.env.example']) {
+      assert.ok(fs.existsSync(path.join(e2e(root), file)), `${file} should be in e2e/`);
+    }
+    assert.ok(fs.existsSync(path.join(e2e(root), 'tests', 'login', 'login.spec.ts')));
+    assert.ok(fs.existsSync(path.join(e2e(root), 'lib', 'helpers.ts')), 'lib/ is never a module');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade A1: 07-automation/ root files are not moved into e2e/ without a legacy root config', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    // A workspace-level package.json next to e2e/ and integration/, plus a shared
+    // fixtures/ folder: user-owned, not leftovers of the v1.5.x layout.
+    const automation = path.join(root, 'qa', '07-automation');
+    fs.rmSync(path.join(e2e(root), 'package.json'));
+    write(path.join(automation, 'package.json'), '{ "private": true, "workspaces": ["e2e", "integration"] }\n');
+    fs.rmSync(path.join(e2e(root), 'fixtures'), { recursive: true, force: true });
+    write(path.join(automation, 'fixtures', 'shared-data.ts'));
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    assert.ok(fs.existsSync(path.join(automation, 'package.json')), '07-automation/package.json must stay');
+    assert.ok(!fs.existsSync(path.join(e2e(root), 'package.json')));
+    assert.ok(
+      fs.existsSync(path.join(automation, 'fixtures', 'shared-data.ts')),
+      '07-automation/fixtures/ must stay'
+    );
+    assert.ok(!fs.existsSync(path.join(e2e(root), 'fixtures', 'shared-data.ts')));
+    assert.doesNotMatch(result.stdout, /\[migrated\] qa/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade A1: 02-test-plans/{automated,manual}/ move only when they hold pre-v1.7.0 plans', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    // Legacy: what qa-test-plan <= v1.6.x wrote ({module}-test-plan.md).
+    write(path.join(testPlans(root), 'automated', 'pp-bprole-test-plan.md'), '# Test Plan\n');
+    // User-created after v1.7.0: nothing in it proves it is a legacy folder.
+    write(path.join(testPlans(root), 'manual', 'checklist-regresion.md'), '# Checklist\n');
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    assert.ok(
+      fs.existsSync(path.join(testPlans(root), 'sprints', 'legacy-automated', 'pp-bprole-test-plan.md'))
+    );
+    assert.ok(fs.existsSync(path.join(testPlans(root), 'manual', 'checklist-regresion.md')), 'manual/ must stay');
+    assert.ok(!fs.existsSync(path.join(testPlans(root), 'sprints', 'legacy-manual')));
+    assert.match(result.stdout, /02-test-plans\/manual\//);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

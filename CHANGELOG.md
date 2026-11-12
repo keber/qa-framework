@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **`upgrade` moves a path only with positive evidence that it is a framework leftover.**
+  The field report against v1.12.0 (`lib/` and `node_modules/` moved into `e2e/tests/`,
+  flat plans moved to `sprints/legacy/`) no longer reproduces since 1.13.2, and is now
+  pinned by regression tests built from real consumer layouts. The same guessing pattern
+  survived in three other places and is closed here:
+  - `e2e/{folder}/` holding `*.spec.*` files was moved into `tests/` even in projects
+    already on `testDir: './tests'` (e.g. `temp/`, `archive/` kept outside the suite on
+    purpose). It is now moved only while `playwright.config.ts` still has the v1.5.x
+    `testDir: '.'`; otherwise it stays and is reported.
+  - `07-automation/{playwright.config.ts,global-setup.ts,package.json,.env.example,package-lock.json}`
+    and `07-automation/fixtures/` were moved into `e2e/` whenever the target was missing,
+    which also caught a user's workspace `package.json` or shared `fixtures/`. They now
+    move only when `07-automation/playwright.config.ts` (the v1.5.x location) exists.
+  - `02-test-plans/automated/` and `02-test-plans/manual/` were moved to
+    `sprints/legacy-*/` by name alone. They now move only when they hold at least one
+    pre-v1.7.0 plan (`*-test-plan.md` or the `**Plan ID**: TP-` header).
+  Anything left in place is listed under Warnings so the user can decide.
+
+---
+
 ## [1.13.2] - 2026-11-06
 
 ### Fixed
