@@ -444,7 +444,10 @@ test('delivery: an integration/ holding only the pre-1.11 placeholder README get
     const result = runUpgrade(root);
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(snapshot(integration(root)), before);
-    assert.doesNotMatch(result.stdout, /integration\//);
+    // A path segment named integration, with either separator: `/integration\//` never
+    // matched on Windows (backslash paths, so the assertion passed without checking
+    // anything) and matched skill names such as qa-api-integration/ on Linux.
+    assert.doesNotMatch(result.stdout, /(?<![\w-])integration[\\/]/);
   });
 });
 
