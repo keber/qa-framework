@@ -88,6 +88,12 @@ const path = require('path');
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
 const { isSprintCycleEnabled, renderAllAgents } = require('./lib/claude-agents');
 
+// Version stamped into the rule files. Always the package running the upgrade, never
+// the consumer's frameworkVersion: that is a copy init wrote once and nothing updates
+// (upgrade does not rewrite user config), so reading it froze both files at the
+// scaffold-time version across every later upgrade.
+const PACKAGE_VERSION = require(path.resolve(__dirname, '..', 'package.json')).version;
+
 const args   = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 
@@ -207,7 +213,7 @@ if (!fs.existsSync(skillsSrc)) {
 const copilotInstrPath = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
 const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.instructions.md');
 const copilotContent = fs.readFileSync(instrTemplatePath, 'utf8')
-  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
+  .replace('{{VERSION}}', PACKAGE_VERSION);
 forceWrite(copilotInstrPath, copilotContent);
 
 // ---------------------------------------------------------------------------
@@ -221,7 +227,7 @@ for (const skillName of discoverSkillNames(skillsSrc)) {
 const claudeRulesPath   = path.join(cwd, '.claude', 'rules', 'qa-framework.md');
 const rulesTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.rules.md');
 const claudeRulesContent = fs.readFileSync(rulesTemplatePath, 'utf8')
-  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
+  .replace('{{VERSION}}', PACKAGE_VERSION);
 forceWrite(claudeRulesPath, claudeRulesContent);
 
 // ---------------------------------------------------------------------------

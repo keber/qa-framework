@@ -29,6 +29,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Installed rules always show the installed package version.** `init` and `upgrade`
+  stamped `v{{VERSION}}` in `.github/instructions/qa-framework.instructions.md` and
+  `.claude/rules/qa-framework.md` (and `v{VERSION}` in `qa/README.md`) from the
+  consumer's `frameworkVersion`, a copy written once at scaffold time that nothing
+  updates. After `npm update` plus `upgrade`, both files kept the original version. They
+  now take the version from the package's own `package.json`. The consumer config is
+  still never rewritten.
 - **`lane-lock.js` `heartbeat` and `release` can check the holder.** After a sweep and a
   re-acquisition by someone else, a late `heartbeat` from the previous owner kept the new
   holder's lane alive and a late `release` freed it under them. Both now accept an

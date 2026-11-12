@@ -18,6 +18,11 @@ const path = require('path');
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
 const { AGENT_NAMES, isSprintCycleEnabled, renderAllAgents } = require('./lib/claude-agents');
 
+// Version stamped into the installed agent rules and qa/README.md. Always the package
+// doing the install: the consumer's frameworkVersion is a one-time copy that nothing
+// updates, so reading it left both rule files on the scaffold-time version forever.
+const PACKAGE_VERSION = require(path.resolve(__dirname, '..', 'package.json')).version;
+
 // --- Parse args ---
 const args            = process.argv.slice(2);
 const configFlag      = args.indexOf('--config');
@@ -120,7 +125,7 @@ if (fs.existsSync(qaReadmeTemplate)) {
   let readmeContent = fs.readFileSync(qaReadmeTemplate, 'utf8');
   readmeContent = readmeContent
     .replace(/\{PROJECT_DISPLAY_NAME\}/g, config.project?.displayName ?? config.project?.name ?? 'Project')
-    .replace(/\{VERSION\}/g, config.frameworkVersion ?? '1.0.0')
+    .replace(/\{VERSION\}/g, PACKAGE_VERSION)
     .replace(/\{LANGUAGE\}/g, config.conventions?.language ?? 'en')
     .replace(/\{QA_BASE_URL\}/g, config.project?.qaBaseUrl ?? '<QA_BASE_URL>');
   writeIfMissing(path.join(qaRoot, 'README.md'), readmeContent);
@@ -340,7 +345,7 @@ const copilotInstrPath  = path.join(githubDir, 'instructions', 'qa-framework.ins
 
 const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.instructions.md');
 const copilotInstrContent = fs.readFileSync(instrTemplatePath, 'utf8')
-  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
+  .replace('{{VERSION}}', PACKAGE_VERSION);
 writeIfMissing(copilotInstrPath, copilotInstrContent);
 
 // --- .claude/commands/qa-*.md - thin wrappers pointing at .github/skills/ ---
@@ -354,7 +359,7 @@ for (const skillName of discoverSkillNames(skillsSrc)) {
 const claudeRulesPath  = path.join(cwd, '.claude', 'rules', 'qa-framework.md');
 const rulesTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.rules.md');
 const claudeRulesContent = fs.readFileSync(rulesTemplatePath, 'utf8')
-  .replace('{{VERSION}}', config.frameworkVersion ?? '1.0.0');
+  .replace('{{VERSION}}', PACKAGE_VERSION);
 writeIfMissing(claudeRulesPath, claudeRulesContent);
 
 // --- .claude/agents/qa-*.md - optional ANALISIS/PLAN sprint-cycle mode (Claude Code only) ---
