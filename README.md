@@ -64,6 +64,9 @@ npm install @keber/qa-framework
 4. Generate `.github/instructions/qa-framework.instructions.md` with QA agent behavior rules (11 rules + ADO detection)
 5. Copy the `skills/` set to `.github/skills/` so the agent can load them on demand
 6. Create `qa/AGENT-NEXT-STEPS.md` with follow-up steps
+7. Install `qa/00-standards/agents-md-template.md`, a review-rulebook template to copy to
+   `AGENTS.md` at the repository root. `init` never writes a root `AGENTS.md` and `upgrade`
+   never touches one: it is project-owned
 
 ### Upgrading
 

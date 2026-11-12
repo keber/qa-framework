@@ -145,6 +145,7 @@ updates every command that references it - no regeneration needed, zero drift po
 | `execution-report-template.md` | How to write an execution report |
 | `write-safety-policy.md` | The single write policy for tests that can change data in a system under test (API, load, scripts) |
 | `api-testing-conventions.md` | The project's own API values and observations; the method lives in the `qa-api-integration` skill |
+| `agents-md-template.md` | Review rulebook template: ten sections of rules with citable IDs, a tracked exceptions register and a "what NOT to report" table. Copy it to `AGENTS.md` at the repository root and fill in the placeholders. The framework never writes or edits a root `AGENTS.md` |
 
 ---
 

@@ -36,6 +36,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   move to `storageState`. `run-opt-in.js` is delivered per file: installed when absent,
   refreshed when pristine, kept with a warning when edited.
 
+- **`AGENTS.md` review-rulebook template (`qa/00-standards/agents-md-template.md`).** The
+  ten-section structure that several projects converged on independently: security (`S*`),
+  character encoding, assertion integrity (`A*`), specification traceability (`T*`),
+  framework structure (`E*`), verification tools (`H*`), scope restrictions (`L*`),
+  automation (`P*`), commit messages (`C*`) and "what NOT to report as a finding", an
+  anti-noise table for recurring false positives from AI reviewers. Automation carries a
+  tracked exceptions register: no exception without an ID, a live-verified justification
+  and a new-callers clause, so reviewers stop re-reporting known exceptions. English with
+  `{{PLACEHOLDER}}` values. `init` installs it under `qa/00-standards/` when missing and
+  points to it from `qa/AGENT-NEXT-STEPS.md`; it never writes a root `AGENTS.md`, which
+  several coding agents load automatically and which belongs to the project. `upgrade`
+  delivers the template under `qa/00-standards/` to projects that do not have it, never
+  overwrites an existing copy and never creates or edits a root `AGENTS.md`.
 - **Defect-suite polarity helper (`qa/07-automation/e2e/fixtures/defects.ts`).** A test
   asserts what the specification requires; when an open defect makes it fail, it is
   marked instead of being bent to the current behaviour, so the run stays green while
