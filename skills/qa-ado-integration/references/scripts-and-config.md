@@ -6,6 +6,26 @@
 
 ## PowerShell Scripts Usage
 
+### Credentials: read and write variables
+
+The scripts follow the read/write split of `references/credential-policy.md` (section 5).
+Set the variables in the process that runs the script, never as persisted user or machine
+variables:
+
+| Variable | Used for | Fallback |
+|---|---|---|
+| `ADO_ORG` | Organization name (`https://dev.azure.com/<name>`) or full organization URL | - |
+| `ADO_PROJECT_READ` | The project read-only tooling reads from (work items, PRs, code) | `ADO_PROJECT` |
+| `ADO_PAT_READ` | PAT with read scopes only, for tooling that never writes | `ADO_PAT` |
+| `ADO_PROJECT_WRITE` | The project QA writes test plans, test cases, results and defects to | `ADO_PROJECT` |
+| `ADO_PAT_WRITE` | PAT with the write scopes the write scripts need | `ADO_PAT` |
+
+Every shipped script that calls ADO writes, so all of them prefer `ADO_PROJECT_WRITE` and
+`ADO_PAT_WRITE` (`publish-results.ps1`, `create-issue.ps1`, `sync-ado-titles.ps1`,
+`create-testplan-from-mapping.ps1`); read-only recipes such as the work item full-read
+protocol use the `_READ` pair. An explicit `-ProjectName`, `-Token` or `-Session` always wins.
+A missing value is reported by variable name, never by value.
+
 ### create-testplan-from-mapping.ps1
 
 Creates ADO Test Cases from a `tc-mapping.json` file and adds them to an existing plan and
@@ -23,12 +43,19 @@ call patterns).
 ```
 
 - `-SuiteId` is optional: without it the `suiteId` of the mapping file is used.
-- `-Session` is optional when `$AdoSession` is visible from the script. With no usable session
-  (missing `Org`, `Project` or `Headers.Authorization`) the script stops before any ADO call
-  and names what is missing.
+- Session resolution: `-Session` as given; else a visible `$AdoSession`, whose `Project` and
+  `Authorization` are replaced by `ADO_PROJECT_WRITE` and `ADO_PAT_WRITE` when those are set;
+  else a session built from `ADO_ORG`, `ADO_PROJECT_WRITE` (or `ADO_PROJECT`) and
+  `ADO_PAT_WRITE` (or `ADO_PAT`). With no usable session (missing `Org`, `Project` or
+  `Headers.Authorization`) the script stops before any ADO call and names what is missing.
+- When the helpers are not loaded, the script dot-sources the `load.ps1` of the nearest
+  `node_modules/@keber/ado-powershell`, walking up from the current directory (run it from
+  the project root). If none is found it stops and says to run
+  `npm install @keber/ado-powershell`.
 
-Output: `ado-ids.json` (next to the mapping file, or `-OutputFile`) with the created WI IDs,
-the input of `inject-ado-ids.ps1`; record the plan and suite IDs in `module-registry.json`.
+Output: `ado-ids.json` (next to the mapping file, or `-OutputFile`), a UTF-8 JSON array without
+BOM with the created WI IDs, the input of `inject-ado-ids.ps1`; record the plan and suite IDs
+in `module-registry.json`.
 
 ### Listing test suites
 
@@ -78,6 +105,10 @@ Adds annotation:
 test.info().annotations.push({ type: 'TestCase', description: '22957' });
 ```
 
+Spec files are read as UTF-8 and a modified file is written back as UTF-8 without BOM with
+its original line endings (CRLF or LF); accents are preserved and a file that needs no change
+is not rewritten.
+
 ---
 
 ### sync-ado-titles.ps1
@@ -85,17 +116,90 @@ test.info().annotations.push({ type: 'TestCase', description: '22957' });
 Syncs ADO TC titles with local spec file titles (detects drift):
 
 ```powershell
+# ADO_ORG, ADO_PROJECT_WRITE and ADO_PAT_WRITE set in this process
 .\integrations\ado-powershell\scripts\sync-ado-titles.ps1 `
-  -OrgUrl      "https://dev.azure.com/$env:ADO_ORG" `
-  -ProjectName $env:ADO_PROJECT `
-  -Token       $env:ADO_PAT `
   -MappingFile .\qa\08-azure-integration\ado-ids.json `
   -SpecDir     .\qa\07-automation\e2e `
   -WhatIf
 ```
 
-Apply without `-WhatIf`. Titles are read from the spec files as UTF-8 and sent as UTF-8 bytes,
-so accented titles arrive intact on Windows PowerShell 5.1.
+`-OrgUrl`, `-ProjectName` and `-Token` are optional: they default to `ADO_ORG`,
+`ADO_PROJECT_WRITE` (else `ADO_PROJECT`) and `ADO_PAT_WRITE` (else `ADO_PAT`). Apply without
+`-WhatIf`. Titles are read from the spec files as UTF-8 and sent as UTF-8 bytes, so accented
+titles arrive intact on Windows PowerShell 5.1.
+
+---
+
+### publish-results.ps1
+
+Publishes manual execution results the way the ADO Test Runner does: one test run bound to
+the test points of a suite, so the outcomes show in the test plan.
+
+```powershell
+# Preview: prints every request and sends nothing (no PAT needed)
+.\integrations\ado-powershell\scripts\publish-results.ps1 `
+  -ResultsFile .\qa\08-azure-integration\results-{module}.json -DryRun
+
+# Publish (ADO_ORG, ADO_PROJECT_WRITE and ADO_PAT_WRITE set in this process)
+.\integrations\ado-powershell\scripts\publish-results.ps1 `
+  -ResultsFile .\qa\08-azure-integration\results-{module}.json
+```
+
+Results file (UTF-8 JSON):
+
+```json
+{
+  "planId": 101,
+  "suiteId": 202,
+  "runName": "Manual run - {module} - {build}",
+  "results": [
+    { "testCaseId": 4242, "outcome": "Passed", "comment": "Optional" },
+    { "adoWiId": 4243, "outcome": "Failed", "comment": "Search by year returns no rows" },
+    { "pointId": 9003, "outcome": "Blocked" }
+  ]
+}
+```
+
+- Steps: read the suite's test points (following `x-ms-continuationtoken`), create the run
+  (`POST _apis/test/runs` with `pointIds`, `isAutomated: false`), record each outcome
+  (`PATCH _apis/test/Runs/{runId}/results`), close the run (`state: Completed`).
+- Outcomes: `Passed`, `Failed`, `Blocked`, `NotApplicable`, `Paused`, `NotExecuted`
+  (case-insensitive). `adoWiId` is a synonym of `testCaseId`. Give `pointId` when a test case
+  has several points in the suite (one per configuration). Comments over 1000 characters are
+  truncated with a warning.
+- Everything is validated before the first write. If a selected point already has an outcome
+  the script stops before creating a run; `-Force` publishes a new run anyway.
+- If a step fails after the run was created, the error names the run so it can be reviewed or
+  deleted in ADO before retrying. Evidence attachments are not uploaded.
+
+---
+
+### create-issue.ps1
+
+Creates a Bug (or `-Type Issue`) for a QA defect, idempotently: it first searches the write
+project with WIQL and returns the existing item instead of creating a duplicate.
+
+```powershell
+.\integrations\ado-powershell\scripts\create-issue.ps1 `
+  -Title           "[DEF-MOD-001] Search by year returns no rows" `
+  -DescriptionFile .\qa\06-defects\drafts\DEF-MOD-001.html `
+  -DedupKey        "DEF-MOD-001" `
+  -TestedBy        4242 `
+  -Priority        2 `
+  -DryRun
+```
+
+- Duplicate key: by default the exact title within the same work item type. With
+  `-DedupKey` the key is stored as a tag and searched with `[System.Tags] CONTAINS`, whatever
+  the title or type; candidates are read back and the tag must match exactly. When several
+  items match, the lowest ID is returned and the others are reported as a warning.
+- The description goes to `Microsoft.VSTS.TCM.ReproSteps` for a Bug and to
+  `System.Description` for other types (`-DescriptionField` overrides it). `-TestedBy` adds
+  Tested By links to test cases; `-Related` adds Related links.
+- Output: an object with `id`, `created` (`$false` when an existing item was returned),
+  `state` and `url`. `-DryRun` prints the search and the create request without sending them.
+- Two runs started at the same moment for the same defect can both create an item; the
+  search and the create are separate requests.
 
 ---
 
@@ -226,3 +330,4 @@ steps:
 3. If a PAT appears in any log or output: revoke it immediately in ADO Portal, generate new one
 4. Variable group `qa-secrets` must be scoped to the pipeline only - no project-wide access
 5. PAT minimum scopes: `Work Items (Read, Write)`, `Test Management (Read, Write)` - never use full-access PATs
+6. Read-only sessions receive only `ADO_PAT_READ`; only the step that writes receives `ADO_PAT_WRITE` (see `credential-policy.md`)

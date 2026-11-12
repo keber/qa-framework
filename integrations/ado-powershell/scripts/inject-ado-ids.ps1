@@ -35,6 +35,9 @@
 .NOTES
     Does NOT require a network connection or ADO token.
     Commit the modified spec files after running.
+    Spec files and mappings are read as UTF-8. A modified spec file is written back
+    as UTF-8 WITHOUT a BOM (a BOM it had is dropped) and keeps its original line
+    endings; a file that needs no change is never rewritten.
 #>
 [CmdletBinding()]
 param(
@@ -53,13 +56,16 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# UTF-8 without BOM: users' .ts files must never gain a BOM (Encoding.UTF8 writes one).
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
 # Collect input files based on mode
-$adoIdFiles = if ($PSCmdlet.ParameterSetName -eq 'SingleFile') {
-    if (-not (Test-Path $MappingFile)) { Write-Error "Not found: $MappingFile"; exit 1 }
-    @(Get-Item $MappingFile)
+$adoIdFiles = @(if ($PSCmdlet.ParameterSetName -eq 'SingleFile') {
+    if (-not (Test-Path -LiteralPath $MappingFile)) { throw "Not found: $MappingFile" }
+    Get-Item -LiteralPath $MappingFile
 } else {
-    @(Get-ChildItem -Path $AdonIdsDir -Filter 'ado-ids-*.json')
-}
+    Get-ChildItem -Path $AdonIdsDir -Filter 'ado-ids-*.json'
+})
 
 Write-Host "[inject-ado-ids] Processing $($adoIdFiles.Count) mapping file(s)"
 
@@ -67,8 +73,8 @@ $totalUpdated = 0
 $totalSkipped = 0
 
 foreach ($f in $adoIdFiles) {
-    $entries = Get-Content $f.FullName -Raw | ConvertFrom-Json
-    if ($entries -isnot [array]) { $entries = @($entries) }
+    # Piping enumerates the array (Windows PowerShell 5.1 emits it as one object).
+    $entries = @(([System.IO.File]::ReadAllText($f.FullName, $utf8NoBom) | ConvertFrom-Json) | ForEach-Object { $_ })
     Write-Host "  $($f.Name) ($($entries.Count) entries)"
 
     foreach ($entry in $entries) {
@@ -77,11 +83,12 @@ foreach ($f in $adoIdFiles) {
         $specHint = $entry.specFile
 
         $specHintNorm = $specHint -replace '/', '\'
-        $specFiles = Get-ChildItem -Path $SpecDir -Recurse -Filter '*.spec.ts' |
-                     Where-Object { $_.FullName -like "*$specHintNorm*" }
+        $specFiles = @(Get-ChildItem -Path $SpecDir -Recurse -Filter '*.spec.ts' |
+                     Where-Object { $_.FullName -like "*$specHintNorm*" })
 
         foreach ($sf in $specFiles) {
-            $content  = Get-Content $sf.FullName -Raw
+            # ReadAllText strips a BOM when present and keeps CRLF/LF as they are.
+            $content  = [System.IO.File]::ReadAllText($sf.FullName, $utf8NoBom)
             $wiPrefix = "[$wiId]"
 
             # Idempotent: skip if this wiId is already associated with this localId
@@ -98,7 +105,7 @@ foreach ($f in $adoIdFiles) {
 
             if ($newContent -ne $content) {
                 if (-not $DryRun) {
-                    [System.IO.File]::WriteAllText($sf.FullName, $newContent, [System.Text.Encoding]::UTF8)
+                    [System.IO.File]::WriteAllText($sf.FullName, $newContent, $utf8NoBom)
                 }
                 Write-Host "    [UPDATED] $($sf.Name) -- injected $wiPrefix for $localId$(if($DryRun){' (dry run)'})"
                 $totalUpdated++

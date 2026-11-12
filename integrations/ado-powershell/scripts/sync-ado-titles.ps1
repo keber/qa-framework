@@ -8,10 +8,11 @@
     current spec file titles.
 
 .PARAMETER OrgUrl
-    Azure DevOps organization URL.
+    Azure DevOps organization URL. Default: $env:ADO_ORG (an organization name
+    becomes https://dev.azure.com/<name>; a full URL is used as is).
 
 .PARAMETER ProjectName
-    ADO project name.
+    ADO project name. Default: $env:ADO_PROJECT_WRITE, else $env:ADO_PROJECT.
 
 .PARAMETER MappingFile
     Path to ado-ids.json (output of create-testplan-from-mapping.ps1).
@@ -20,9 +21,15 @@
     Root directory of Playwright spec files (.spec.ts). Searched recursively.
 
 .PARAMETER Token
-    ADO Personal Access Token. Prefer $env:AZURE_TOKEN.
+    ADO Personal Access Token. Default: $env:ADO_PAT_WRITE, else $env:ADO_PAT.
+    Prefer the environment variables over typing a token on the command line.
 
 .NOTES
+    This script writes to ADO, so it follows the read/write split of
+    skills/qa-ado-integration/references/credential-policy.md: it prefers
+    ADO_PROJECT_WRITE and ADO_PAT_WRITE and falls back to ADO_PROJECT and ADO_PAT.
+    Explicit parameters always win. Missing values are reported by variable
+    name, never by value.
     Every HTTP call goes through Invoke-AdoRest, which sends request bodies as
     UTF-8 bytes (Windows PowerShell 5.1 would otherwise encode a string body
     with the system codepage and corrupt accented titles). Spec files and the
@@ -31,24 +38,71 @@
     so there is no pagination to follow.
 
 .EXAMPLE
+    # ADO_ORG, ADO_PROJECT_WRITE and ADO_PAT_WRITE set in this process
+    .\sync-ado-titles.ps1 `
+        -MappingFile "qa/08-azure-integration/ado-ids.json" `
+        -SpecDir     "qa/07-automation/e2e" `
+        -WhatIf
+
+.EXAMPLE
     .\sync-ado-titles.ps1 `
         -OrgUrl      "https://dev.azure.com/your-org" `
         -ProjectName "YourProject" `
         -MappingFile "qa/08-azure-integration/ado-ids.json" `
         -SpecDir     "qa/07-automation/e2e" `
-        -Token       $env:AZURE_TOKEN
+        -Token       $env:ADO_PAT_WRITE
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [Parameter(Mandatory)] [string] $OrgUrl,
-    [Parameter(Mandatory)] [string] $ProjectName,
+    [string]                        $OrgUrl = '',
+    [string]                        $ProjectName = '',
     [Parameter(Mandatory)] [string] $MappingFile,
     [Parameter(Mandatory)] [string] $SpecDir,
-    [Parameter(Mandatory)] [string] $Token
+    [string]                        $Token = ''
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# Resolves organization URL, project and PAT for one access direction (READ or WRITE).
+# An explicit value wins; then ADO_PROJECT_<Access> / ADO_PAT_<Access>; then the generic
+# ADO_PROJECT / ADO_PAT. Missing values are named by variable, never printed by value.
+function Resolve-QaAdoConnection {
+    param(
+        [string] $OrgUrl,
+        [string] $Project,
+        [string] $Token,
+        [Parameter(Mandatory)] [ValidateSet('READ', 'WRITE')] [string] $Access,
+        [switch] $AllowMissingToken
+    )
+    $first = {
+        param([string] $Explicit, [string[]] $Names)
+        if ($Explicit) { return $Explicit }
+        foreach ($name in $Names) {
+            $value = [Environment]::GetEnvironmentVariable($name)
+            if ($value) { return $value }
+        }
+        return ''
+    }
+    $org     = & $first $OrgUrl  @('ADO_ORG')
+    $project = & $first $Project @("ADO_PROJECT_$Access", 'ADO_PROJECT')
+    $pat     = & $first $Token   @("ADO_PAT_$Access", 'ADO_PAT')
+
+    $missing = @()
+    if (-not $org)     { $missing += 'organization (-OrgUrl or ADO_ORG)' }
+    if (-not $project) { $missing += "project (-ProjectName, ADO_PROJECT_$Access or ADO_PROJECT)" }
+    if (-not $pat -and -not $AllowMissingToken) { $missing += "PAT (-Token, ADO_PAT_$Access or ADO_PAT)" }
+    if ($missing.Count -gt 0) {
+        throw "Azure DevOps connection incomplete. Missing: $($missing -join '; ')."
+    }
+
+    $orgUrl = if ($org -match '^https?://') { $org.TrimEnd('/') } else { "https://dev.azure.com/$org" }
+    $headers = @{}
+    if ($pat) {
+        $headers['Authorization'] = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
+    }
+    return @{ OrgUrl = $orgUrl; Project = $project; Headers = $headers }
+}
 
 # Single entry point for every ADO HTTP call (tests replace Invoke-RestMethod).
 # A body is always sent as UTF-8 bytes, never as a raw [string].
@@ -68,11 +122,12 @@ function Invoke-AdoRest {
     Invoke-RestMethod @restArgs
 }
 
-$b64     = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$Token"))
-$headers = @{ 'Authorization' = "Basic $b64" }
+$connection = Resolve-QaAdoConnection -OrgUrl $OrgUrl -Project $ProjectName -Token $Token -Access WRITE `
+                                      -AllowMissingToken:$WhatIfPreference
+$headers    = $connection.Headers
 
 $mapping = Get-Content $MappingFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$apiBase = "$OrgUrl/$ProjectName/_apis"
+$apiBase = "$($connection.OrgUrl)/$([Uri]::EscapeDataString($connection.Project))/_apis"
 
 $synced  = 0
 $skipped = 0

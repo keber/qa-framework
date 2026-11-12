@@ -23,7 +23,28 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   It defines the read/write split: `ADO_PROJECT_READ` / `ADO_PROJECT_WRITE` for the
   target projects and `ADO_PAT_READ` / `ADO_PAT_WRITE` so read-only tooling never holds
   write scope, with `ADO_PROJECT` / `ADO_PAT` set per process as the fallback the
-  current scripts read. No script reads the new variables yet.
+  current scripts read. The shipped ADO scripts now read the write variables (see
+  "ADO scripts: read/write credential split" under Changed).
+- **ADO: `publish-results.ps1` and idempotent `create-issue.ps1`.** Verified with mocks
+  only; real Azure DevOps verification pending.
+  - `integrations/ado-powershell/scripts/publish-results.ps1` publishes manual results
+    from a JSON file (outcome and comment per test case or test point) as a test run
+    bound to the suite's test points, the way the Test Runner does: it reads the points
+    (following `x-ms-continuationtoken`), creates the run, records the outcomes and
+    closes the run. Everything is validated before the first write (outcomes, plan and
+    suite, exactly one point per test case); points that already have an outcome stop it
+    before a run is created unless `-Force`; a failure after the run exists names the run.
+  - `integrations/ado-powershell/scripts/create-issue.ps1` creates a Bug (or Issue) only
+    when no item for the same defect exists: a WIQL search by exact title and type, or by
+    a stable `-DedupKey` stored as a tag (checked exactly after the search), returns the
+    existing item instead. Supports priority, tags, area, iteration, Tested By and
+    Related links.
+  - Both have `-DryRun` (prints and returns every request, sends nothing, needs no PAT),
+    send every request through one `Invoke-AdoRest` function (UTF-8 byte bodies, UTF-8
+    decoded responses, Authorization never printed) and prefer
+    `ADO_PROJECT_WRITE` / `ADO_PAT_WRITE`. Documented in
+    `skills/qa-ado-integration/references/scripts-and-config.md` and the integration
+    README; `test/ado-powershell.test.js` covers them with mocked HTTP.
 - **PR review rubric template: `qa/00-standards/pr-review-rubric.md`.** What QA
   certifies when it approves a pull request: the work item (not the PR) as the review
   unit, criteria with citable codes in three escalation levels (Blocking -> Waiting for
@@ -256,6 +277,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **ADO scripts: read/write credential split.** Verified with mocks only; real Azure
+  DevOps verification pending. Following `references/credential-policy.md`, the shipped
+  scripts that write to ADO prefer `ADO_PROJECT_WRITE` / `ADO_PAT_WRITE` and fall back to
+  `ADO_PROJECT` / `ADO_PAT`; read-only recipes prefer `ADO_PROJECT_READ` / `ADO_PAT_READ`.
+  - `sync-ado-titles.ps1`: `-OrgUrl`, `-ProjectName` and `-Token` are no longer mandatory;
+    they default to `ADO_ORG` (a name or a URL) and the write variables. Explicit values
+    still win. `-WhatIf` needs no PAT.
+  - `create-testplan-from-mapping.ps1`: an explicit `-Session` is used as given; a loader
+    `$AdoSession` gets its `Project` / `Authorization` replaced by `ADO_PROJECT_WRITE` /
+    `ADO_PAT_WRITE` when those are set; with no session at all it builds one from
+    `ADO_ORG` and the write variables instead of failing.
+  - `ado-workitem-full-read-protocol.md` reads from `ADO_PROJECT_READ` with the read PAT,
+    falling back to `ADO_PROJECT` / `ADO_PAT`; `scripts-and-config.md` documents the four
+    variables.
 - **Encoding policy is per file type.** The formatting rules of
   `qa-framework.instructions.md` and `qa-framework.rules.md` said UTF-8 without BOM for
   everything. `.ps1` files now require UTF-8 WITH BOM, because Windows PowerShell 5.1
@@ -274,6 +309,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **ADO scripts: BOM-less output, intact spec files, helper auto-load.** Verified with
+  mocks only; real Azure DevOps verification pending.
+  - `inject-ado-ids.ps1` read spec files and mappings without an encoding (Windows
+    PowerShell 5.1 read them as ANSI and corrupted accents) and wrote them back WITH a
+    UTF-8 BOM. It now reads UTF-8 and writes a modified spec file as UTF-8 without BOM
+    (a BOM the file had is dropped), keeping its CRLF or LF line endings; unchanged files
+    are not rewritten. A mapping with a single entry no longer fails on 5.1.
+  - `md-to-tc-mapping.ps1` and `create-testplan-from-mapping.ps1` wrote their JSON with a
+    UTF-8 BOM on 5.1; both now write UTF-8 without BOM. `ado-ids.json` is always a JSON
+    array (a single created test case used to be written as a bare object, and none as
+    an empty file).
+  - `create-testplan-from-mapping.ps1` looked for `@keber/ado-powershell` relative to its
+    own folder, which resolves inside `node_modules/@keber/qa-framework/` and never finds
+    it. It now walks up from the current directory (the project root), then from its own
+    folder, to the nearest `node_modules/@keber/ado-powershell`, and stops with an error
+    that says how to install it when there is none.
+  - A static test now rejects any shipped `.ps1` that writes a file with
+    `Set-Content`/`Out-File -Encoding UTF8` or `[Text.Encoding]::UTF8`.
 - **ADO scripts: explicit session, UTF-8 request bodies, no truncated suite lists.**
   Verified with mocks only; real Azure DevOps verification pending.
   - `create-testplan-from-mapping.ps1` passes the session (`Org`, `Project`, `ApiV`,
