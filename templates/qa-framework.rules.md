@@ -129,6 +129,7 @@ Stages must run in order. Never start a stage unless its prerequisite is met.
 | 5 | Generate API tests | `/qa-api-integration` | Integration scaffold in qa/07-automation/integration/ |
 | 5b | Stabilize failing tests | `/qa-test-stabilization` | Failing tests exist |
 | 6 | Maintenance | `/qa-maintenance` | Application change delivered |
+| - | Performance test (optional) | `/qa-performance-k6` | Endpoints known; load scaffold in qa/07-automation/load/k6/ |
 | - | ADO integration | `/qa-ado-integration` | ADO enabled in config |
 
 Each command reads its full skill from `.github/skills/qa-{name}/SKILL.md` before acting - see `.claude/commands/` for the generated wrappers.

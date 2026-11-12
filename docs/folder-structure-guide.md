@@ -105,6 +105,7 @@ two tracks that can run in parallel or independently depending on team maturity.
 | `qa-test-stabilization/` | 5b | Diagnosing and fixing failing tests |
 | `qa-ado-integration/` | opt | Syncing with Azure DevOps Test Plans |
 | `qa-maintenance/` | 6 | Updating specs and tests after app changes |
+| `qa-performance-k6/` | opt | Planning, running and reporting a k6 performance test of named endpoints |
 
 Each skill folder contains:
 - `SKILL.md` - process outline (~400-600 tokens, always loaded when skill applies)
@@ -260,6 +261,8 @@ updates every command that references it - no regeneration needed, zero drift po
 │   ├── {YYYY-MM-DD_HH-MM-SS_desc}.md    <- Execution report (human-readable summary)
 │   └── test-results/                    <- Playwright output (gitignored if large)
 │       └── .last-run.json
+├── performance/
+│   └── {YYYY-MM-DD}-{topic}/            <- k6 report, raw summary and plan copy (qa-performance-k6)
 └── manual/
     ├── exploratory/
     │   └── {YYYY-MM-DD_desc}.md
@@ -328,8 +331,15 @@ See `docs/generalization-decisions.md §7` for the full evaluation of this folde
 │   └── diagnosis/                  <- Screenshots and debug output (gitignored)
 ├── integration/                    <- API-level tests (k6, JMeter, Azure Load Testing)
 │   └── README.md                   <- Integration test setup and run instructions
-└── load/                           <- Load / performance tests (future)
-    └── README.md                   <- Load test setup and run instructions
+└── load/                           <- Load / performance tests
+    ├── README.md                   <- Load test setup and run instructions
+    └── k6/                         <- k6 scaffold installed by init (qa-performance-k6 skill)
+        ├── run-perf.js             <- Validates the plan, enforces the safety rules, runs k6, saves the report
+        ├── perf-guard.js           <- Plan validation and safety rules
+        ├── perf-script.js          <- Plan-driven k6 script
+        ├── build-report.js         <- Markdown report from a k6 summary and its plan
+        ├── plans/                  <- plan.schema.json, _example.plan.json and the project's plans
+        └── .session/               <- Session files for k6 runs (gitignored)
 ```
 
 **Important rules**:

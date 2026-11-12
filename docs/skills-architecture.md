@@ -53,6 +53,9 @@ Stage 6: qa-maintenance          (after each application change)
 
 Optional (any time after Stage 4):
    qa-ado-integration            (requires ADO enabled in config)
+
+Optional (any time, no order dependency):
+   qa-performance-k6             (requires known endpoints and the load scaffold)
 ```
 
 ---
@@ -70,6 +73,7 @@ Optional (any time after Stage 4):
 | `qa-test-stabilization` | Stage 5b - 8 steps + confidence scoring | `classification-protocol.md` (includes report template) |
 | `qa-ado-integration` | Optional ADO sync - 6 steps | `scripts-and-config.md` |
 | `qa-maintenance` | Stage 6 - update rules | `update-rules.md` |
+| `qa-performance-k6` | Optional - ISTQB framing, safety rules, plan, run, report | - (scaffold in `templates/load-scaffold/k6/`) |
 
 ---
 

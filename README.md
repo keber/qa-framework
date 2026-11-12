@@ -108,6 +108,7 @@ qa-framework/
 │   ├── qa-api-integration/           <- Stage 5 (API track): API tests, catalog, contract, writes
 │   ├── qa-test-stabilization/        <- Stage 5b: stabilize failing tests
 │   ├── qa-maintenance/               <- Stage 6: update artifacts after app changes
+│   ├── qa-performance-k6/            <- Optional: targeted k6 performance runs and report
 │   └── qa-ado-integration/           <- Optional: sync with Azure DevOps
 │       (each skill contains SKILL.md + references/*.md)
 │
@@ -126,6 +127,7 @@ qa-framework/
 │   ├── defect-report.md
 │   ├── session-summary.md
 │   ├── qa-readme.md                  <- Template for qa/README.md
+│   ├── load-scaffold/k6/             <- k6 runner, safety guard, report builder, plan schema (qa/07-automation/load/k6/)
 │   └── automation-scaffold/          <- Files to bootstrap a Playwright E2E project
 │       ├── package.json
 │       ├── playwright.config.ts
@@ -190,7 +192,8 @@ qa/
 │   │   ├── fixtures/test-helpers.ts
 │   │   └── tests/{module}/      <- Generated .spec.ts stubs per submodule
 │   ├── integration/             <- API / integration tests (k6, JMeter...)
-│   └── load/                    <- Load / performance tests (future)
+│   └── load/                    <- Load / performance tests
+│       └── k6/                  <- k6 runner, safety guard, report builder, plans/
 ├── 08-azure-integration/        <- Azure DevOps integration (optional)
 └── memory/                      <- Agent learnings and session notes
     └── INDEX.md
@@ -241,6 +244,7 @@ Skills map to the pipeline stages enforced by `.github/instructions/qa-framework
 | 5 | `qa-api-integration` | Implement API tests (no browser) | Automation | Integration scaffold in `qa/07-automation/integration/` |
 | 5b | `qa-test-stabilization` | Stabilize failing tests | Automation | Failing tests exist |
 | 6 | `qa-maintenance` | Update artifacts after app changes | Both | Delivered change |
+| - | `qa-performance-k6` | Targeted k6 performance test and report (optional, no order dependency) | Automation | Endpoints known; load scaffold in `qa/07-automation/load/k6/` |
 | - | `qa-ado-integration` | Sync with Azure DevOps Test Plans | Both | Plan de Pruebas with steps exists |
 
 See [docs/skills-architecture.md](docs/skills-architecture.md) for the full design rationale.

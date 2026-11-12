@@ -24,6 +24,7 @@ const STAGE_PREREQUISITES = {
   'qa-api-integration': 'Prerequisite: Integration scaffold in `qa/07-automation/integration/`.',
   'qa-test-stabilization': 'Prerequisite: Failing or flaky tests exist in `qa/07-automation/e2e/`.',
   'qa-maintenance': 'Prerequisite: Application change delivered.',
+  'qa-performance-k6': 'Prerequisite: Endpoints known; load scaffold in `qa/07-automation/load/k6/`. Optional stage, no order dependency.',
   'qa-ado-integration': 'Prerequisite: ADO enabled in `qa/qa-framework.config.json`.',
 };
 

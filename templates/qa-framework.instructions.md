@@ -50,6 +50,7 @@ Stages must run in order. Never start a stage unless its prerequisite is met.
 | 5 | Generate API tests | `.github/skills/qa-api-integration/SKILL.md` | Integration scaffold in qa/07-automation/integration/ |
 | 5b | Stabilize failing tests | `.github/skills/qa-test-stabilization/SKILL.md` | Failing tests exist |
 | 6 | Maintenance | `.github/skills/qa-maintenance/SKILL.md` | Application change delivered |
+| - | Performance test (optional) | `.github/skills/qa-performance-k6/SKILL.md` | Endpoints known; load scaffold in qa/07-automation/load/k6/ |
 | - | ADO integration | `.github/skills/qa-ado-integration/SKILL.md` | ADO enabled in config |
 
 ## Project KB
