@@ -36,6 +36,8 @@ const STANDARDS_DOCS = Object.freeze([
   // rulebook there from a postinstall would feed unfilled rules to every agent session.
   // The project copies it to the root itself; the framework never writes or edits that file.
   Object.freeze({ file: 'agents-md-template.md', template: 'AGENTS.md' }),
+  // Project-owned once installed: the team promotes, demotes and suspends its criteria.
+  Object.freeze({ file: 'pr-review-rubric.md', template: 'pr-review-rubric.md' }),
 ]);
 
 /** The content a standards entry installs. */
