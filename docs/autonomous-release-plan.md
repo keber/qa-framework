@@ -215,8 +215,11 @@ Per release candidate:
 | 1 | WP1.2 scaffold config without load-time creds | merged to `dev`; upgrade simulated in 3 ownership scenarios | `df4172d` | 1.14.0-rc.2 |
 | 1 | WP1.7 upgrade misreports user-owned files | merged to `dev`; edited-config scenario re-simulated | `378cccd` | 1.14.0-rc.2 |
 | 0 | WP0.3 test race on tracked files | merged to `dev`; 10 consecutive clean runs, repo clean after | `0f77188` | 1.14.0-rc.2 |
-| 2 | WP2.1 write-safety policy | done, held until rc.2 is tagged | `e023cc2` | next rc |
-| 2 | WP2.2 API integration scaffold | done, under coordinator review | `235c0a5` | next rc |
+| 1 | Release 1.14.0-rc.2 | **published under `next`**, verified; tag pushed only after CI was green | `07d187d`, tag `v1.14.0-rc.2` | 1.14.0-rc.2 |
+| 2 | WP2.1 write-safety policy | merged to `dev`; no internal names | `e023cc2` | 1.14.0-rc.3 |
+| 2 | WP2.2 API integration scaffold | merged to `dev`; 10 adversarial gate cases all land on the right gate | `235c0a5` | 1.14.0-rc.3 |
+| 2 | WP2.3 `qa-api-integration` skill + conventions | in progress | `claude/wp23-api-skill` | 1.14.0-rc.3 |
+| 2 | WP2.4 `upgrade` delivers new standards and integration files | in progress | `claude/wp24-upgrade-delivery` | 1.14.0-rc.3 |
 
 ## Decision log
 
@@ -237,4 +240,6 @@ Per release candidate:
 | 2026-11-12 | Wave 2 merges into `dev` only after the wave 1 rc is published | Keeps wave 1 promotable without waiting for Marcela's review. If 1.14.0 is not promoted before wave 2 lands, wave 2 ships as a later rc of 1.14.0, and promoting 1.14.0 then requires her review |
 | 2026-11-12 | Add WP0.3 and hold rc.2 for it | Coordinator re-run of WP1.7 showed 1 failure in 6 runs: `sync-version.test.js` rewrote tracked repo files while `installed-version.test.js`, in a parallel process, read one of them truncated. A flaky suite would fail the publish job at random and teach readers to ignore red |
 | 2026-11-12 | WP2.2 cut from the WP2.1 branch, not from `dev` | It implements the policy WP2.1 wrote |
+| 2026-11-12 | Accept WP2.2's change to the integration scaffold's token handling, flagged for Marcela | The brief said to stop on an auth redesign. This is a fix, not a redesign: the token was stored in `localStorage`, which `APIRequestContext` never reads, so token auth never worked. Exposure is nil: no consumer runs the pristine integration scaffold (six have it untouched or unused; the one real suite is user-owned and is not touched by `upgrade`) |
+| 2026-11-12 | `integration-scaffold/.env.example` left as is; not bypassed | A permission rule blocks edits to `.env*` paths. The intended change was only a comment ("do not set `QA_API_WRITE` here"); the protection itself is in code. Left for Keber to apply if wanted |
 | 2026-11-12 | Release smoke test installs with `--prefer-online` | A failed install while the registry CDN was still propagating cached package metadata without the new version, and later installs kept failing with ETARGET from that local cache |
