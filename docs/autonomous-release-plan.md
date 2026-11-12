@@ -206,6 +206,7 @@ Per release candidate:
 |---|---|---|---|---|
 | 0 | WP0.1 publish guards | merged to `dev`; CI green on `dev` | `3c2dc8d` | 1.14.0-rc.1 |
 | 0 | WP0.2 prerelease-safe versions | merged to `dev`; four-bump simulation passes | `58e2b60` | 1.14.0-rc.1 |
+| 0 | Release 1.14.0-rc.1 | **published under `next`**, verified; `latest` still 1.13.2 | `4199602`, tag `v1.14.0-rc.1` | 1.14.0-rc.1 |
 | 1 | WP1.5 priority-and-feasibility | closed - already covered | - | - |
 | 1 | WP1.6 ADO full-read protocol | done, held until rc.1 is tagged | `2e59409` | 1.14.0-rc.2 |
 
@@ -219,3 +220,5 @@ Per release candidate:
 | 2026-11-12 | Add WP0.2 to wave 0 and hold rc.1 for it | Simulating three bumps showed `sync-version.js` throws on any version after the first prerelease: its `frameworkVersion` pattern requires `X.Y.Z"`. Neither rc.2 nor the final promotion bump could be made. Release plumbing, so it belongs to wave 0 |
 | 2026-11-12 | WP1.6 ships the ADO full-read protocol as a skill reference only, not as a new agent rule | A new rule would renumber the rules files that WP1.3 also edits; the rule can follow once WP1.3 lands |
 | 2026-11-12 | `CHANGELOG.md` keeps `[Unreleased]` through every release candidate; it is renamed to `[X.Y.Z] - date` only in the promotion commit | Keep a Changelog has no convention for candidates, and renaming per rc would split one release's notes across several headings |
+| 2026-11-12 | **Incident, process fix.** Every branch push is now `git push --no-follow-tags`; a release tag is pushed only by an explicit `git push origin <tag>` after CI is green on its commit | The machine has `push.followTags = true` globally, so pushing the 1.14.0-rc.1 commit to `dev` also pushed its annotated tag and started the publish job at the same second as CI, not after it. No unverified code shipped - CI on that commit finished green 6 s before the publish step, and the publish job runs the suite itself - but the gate "CI green before tagging" held by timing, not by design. `latest` was not touched |
+| 2026-11-12 | Release smoke test installs with `--prefer-online` | A failed install while the registry CDN was still propagating cached package metadata without the new version, and later installs kept failing with ETARGET from that local cache |
