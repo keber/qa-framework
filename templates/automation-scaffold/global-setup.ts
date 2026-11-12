@@ -10,11 +10,13 @@
  *   - Save each to `.auth/user-{role}.json`.
  *   - Reference the matching storageState in playwright.config.ts projects[].
  *
- * Environment variables required:
- *   QA_BASE_URL           - Base URL of the application under test
- *   QA_USER_EMAIL         - Default QA user email (or username/RUT)
- *   QA_USER_PASSWORD      - Default QA user password
- *   QA_LOGIN_PATH         - Relative path to the login page (default: /login)
+ * Environment variables:
+ *   QA_BASE_URL           - Base URL of the application under test. Optional:
+ *                           defaults to project.qaBaseUrl in qa-framework.config.json
+ *   <ACCOUNT>_EMAIL       - Per lane, e.g. QA_USER_EMAIL for the default lane
+ *   <ACCOUNT>_PASSWORD    - Per lane, e.g. QA_USER_PASSWORD for the default lane.
+ *                           Required only for the lanes this run logs in.
+ *   QA_LOGIN_PATH        - Relative path to the login page (default: /login)
  *   QA_LOGIN_EMAIL_SELECTOR    - CSS selector for the username/email input
  *   QA_LOGIN_PASSWORD_SELECTOR - CSS selector for the password input
  *   QA_LOGIN_SUBMIT_SELECTOR   - CSS selector for the submit button
@@ -43,16 +45,7 @@ type LaneInfo = {
   capabilities: string[];
 };
 const LANE_INFO: Record<string, LaneInfo> = laneLock.LANE_INFO;
-
-function resolveVar(param: string | undefined, envKey: string, defaultValue: string): [string, string] {
-  if (param !== undefined) {
-    return [param, 'param'];
-  }
-  if (process.env[envKey] !== undefined) {
-    return [process.env[envKey]!, `env:${envKey}`];
-  }
-  return [defaultValue, 'default'];
-}
+const laneConfig = require('./scripts/lane-config.js');
 
 /**
  * Decides which lanes to log in.
@@ -215,7 +208,9 @@ async function loginAs(params: {
 }
 
 export default async function globalSetup(_config: FullConfig): Promise<void> {
-  const baseURL = process.env.QA_BASE_URL!;
+  // Same resolution as playwright.config.ts (QA_BASE_URL, else project.qaBaseUrl in the
+  // manifest, else a clear error), so the login never targets an undefined URL.
+  const baseURL: string = laneConfig.loadQaBaseUrl(process.env, __dirname).url;
 
   // Guards run BEFORE any login. A lock nothing consults is decoration, and this is
   // the last point at which a run about to drive an account it does not hold can
@@ -239,21 +234,10 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     // Credentials come from the lane's declared account prefix, e.g. account
     // 'QA_USER4' resolves QA_USER4_EMAIL / QA_USER4_PASSWORD. This is what replaces
     // the old hardcoded QA_USER / QA_USER2 pair and is what lets a lane be added by
-    // config alone.
-    const emailKey = `${lane.account}_EMAIL`;
-    const passwordKey = `${lane.account}_PASSWORD`;
-
-    if (!process.env[emailKey] || !process.env[passwordKey]) {
-      throw new Error(
-        `[global-setup] Lane ${laneId} (account ${lane.account}) is missing ${emailKey} or ` +
-        `${passwordKey}. Every configured lane needs its own credentials, otherwise two lanes ` +
-        'end up sharing an account, which is exactly what lanes exist to prevent.'
-      );
-    }
-
-    const [email, emailSource] = resolveVar(process.env[emailKey], emailKey, 'qa-user@example.com');
-    const [password, passwordSource] = resolveVar(process.env[passwordKey], passwordKey, 'CHANGE_ME');
-    console.log(`[global-setup] lane ${laneId} (${lane.account}) credentials from ${emailSource} / ${passwordSource}`);
+    // config alone. playwright.config.ts no longer checks credentials at load time, so
+    // this is where a missing one fails: loudly, naming the variable, never its value.
+    const { email, password, emailKey, passwordKey } = guards.laneCredentials(laneId, lane, process.env);
+    console.log(`[global-setup] lane ${laneId} (${lane.account}) credentials from env:${emailKey} / env:${passwordKey}`);
 
     await loginAs({
       email,

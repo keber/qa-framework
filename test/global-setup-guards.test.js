@@ -177,3 +177,45 @@ test('assertProjectsMatchLane: names the lane the mismatched storageState belong
     /belongs to lane 3, not lane 1/
   );
 });
+
+// --- laneCredentials ------------------------------------------------------------
+//
+// playwright.config.ts no longer validates credentials at load time (a lane that is
+// not logging in must not need them). The failure moved here, to the moment a lane
+// actually logs in, and must stay loud: name the missing variable, never a value.
+
+test('laneCredentials: returns the lane account credentials when both are set', () => {
+  const lane = { account: 'QA_USER4' };
+  const env = { QA_USER4_EMAIL: 'lane4@example.test', QA_USER4_PASSWORD: 'secret-4' };
+  assert.deepEqual(guards.laneCredentials('4', lane, env), {
+    email: 'lane4@example.test',
+    password: 'secret-4',
+    emailKey: 'QA_USER4_EMAIL',
+    passwordKey: 'QA_USER4_PASSWORD',
+  });
+});
+
+test('laneCredentials: names exactly the missing variable and never leaks a value', () => {
+  const lane = { account: 'QA_USER2' };
+  const cases = [
+    [{ QA_USER2_PASSWORD: 'secret-2' }, ['QA_USER2_EMAIL'], ['QA_USER2_PASSWORD']],
+    [{ QA_USER2_EMAIL: 'lane2@example.test' }, ['QA_USER2_PASSWORD'], ['QA_USER2_EMAIL']],
+    [{ QA_USER2_EMAIL: '', QA_USER2_PASSWORD: '' }, ['QA_USER2_EMAIL', 'QA_USER2_PASSWORD'], []],
+  ];
+  for (const [env, missing, present] of cases) {
+    let message = '';
+    assert.throws(() => guards.laneCredentials('2', lane, env), (err) => {
+      message = err.message;
+      return true;
+    });
+    assert.match(message, /Lane 2 \(account QA_USER2\)/);
+    for (const key of missing) assert.ok(message.includes(key), `message must name ${key}: ${message}`);
+    for (const key of present) assert.ok(!message.includes(key), `message must not name ${key}: ${message}`);
+    assert.ok(!message.includes('secret-2') && !message.includes('lane2@example.test'), 'no value in message');
+  }
+});
+
+test('laneCredentials: another lane having credentials does not satisfy this lane', () => {
+  const env = { QA_USER_EMAIL: 'lane1@example.test', QA_USER_PASSWORD: 'secret-1' };
+  assert.throws(() => guards.laneCredentials('3', { account: 'QA_USER3' }, env), /QA_USER3_EMAIL/);
+});

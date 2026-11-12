@@ -241,3 +241,98 @@ test('findConfigPath: locates qa-framework.config.json by walking up', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// QA base URL resolution (playwright.config.ts)
+// ---------------------------------------------------------------------------
+
+test('resolveQaBaseUrl: QA_BASE_URL from the environment wins over the manifest', () => {
+  const result = laneConfig.resolveQaBaseUrl(
+    { QA_BASE_URL: 'https://env.example.test' },
+    { project: { qaBaseUrl: 'https://manifest.example.test' } }
+  );
+  assert.deepEqual(result, { url: 'https://env.example.test', source: 'env:QA_BASE_URL' });
+});
+
+test('resolveQaBaseUrl: falls back to project.qaBaseUrl when QA_BASE_URL is missing or empty', () => {
+  const manifest = { project: { qaBaseUrl: 'https://manifest.example.test' } };
+  for (const env of [{}, { QA_BASE_URL: '' }, { QA_BASE_URL: '   ' }]) {
+    assert.deepEqual(laneConfig.resolveQaBaseUrl(env, manifest), {
+      url: 'https://manifest.example.test',
+      source: 'manifest:project.qaBaseUrl',
+    });
+  }
+});
+
+test('resolveQaBaseUrl: throws a clear error when neither source has a URL', () => {
+  for (const manifest of [undefined, {}, { project: {} }, { project: { qaBaseUrl: '' } }]) {
+    assert.throws(
+      () => laneConfig.resolveQaBaseUrl({}, manifest),
+      /QA_BASE_URL is not set and .*project\.qaBaseUrl/
+    );
+  }
+});
+
+test('resolveQaBaseUrl: rejects an unfilled template placeholder in the manifest', () => {
+  // init and the README ship {{QA_BASE_URL}} as a placeholder. Navigating to it would
+  // fail far from the cause, so it must be reported as "not configured".
+  assert.throws(
+    () => laneConfig.resolveQaBaseUrl({}, { project: { qaBaseUrl: '{{QA_BASE_URL}}' } }),
+    /project\.qaBaseUrl .*not an http\(s\) URL/
+  );
+});
+
+test('resolveQaBaseUrl: rejects a manifest value that is not an http(s) URL', () => {
+  for (const value of ['qa.example.test', 'ftp://qa.example.test', 42]) {
+    assert.throws(
+      () => laneConfig.resolveQaBaseUrl({}, { project: { qaBaseUrl: value } }),
+      /project\.qaBaseUrl/
+    );
+  }
+});
+
+test('loadQaBaseUrl: reads project.qaBaseUrl from the manifest found by walking up', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-base-url-'));
+  try {
+    const e2eDir = path.join(dir, 'qa', '07-automation', 'e2e');
+    fs.mkdirSync(e2eDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'qa', 'qa-framework.config.json'),
+      JSON.stringify({ project: { qaBaseUrl: 'https://manifest.example.test' } }),
+      'utf8'
+    );
+    assert.deepEqual(laneConfig.loadQaBaseUrl({}, e2eDir), {
+      url: 'https://manifest.example.test',
+      source: 'manifest:project.qaBaseUrl',
+    });
+    // The environment still wins, and the manifest is not even required for it.
+    assert.equal(laneConfig.loadQaBaseUrl({ QA_BASE_URL: 'https://env.example.test' }, e2eDir).url, 'https://env.example.test');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('loadQaBaseUrl: QA_BASE_URL works without any manifest; no manifest and no env throws', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-base-url-none-'));
+  try {
+    assert.equal(laneConfig.loadQaBaseUrl({ QA_BASE_URL: 'https://env.example.test' }, dir).url, 'https://env.example.test');
+    // A real temp dir may still have a manifest somewhere above it; only assert the
+    // throw when the walk-up genuinely finds nothing.
+    if (!laneConfig.findConfigPath(dir)) {
+      assert.throws(() => laneConfig.loadQaBaseUrl({}, dir), /QA_BASE_URL is not set/);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('loadQaBaseUrl: a manifest that is not valid JSON fails naming the file', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-base-url-bad-'));
+  try {
+    const configPath = path.join(dir, 'qa-framework.config.json');
+    fs.writeFileSync(configPath, '{ not json', 'utf8');
+    assert.throws(() => laneConfig.loadQaBaseUrl({}, dir), /Could not parse .*qa-framework\.config\.json/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

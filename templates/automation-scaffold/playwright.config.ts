@@ -20,14 +20,21 @@ if (fs.existsSync('.env')) {
 export const SESSION_TTL_MS = Number(process.env.QA_SESSION_TTL_MS ?? 2 * 60 * 60 * 1000);
 
 // -------------------------------------------------------------------
-// Validate required environment variables at config load time
+// Base URL (credentials are deliberately NOT checked here)
 // -------------------------------------------------------------------
-const required = ['QA_BASE_URL', 'QA_USER_EMAIL', 'QA_USER_PASSWORD'];
-for (const key of required) {
-  if (!process.env[key]) {
-    throw new Error(`[qa-framework] Missing required env var: ${key}. Check your .env file.`);
-  }
-}
+// QA_BASE_URL from the environment or .env wins. Without it, project.qaBaseUrl from
+// qa-framework.config.json is used: the manifest is the versioned source of the QA URL
+// and holds no secrets. With neither, loading the config fails - never run without a URL.
+// The resolved value is written back to process.env because global-setup.ts and the
+// fixtures read process.env.QA_BASE_URL, and Playwright workers re-load this config.
+//
+// Credentials are NOT validated at load time. Each lane logs in with its own account
+// (<ACCOUNT>_EMAIL / <ACCOUNT>_PASSWORD), and a lane that is not logging in must not be
+// forced to have credentials loaded. A missing credential still fails loudly, naming
+// the variable, at the moment it is needed: when global-setup.ts logs that lane in
+// (see laneCredentials() in scripts/global-setup-guards.js).
+const laneConfig = require('./scripts/lane-config.js');
+process.env.QA_BASE_URL = laneConfig.loadQaBaseUrl(process.env, __dirname).url;
 
 // Optional: Azure DevOps reporter configuration
 // To enable: set env vars ADO_ORG, ADO_PROJECT, ADO_PAT, ADO_PLAN_ID and CI=true,

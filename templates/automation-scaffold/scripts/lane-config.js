@@ -257,6 +257,68 @@ function assertLaneHasCapability(laneId, capability, laneTable) {
   }
 }
 
+/**
+ * Resolves the base URL of the QA environment. Pure: takes the env and the parsed
+ * manifest, touches nothing.
+ *
+ *   1. QA_BASE_URL from the environment (or .env) wins, exactly as before.
+ *   2. Otherwise project.qaBaseUrl from qa-framework.config.json. The manifest is the
+ *      versioned source of the QA URL and holds no secrets, so a lane does not need a
+ *      .env just to know where the application lives.
+ *   3. Otherwise throw. Running without a URL is never a valid default.
+ *
+ * The manifest value must be an http(s) URL. init writes an empty string and the docs
+ * show {{QA_BASE_URL}}; both mean "not configured" and must fail here, not later as a
+ * confusing navigation error.
+ */
+function resolveQaBaseUrl(env, config) {
+  const fromEnv = env && typeof env.QA_BASE_URL === 'string' ? env.QA_BASE_URL.trim() : '';
+  if (fromEnv) return { url: fromEnv, source: 'env:QA_BASE_URL' };
+
+  const fromManifest = config && config.project ? config.project.qaBaseUrl : undefined;
+  if (fromManifest === undefined || fromManifest === null || fromManifest === '') {
+    throw new Error(
+      '[qa-framework] QA_BASE_URL is not set and qa-framework.config.json has no project.qaBaseUrl. ' +
+      'Set one of them: the QA environment URL is required.'
+    );
+  }
+
+  let parsed;
+  try {
+    parsed = typeof fromManifest === 'string' ? new URL(fromManifest.trim()) : undefined;
+  } catch {
+    parsed = undefined;
+  }
+  if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
+    throw new Error(
+      '[qa-framework] project.qaBaseUrl in qa-framework.config.json is not an http(s) URL: ' +
+      `${JSON.stringify(fromManifest)}. Set it to the QA environment URL, or set QA_BASE_URL.`
+    );
+  }
+  return { url: fromManifest.trim(), source: 'manifest:project.qaBaseUrl' };
+}
+
+/**
+ * resolveQaBaseUrl() against the manifest found by walking up from `startDir`. The
+ * manifest is only read when the environment does not already provide the URL, so a
+ * broken manifest never blocks a run that sets QA_BASE_URL explicitly.
+ */
+function loadQaBaseUrl(env, startDir) {
+  const fromEnv = env && typeof env.QA_BASE_URL === 'string' ? env.QA_BASE_URL.trim() : '';
+  if (fromEnv) return resolveQaBaseUrl(env, undefined);
+
+  const configPath = findConfigPath(startDir);
+  let config;
+  if (configPath) {
+    try {
+      config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    } catch (err) {
+      throw new Error(`[qa-framework] Could not parse ${configPath}: ${err.message}`);
+    }
+  }
+  return resolveQaBaseUrl(env, config);
+}
+
 module.exports = {
   DEFAULT_LANE_TABLE,
   findConfigPath,
@@ -266,4 +328,6 @@ module.exports = {
   storageStateForLaneOnly,
   lanesWithCapability,
   assertLaneHasCapability,
+  resolveQaBaseUrl,
+  loadQaBaseUrl,
 };

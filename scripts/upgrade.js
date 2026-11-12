@@ -140,12 +140,14 @@ const SHIPPED_SCAFFOLD_HASHES = {
     '9dbb21c6b5e84c58be8fd86d8da31b00aeedd3d7adbbd40e06f97b386d461ad0', // v1.6.1
     '948635c118553e293447930ba3dcff9155446718554dd3bbcffac2720baebba1', // v1.6.2 - v1.10.0
     'f145fda0a7215942b5431a779188609f8958e51a048b161ede605576efba3ef8', // v1.11.0 - v1.11.3
-    '59acff16e745ccd802254e65a1a5f8ddec549328c9c1fa94f715fb9daf449a1a', // v1.12.0 - v1.13.2
+    '59acff16e745ccd802254e65a1a5f8ddec549328c9c1fa94f715fb9daf449a1a', // v1.12.0 - v1.14.0-rc.1
+    'c4b43b3075bcb283e4d1a32ad91b53395ea1930a24fd44afef554422f002903b', // unreleased: WP1.2 qaBaseUrl fallback, credentials checked at login
   ],
   'automation-scaffold/global-setup.ts': [
     '077580914881ee71ac082d47579dc4cffa01e8348b0744fced6b8de2863e0bd1', // v1.0.1 - v1.10.0
     '7b3e7ca54929e525055d19ba8cd9643de722c7092c67b1a2e273072dd712ec7a', // v1.11.0 - v1.11.3
-    '849b265ac82ffd082c96b68f9542331f3083d81e61709abf009450c35da39948', // v1.12.0 - v1.13.2
+    '849b265ac82ffd082c96b68f9542331f3083d81e61709abf009450c35da39948', // v1.12.0 - v1.14.0-rc.1
+    '2f44cb447c5e5e8248c50cbda91ee66192cb14eb8f73761651f94fa8e5116a10', // unreleased: WP1.2 qaBaseUrl fallback, credentials checked at login
   ],
   'automation-scaffold/.env.example': [
     '18fab7c165085a4a585a6911b42c49b97177265d46261c8362c3508a7436c65c', // v1.0.1 - v1.10.0
@@ -167,14 +169,16 @@ const SHIPPED_SCAFFOLD_HASHES = {
   // Introduced in v1.12.0. A copy matching none of these is user-authored (two live
   // installations hand-wrote their own lane-lock.js before v1.12.0).
   'automation-scaffold/scripts/lane-config.js': [
-    '962e47f06854f2542069abd5c68f84f2f307dec88412e10954034c4299c0be14', // v1.12.0 - v1.13.2
+    '962e47f06854f2542069abd5c68f84f2f307dec88412e10954034c4299c0be14', // v1.12.0 - v1.14.0-rc.1
+    '902e6ff19c334f3af5ef31e78171c52c8b8135cb42dff2e82d6e81ea66a06b26', // unreleased: WP1.2 qaBaseUrl fallback, credentials checked at login
   ],
   'automation-scaffold/scripts/lane-lock.js': [
     '84d2706e953968c3d2af51c67af24473db3c31e4e604c99a677ddd1b6adb07e0', // v1.12.0 - v1.13.2
     '82f90f20a871bc080ff58c359bc480010ca6534a05d46c65bf6f6413303f6f90', // unreleased: request_id holder check
   ],
   'automation-scaffold/scripts/global-setup-guards.js': [
-    'f8584209a241222552c9f34a6e5535265e8903782131e216e6b68c717e360da8', // v1.12.0 - v1.13.2
+    'f8584209a241222552c9f34a6e5535265e8903782131e216e6b68c717e360da8', // v1.12.0 - v1.14.0-rc.1
+    '8c360139a27e9117aef444e0e1855f8f98167309f273c2648a0c07fa2823b7b9', // unreleased: WP1.2 qaBaseUrl fallback, credentials checked at login
   ],
   'integration-scaffold/playwright.config.ts': [
     '7276ed4fda85f80e37381257bc559f4bb48055d359858f69f6b838f3671a9e2d', // v1.11.0 - v1.11.3
