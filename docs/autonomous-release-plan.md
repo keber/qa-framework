@@ -213,7 +213,10 @@ Per release candidate:
 | 1 | WP1.1 stale `{{VERSION}}` | merged to `dev`; was a live bug (cause b) | `e09b3d3` | 1.14.0-rc.2 |
 | 1 | WP1.4 encoding policy by file type | merged to `dev`; byte check: only the BOM changed | `aeeb28b` | 1.14.0-rc.2 |
 | 1 | WP1.2 scaffold config without load-time creds | merged to `dev`; upgrade simulated in 3 ownership scenarios | `df4172d` | 1.14.0-rc.2 |
-| 1 | WP1.7 upgrade misreports user-owned files | in progress | `claude/wp12-scaffold-config` | 1.14.0-rc.2 |
+| 1 | WP1.7 upgrade misreports user-owned files | merged to `dev`; edited-config scenario re-simulated | `378cccd` | 1.14.0-rc.2 |
+| 0 | WP0.3 test race on tracked files | merged to `dev`; 10 consecutive clean runs, repo clean after | `0f77188` | 1.14.0-rc.2 |
+| 2 | WP2.1 write-safety policy | done, held until rc.2 is tagged | `e023cc2` | next rc |
+| 2 | WP2.2 API integration scaffold | done, under coordinator review | `235c0a5` | next rc |
 
 ## Decision log
 
@@ -230,4 +233,8 @@ Per release candidate:
 | 2026-11-12 | Add WP1.7 (upgrade report) to wave 1 | Coordinator simulation of WP1.2: a user-edited `playwright.config.ts` is correctly left untouched but listed as "Skipped (already up to date)", which is false. Only what is reported changes, not what is touched |
 | 2026-11-12 | `sync-ado-titles.ps1` raw string request body moves to wave 4 | Found by WP1.4: it violates the new companion rule (bodies as UTF-8 bytes). It is an ADO-calling script, so it belongs with the human-verified ADO package, not here |
 | 2026-11-12 | Coordinator writes CHANGELOG entries when a worker omits them | WP1.2, WP1.4 and WP1.6 shipped without entries; documentation only |
+| 2026-11-12 | Attribute ported work to `marcela.berriosc`, never by full name, and never name her project or the company | The CHANGELOG ships publicly on npm; that is the identifier she already uses in the `author` field of her own skill |
+| 2026-11-12 | Wave 2 merges into `dev` only after the wave 1 rc is published | Keeps wave 1 promotable without waiting for Marcela's review. If 1.14.0 is not promoted before wave 2 lands, wave 2 ships as a later rc of 1.14.0, and promoting 1.14.0 then requires her review |
+| 2026-11-12 | Add WP0.3 and hold rc.2 for it | Coordinator re-run of WP1.7 showed 1 failure in 6 runs: `sync-version.test.js` rewrote tracked repo files while `installed-version.test.js`, in a parallel process, read one of them truncated. A flaky suite would fail the publish job at random and teach readers to ignore red |
+| 2026-11-12 | WP2.2 cut from the WP2.1 branch, not from `dev` | It implements the policy WP2.1 wrote |
 | 2026-11-12 | Release smoke test installs with `--prefer-online` | A failed install while the registry CDN was still propagating cached package metadata without the new version, and later installs kept failing with ETARGET from that local cache |
