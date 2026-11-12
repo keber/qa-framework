@@ -363,3 +363,83 @@ test('init: never overwrites a project-edited write-safety policy', () => {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });
+
+// --- Integration scaffold: read-only guard and write gates (WP2.2) -------------------
+
+function listTemplateFiles(dir, base = dir) {
+  const out = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...listTemplateFiles(full, base));
+    else out.push(path.relative(base, full).split(path.sep).join('/'));
+  }
+  return out.sort();
+}
+
+test('init: installs every file of the integration scaffold, guard and write gates included', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    const result = runInit([], projectRoot);
+    assert.equal(result.status, 0, result.stderr);
+    const src = path.join(__dirname, '..', 'templates', 'integration-scaffold');
+    const dest = path.join(projectRoot, 'qa', '07-automation', 'integration');
+    const files = listTemplateFiles(src);
+    for (const rel of [
+      'scripts/api-guard.js',
+      'scripts/hard-exclusions.js',
+      'scripts/run-write-tests.js',
+      'fixtures/base.ts',
+      'fixtures/read-catalog.ts',
+      'fixtures/write-catalog.ts',
+      'fixtures/project-exclusions.ts',
+      'fixtures/contract.ts',
+      'tests/security/read-only-guard.spec.ts',
+      'tests/security/no-session.spec.ts',
+      'tests/write/example-write-cycle.spec.ts',
+    ]) {
+      assert.ok(files.includes(rel), `template is missing ${rel}`);
+    }
+    for (const rel of files) {
+      const installed = path.join(dest, ...rel.split('/'));
+      assert.ok(fs.existsSync(installed), `init did not install integration/${rel}`);
+      assert.equal(
+        fs.readFileSync(installed, 'utf8'),
+        fs.readFileSync(path.join(src, ...rel.split('/')), 'utf8'),
+        `integration/${rel} differs from the template`
+      );
+    }
+    const pkg = JSON.parse(fs.readFileSync(path.join(dest, 'package.json'), 'utf8'));
+    assert.equal(pkg.scripts.test, 'playwright test', 'npm test stays read-only');
+    assert.equal(pkg.scripts['test:write'], 'node scripts/run-write-tests.js');
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('init: never overwrites an existing integration catalog or guard file', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
+  try {
+    const dest = path.join(projectRoot, 'qa', '07-automation', 'integration');
+    const catalog = path.join(dest, 'fixtures', 'write-catalog.ts');
+    const exclusions = path.join(dest, 'fixtures', 'project-exclusions.ts');
+    fs.mkdirSync(path.dirname(catalog), { recursive: true });
+    fs.writeFileSync(catalog, '// project write catalog\n', 'utf8');
+    fs.writeFileSync(exclusions, '// project exclusions\n', 'utf8');
+
+    const result = runInit([], projectRoot);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(fs.readFileSync(catalog, 'utf8'), '// project write catalog\n');
+    assert.equal(fs.readFileSync(exclusions, 'utf8'), '// project exclusions\n');
+    assert.ok(fs.existsSync(path.join(dest, 'scripts', 'api-guard.js')), 'the rest is still installed');
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('run-write-tests --dry-run prints the warning and runs nothing', () => {
+  const script = path.join(__dirname, '..', 'templates', 'integration-scaffold', 'scripts', 'run-write-tests.js');
+  const r = spawnSync(process.execPath, [script, '--dry-run'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /API WRITE TESTS/);
+  assert.match(r.stdout, /--dry-run: nothing was run/);
+});

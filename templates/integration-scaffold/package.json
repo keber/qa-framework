@@ -4,12 +4,13 @@
   "description": "API integration tests - no browser required",
   "private": true,
   "scripts": {
-    "test":    "playwright test",
+    "test": "playwright test",
     "test:ci": "CI=true playwright test",
-    "report":  "playwright show-report"
+    "test:write": "node scripts/run-write-tests.js",
+    "report": "playwright show-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0",
-    "dotenv":           "^16.4.0"
+    "dotenv": "^16.4.0"
   }
 }

@@ -1,43 +1,28 @@
 /**
- * example.spec.ts - API integration test example
+ * example.spec.ts - the basic pattern of a read test. Replace it with your tests.
  *
- * This file shows the basic pattern for API tests using Playwright's
- * APIRequestContext. Replace this with your real tests.
+ * Use the fixtures of fixtures/base.ts, not Playwright's raw `request`:
+ *   - `api.read(id)` only reaches endpoints of fixtures/read-catalog.ts;
+ *   - `expectApiResponse` (fixtures/contract.ts) asserts JSON first, because a
+ *     gateway or SPA can answer an unknown route with HTTP 200 and an HTML page.
  *
- * The `request` fixture is pre-configured with:
- *   - baseURL from QA_BASE_URL
- *   - storageState from .auth/api-session.json (set by global-setup.ts)
- *
- * For token-based APIs that require an Authorization header, add it
- * explicitly per request or extend the fixture in a fixtures/base.ts file.
+ * Skipped when QA_BASE_URL is not set, and while the catalog entry is still the
+ * framework placeholder.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/base';
+import { READ_CATALOG } from '../fixtures/read-catalog';
+import { expectApiResponse } from '../fixtures/contract';
 
-// Replace with the actual health/status endpoint of your API.
-const HEALTH_ENDPOINT = '/health';
+const entry = READ_CATALOG.find((e) => e.id === 'example-status');
 
-test.describe('API smoke tests', () => {
+test.describe('API - example', () => {
+  // Declared before the test so it is evaluated before the `api` fixture is built.
+  test.skip(!entry || !!entry.placeholder, 'fixtures/read-catalog.ts has no real "example-status" entry. Point this test at a real endpoint.');
 
-  test('GET health endpoint returns 200', async ({ request }) => {
-    const response = await request.get(HEALTH_ENDPOINT);
-
-    expect(response.status()).toBe(200);
+  test('API-EX-001 - the example endpoint answers with a JSON success @P1', async ({ api }) => {
+    const response = await api.read(entry!.id);
+    expectApiResponse(response);
+    expect(response.ms, 'reference time, not an SLA').toBeLessThan(10_000);
   });
-
-  // Example of a test with an Authorization header when QA_API_TOKEN is set.
-  // Uncomment and adapt when your API uses Bearer token auth.
-  //
-  // test('GET protected resource returns 200 with bearer token', async ({ request }) => {
-  //   const response = await request.get('/api/me', {
-  //     headers: {
-  //       Authorization: `Bearer ${process.env.QA_API_TOKEN}`,
-  //     },
-  //   });
-  //
-  //   expect(response.status()).toBe(200);
-  //   const body = await response.json();
-  //   expect(body).toHaveProperty('id');
-  // });
-
 });
