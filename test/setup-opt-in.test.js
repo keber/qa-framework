@@ -558,6 +558,112 @@ test('upgrade: in-test logins are reported even when auth.ts is user-owned', () 
   }
 });
 
+// --- existing specs named with an opt-in suffix --------------------------------------
+// The new config moves *.login/.writes/.slow.spec.ts out of the default suite. A project
+// that already has such files must not lose them from `npm test` silently.
+
+/** An installed scaffold (current lane scripts) whose config is a pristine older one. */
+function makeInstalledProjectWithOldConfig() {
+  const root = tmpDir('optin-installed');
+  assert.equal(run(INIT_PATH, [], root).status, 0);
+  fs.copyFileSync(path.join(LEGACY_SRC, 'playwright.config.ts'), path.join(e2e(root), 'playwright.config.ts'));
+  return root;
+}
+
+function writeSpec(root, rel) {
+  const dest = path.join(e2e(root), 'tests', ...rel.split('/'));
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.writeFileSync(dest, "import { test } from '@playwright/test';\n", 'utf8');
+}
+
+test('upgrade: existing opt-in-suffixed specs hold back a pristine config, with a warning', () => {
+  const root = makeInstalledProjectWithOldConfig();
+  try {
+    writeSpec(root, 'report.slow.spec.ts');
+    writeSpec(root, 'orders/orders.writes.spec.ts');
+    const configPath = path.join(e2e(root), 'playwright.config.ts');
+    const before = fs.readFileSync(configPath, 'utf8');
+    const r = upgrade(root);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), before, 'the config must not be refreshed');
+    assert.match(r.stdout, /e2e\/playwright\.config\.ts NOT refreshed/);
+    assert.match(r.stdout, /report\.slow\.spec\.ts/);
+    assert.match(r.stdout, /orders[\\/]orders\.writes\.spec\.ts/);
+    assert.match(r.stdout, /default suite/);
+    assert.match(r.stdout, /write-safety-policy\.md/);
+    assert.ok(!r.stdout.includes('node scripts/run-opt-in.js writes'), 'no npm script hint for a held-back config');
+    // The rest of the delivery is unaffected.
+    assert.equal(
+      fs.readFileSync(path.join(e2e(root), 'scripts', 'global-setup-guards.js'), 'utf8'),
+      fs.readFileSync(GUARDS_PATH, 'utf8'),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: an existing *.login.spec.ts also holds back the config', () => {
+  const root = makeInstalledProjectWithOldConfig();
+  try {
+    writeSpec(root, 'auth/sign-in.login.spec.ts');
+    const configPath = path.join(e2e(root), 'playwright.config.ts');
+    const before = fs.readFileSync(configPath, 'utf8');
+    const r = upgrade(root);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), before);
+    assert.match(r.stdout, /sign-in\.login\.spec\.ts/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: without opt-in-suffixed specs an installed project refreshes its pristine config', () => {
+  const root = makeInstalledProjectWithOldConfig();
+  try {
+    writeSpec(root, 'orders/orders.spec.ts');
+    const r = upgrade(root);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(
+      fs.readFileSync(path.join(e2e(root), 'playwright.config.ts'), 'utf8'),
+      fs.readFileSync(path.join(SCAFFOLD, 'playwright.config.ts'), 'utf8'),
+    );
+    assert.ok(!/NOT refreshed/.test(r.stdout), r.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: in a project without lane scripts, opt-in-suffixed specs keep the whole old setup', () => {
+  // The config and global-setup.ts require() the scripts, so the first delivery is
+  // all-or-nothing: holding the config back holds the group back.
+  const root = makeLegacyProject();
+  try {
+    writeSpec(root, 'orders.writes.spec.ts');
+    const configPath = path.join(e2e(root), 'playwright.config.ts');
+    const before = fs.readFileSync(configPath, 'utf8');
+    const r = upgrade(root);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), before);
+    assert.match(r.stdout, /orders\.writes\.spec\.ts/);
+    assert.ok(!fs.existsSync(path.join(e2e(root), 'scripts', 'lane-lock.js')), 'group not installed');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: a config already current is never held back by suffixed specs', () => {
+  const root = tmpDir('optin-current');
+  try {
+    assert.equal(run(INIT_PATH, [], root).status, 0);
+    writeSpec(root, 'report.slow.spec.ts');
+    const r = upgrade(root);
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(!/playwright\.config\.ts NOT refreshed/.test(r.stdout), r.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 // --- guidance --------------------------------------------------------------------------
 
 test('qa-automation documents login-only-in-setup and opt-in projects', () => {

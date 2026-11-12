@@ -883,6 +883,16 @@ if (hasAutomationScaffold) {
     ? scriptMembers.filter((m) => !isPristine(m.dest, m.key))
     : groupMembers.filter((m) => fs.existsSync(m.dest) && !isPristine(m.dest, m.key));
 
+  // Specs that already carry an opt-in suffix (C8). The current config moves
+  // *.login/.writes/.slow.spec.ts out of the default suite into opt-in projects, so
+  // refreshing a pristine older config would silently stop running them in `npm test`
+  // (and silently put a *.writes.spec.ts under the write rules). Such a config is held
+  // back with a warning until the files are renamed or the move is accepted by hand.
+  const configMember = hostMembers.find((m) => m.rel === 'playwright.config.ts');
+  const optInSpecs = findOptInSuffixSpecs(path.join(e2eDir, 'tests'));
+  const holdConfig = optInSpecs.length > 0 && fs.existsSync(configMember.dest) &&
+    isPristine(configMember.dest, configMember.key) && !sameAsTemplate(configMember.dest, configMember.src);
+
   if (laneScaffoldInstalled) {
     if (blockers.length === 0) {
       for (const m of scriptMembers) {
@@ -893,6 +903,10 @@ if (hasAutomationScaffold) {
       // Host files follow only when pristine; a user-owned one keeps working because
       // every export it was written against is still there.
       for (const m of hostMembers) {
+        if (m === configMember && holdConfig) {
+          warnings.push(optInSuffixWarning(optInSpecs, ''));
+          continue;
+        }
         if (!fs.existsSync(m.dest) || isPristine(m.dest, m.key)) {
           forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
           console.log(`  [updated]  e2e/${m.rel}`);
@@ -913,6 +927,14 @@ if (hasAutomationScaffold) {
           heldBack
       );
     }
+  } else if (blockers.length === 0 && holdConfig) {
+    // First delivery is all-or-nothing (the config require()s the scripts), so holding
+    // the config back holds the whole group back. The current setup keeps working.
+    warnings.push(optInSuffixWarning(
+      optInSpecs,
+      `\n    The lane scripts and global-setup.ts are installed only together with the config,\n` +
+        `    so the lane-aware scaffold is NOT installed either; your current setup is untouched.`
+    ));
   } else if (blockers.length === 0) {
     for (const m of groupMembers) {
       forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
@@ -1445,6 +1467,42 @@ function reportInTestLogins(found) {
       `    *.login.spec.ts file, run by the opt-in 'login-flow' project\n` +
       `    (.github/skills/qa-automation/references/session-and-opt-in-projects.md):\n` +
       found.map((f) => `      ${f}`).join('\n')
+  );
+}
+
+// C8 - specs under tests/ whose name already ends in an opt-in suffix. The current
+// config runs them only in an opt-in project, never in the default suite.
+function findOptInSuffixSpecs(testsDir) {
+  const found = [];
+  (function walk(dir) {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(login|writes|slow)\.spec\.ts$/.test(entry.name)) found.push(path.relative(cwd, full));
+    }
+  })(testsDir);
+  return found.sort();
+}
+
+function optInSuffixWarning(files, extra) {
+  return (
+    `e2e/playwright.config.ts NOT refreshed: these existing specs already use an opt-in suffix:\n` +
+    files.map((f) => `      ${f}`).join('\n') +
+    `\n    The new config moves *.login.spec.ts, *.writes.spec.ts and *.slow.spec.ts out of the\n` +
+    `    default suite (\`npm test\`) into the opt-in projects login-flow, writes and slow, so\n` +
+    `    these files would silently stop running by default. A *.writes.spec.ts would run in\n` +
+    `    the writes project, which requires qa/00-standards/write-safety-policy.md.\n` +
+    `    Either rename them (any other suffix keeps them in the default suite) and run\n` +
+    `    upgrade again, or accept the move by copying the config by hand from:\n` +
+    `      node_modules/@keber/qa-framework/templates/automation-scaffold/playwright.config.ts` +
+    extra
   );
 }
 
