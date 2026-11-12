@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { spawnSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -16,9 +17,41 @@ const VERSION = require(path.join(ROOT, 'package.json')).version;
 const { syncVersion, PROSE_PATTERN, fieldPattern } = require(SYNC_PATH);
 const FIELD_PATTERN = fieldPattern('frameworkVersion');
 
-function runSync() {
-  return spawnSync(process.execPath, [SYNC_PATH], { cwd: ROOT, encoding: 'utf8' });
+// No test in this file may write to the tracked files of this repo. `node --test` runs
+// test files in parallel processes, and other files read qa-framework.config.json from
+// the repo root: a test here that rewrote and then "restored" it left a window where
+// that file was truncated, and a concurrent JSON.parse failed with "Unexpected end of
+// JSON input" (an intermittent red suite). Every test that runs sync-version does it on
+// a disposable copy instead.
+const SURFACES = ['package.json', 'qa-framework.config.json', 'README.md', path.join('.github', 'copilot-instructions.md')];
+
+// A temp root laid out like the package: the three published version surfaces, the
+// package.json the CLI reads its version from, and a copy of scripts/sync-version.js so
+// the CLI entry point (rootDir = scripts/..) resolves to the copy, not to the repo.
+function copyPackageRoot() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-sync-version-cli-'));
+  fs.mkdirSync(path.join(dir, 'scripts'));
+  fs.mkdirSync(path.join(dir, '.github'));
+  fs.copyFileSync(SYNC_PATH, path.join(dir, 'scripts', 'sync-version.js'));
+  for (const rel of SURFACES) fs.copyFileSync(path.join(ROOT, rel), path.join(dir, rel));
+  return {
+    dir,
+    file: rel => path.join(dir, rel),
+    read: rel => fs.readFileSync(path.join(dir, rel), 'utf8'),
+    write: (rel, content) => fs.writeFileSync(path.join(dir, rel), content, 'utf8'),
+    cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
+  };
 }
+
+function runSync(root) {
+  return spawnSync(process.execPath, [path.join(root.dir, 'scripts', 'sync-version.js')], {
+    cwd: root.dir,
+    encoding: 'utf8',
+  });
+}
+
+const CONFIG_REL = 'qa-framework.config.json';
+const PROSE_RELS = ['README.md', path.join('.github', 'copilot-instructions.md')];
 
 // qa-framework.config.json ships to npm and is the template init.js copies into every
 // consuming project, where frameworkVersion is injected into {{VERSION}} of the
@@ -46,60 +79,53 @@ test('sync-version: every published version surface agrees with package.json', (
   }
 });
 
-// Idempotence, checked without assuming the tree is already synced and without leaving
-// it modified. The previous version ran sync-version once and compared against the
-// starting bytes, so on a drifted tree it REPAIRED qa-framework.config.json as a side
-// effect: the first run failed, the retry passed, and the drift vanished from the
-// working tree unnoticed. A suite that edits tracked files turns a red run green on
-// the retry and hides the very thing it exists to catch. Normalise first, then assert
-// the second run is a no-op, and restore every file sync-version can write.
+// Idempotence, checked without assuming the tree is already synced. Normalise with a
+// first run, then assert the second run is a no-op. Runs on a copy (see SURFACES): an
+// earlier version ran on the repo itself and REPAIRED a drifted config as a side effect,
+// hiding the drift, and later raced concurrent test files while restoring it.
 test('sync-version: a second run on a synced tree changes nothing', () => {
-  const TOUCHED = [CONFIG_PATH, README_PATH, COPILOT_PATH];
-  const before = new Map(TOUCHED.map(p => [p, fs.readFileSync(p, 'utf8')]));
-
+  const root = copyPackageRoot();
   try {
-    const first = runSync();
+    const first = runSync(root);
     assert.equal(first.status, 0, first.stdout + first.stderr);
-    const synced = new Map(TOUCHED.map(p => [p, fs.readFileSync(p, 'utf8')]));
+    const watched = [CONFIG_REL, ...PROSE_RELS];
+    const synced = new Map(watched.map(rel => [rel, root.read(rel)]));
 
-    const second = runSync();
+    const second = runSync(root);
     assert.equal(second.status, 0, second.stdout + second.stderr);
-    for (const p of TOUCHED) {
-      assert.equal(
-        fs.readFileSync(p, 'utf8'),
-        synced.get(p),
-        `${path.relative(ROOT, p)} changed on the second run`
-      );
+    assert.equal(second.stdout, '', 'the second run must report no rewrite');
+    for (const rel of watched) {
+      assert.equal(root.read(rel), synced.get(rel), `${rel} changed on the second run`);
     }
   } finally {
-    for (const [p, content] of before) fs.writeFileSync(p, content, 'utf8');
+    root.cleanup();
   }
 });
 
 // The repair path: a drifted frameworkVersion must be rewritten in place, keeping the
-// surrounding JSON formatting untouched. The original bytes are restored either way.
+// surrounding JSON formatting untouched.
 test('sync-version: a drifted frameworkVersion is rewritten from package.json', () => {
-  const before = fs.readFileSync(CONFIG_PATH, 'utf8');
+  const root = copyPackageRoot();
   try {
+    const before = root.read(CONFIG_REL);
     const drifted = before.replace(FIELD_PATTERN, '$10.0.1$2');
     assert.notEqual(drifted, before, 'fixture setup: frameworkVersion field not found');
-    fs.writeFileSync(CONFIG_PATH, drifted, 'utf8');
+    root.write(CONFIG_REL, drifted);
 
-    const result = runSync();
+    const result = runSync(root);
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.match(result.stdout, /frameworkVersion -> /);
 
-    const after = fs.readFileSync(CONFIG_PATH, 'utf8');
+    const after = root.read(CONFIG_REL);
     assert.equal(JSON.parse(after).frameworkVersion, VERSION);
 
-    // Compare against the starting bytes with only the version field substituted, not
-    // against the starting bytes themselves: the tree may legitimately start drifted
-    // (mid-release, or on a branch that bumped package.json), and this test is about
+    // Compare against the starting bytes with only the version field substituted: the
+    // repo may legitimately start drifted (mid-release), and this test is about
     // sync-version touching nothing else - not about where the tree happened to be.
     const expected = before.replace(FIELD_PATTERN, `$1${VERSION}$2`);
     assert.equal(after, expected, 'only the version field may change');
   } finally {
-    fs.writeFileSync(CONFIG_PATH, before, 'utf8');
+    root.cleanup();
   }
 });
 
@@ -124,36 +150,33 @@ test('sync-version: instruction templates keep the {{VERSION}} placeholder', () 
 // change set out to fix. This test derives the list from behaviour: every file
 // sync-version.js actually rewrites must appear in the staging command.
 test("sync-version: the version lifecycle stages every file sync-version rewrites", () => {
-  const WRITTEN = [CONFIG_PATH, README_PATH, COPILOT_PATH];
-  const before = new Map(WRITTEN.map(p => [p, fs.readFileSync(p, "utf8")]));
-
+  const root = copyPackageRoot();
   try {
-    fs.writeFileSync(
-      CONFIG_PATH,
-      before.get(CONFIG_PATH).replace(FIELD_PATTERN, "$10.0.1$2"),
-      "utf8"
-    );
-    for (const p of [README_PATH, COPILOT_PATH]) {
-      fs.writeFileSync(p, before.get(p).replace(PROSE_PATTERN, "v0.0.1"), "utf8");
+    root.write(CONFIG_REL, root.read(CONFIG_REL).replace(FIELD_PATTERN, "$10.0.1$2"));
+    for (const rel of PROSE_RELS) {
+      root.write(rel, root.read(rel).replace(PROSE_PATTERN, "v0.0.1"));
     }
     // The drift above must actually land, or this test proves nothing: it used to
     // build these patterns with unescaped `d+` / `s*`, matched nothing, and so
     // never exercised the rewrite it claims to check.
-    assert.equal(JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8")).frameworkVersion, "0.0.1");
+    assert.equal(JSON.parse(root.read(CONFIG_REL)).frameworkVersion, "0.0.1");
 
-    const result = runSync();
+    const before = new Map(SURFACES.map(rel => [rel, root.read(rel)]));
+    const result = runSync(root);
     assert.equal(result.status, 0, result.stdout + result.stderr);
+    const rewritten = SURFACES.filter(rel => root.read(rel) !== before.get(rel));
+    assert.equal(rewritten.length, 3, `fixture setup: expected 3 rewrites, got ${rewritten}`);
 
     const versionScript = require(path.join(ROOT, "package.json")).scripts.version;
-    for (const p of WRITTEN) {
-      const rel = path.relative(ROOT, p).split(path.sep).join("/");
+    for (const rel of rewritten) {
+      const posix = rel.split(path.sep).join("/");
       assert.ok(
-        versionScript.includes(rel),
-        `package.json "version" script must stage ${rel}, which sync-version.js rewrites`
+        versionScript.includes(posix),
+        `package.json "version" script must stage ${posix}, which sync-version.js rewrites`
       );
     }
   } finally {
-    for (const [p, content] of before) fs.writeFileSync(p, content, "utf8");
+    root.cleanup();
   }
 });
 
@@ -164,8 +187,6 @@ test("sync-version: the version lifecycle stages every file sync-version rewrite
 // frameworkVersion version field"; the prose pattern would have left the old suffix
 // dangling ("v1.14.0-rc.2-rc.1"). These tests run the real sequence on temp copies of
 // the three published surfaces, never on the tracked files.
-
-const os = require('node:os');
 
 function makeFixtureRoot() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-sync-version-'));
