@@ -204,7 +204,10 @@ Per release candidate:
 
 | Wave | Package | Status | Branch / commit | Release |
 |---|---|---|---|---|
-| 0 | WP0.1 | not started | | 1.14.0-rc.1 |
+| 0 | WP0.1 publish guards | merged to `dev`; CI green on `dev` | `3c2dc8d` | 1.14.0-rc.1 |
+| 0 | WP0.2 prerelease-safe versions | merged to `dev`; four-bump simulation passes | `58e2b60` | 1.14.0-rc.1 |
+| 1 | WP1.5 priority-and-feasibility | closed - already covered | - | - |
+| 1 | WP1.6 ADO full-read protocol | done, held until rc.1 is tagged | `2e59409` | 1.14.0-rc.2 |
 
 ## Decision log
 
@@ -212,3 +215,7 @@ Per release candidate:
 |---|---|---|
 | 2026-11-12 | Autonomous prereleases under `next`; human promotion to `latest` | Seven consumers on `^` ranges; publication is irreversible |
 | 2026-11-12 | Port Marcela's work (candidates 1-3); she reviews the rc before promotion | Her decisions become defaults for every project |
+| 2026-11-12 | Close WP1.5 (B8) without changes | The survey premise was false: `priority-and-feasibility.md` was merged on purpose into `skills/qa-test-plan/references/plan-de-pruebas-template.md` in `86550b5` (v1.11.3), which carries the P0-P3 tree and the feasibility table and is already linked from the skill. Consumers still hold the old file only because they run older versions |
+| 2026-11-12 | Add WP0.2 to wave 0 and hold rc.1 for it | Simulating three bumps showed `sync-version.js` throws on any version after the first prerelease: its `frameworkVersion` pattern requires `X.Y.Z"`. Neither rc.2 nor the final promotion bump could be made. Release plumbing, so it belongs to wave 0 |
+| 2026-11-12 | WP1.6 ships the ADO full-read protocol as a skill reference only, not as a new agent rule | A new rule would renumber the rules files that WP1.3 also edits; the rule can follow once WP1.3 lands |
+| 2026-11-12 | `CHANGELOG.md` keeps `[Unreleased]` through every release candidate; it is renamed to `[X.Y.Z] - date` only in the promotion commit | Keep a Changelog has no convention for candidates, and renaming per rc would split one release's notes across several headings |
