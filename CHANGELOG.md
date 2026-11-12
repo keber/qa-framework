@@ -22,8 +22,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   under load limited to a single timed call unless explicitly requested, capped and
   confirmed; runs only against `project.qaBaseUrl`; and an explicit slot for each project
   to name its write approver. Ported from the work of `marcela.berriosc` in a consumer
-  project. Installed by `init` for new projects; `upgrade` does not install standards
-  documents, so existing projects do not receive it yet.
+  project. Installed by `init` for new projects and by `upgrade` for existing ones when
+  missing (an existing copy is never touched).
 - **API integration scaffold implements the write-safety policy (`qa/07-automation/integration/`).**
   The scaffold was a skeleton with one placeholder test; it is now a read-only API test
   project with an explicit write opt-in. `scripts/api-guard.js` (plain JavaScript, unit-tested
@@ -45,7 +45,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   credentials. Mechanism ported from the work of `marcela.berriosc` in a consumer
   project. Installed by `init` for new projects; `upgrade` refreshes a pristine
   `playwright.config.ts` and `global-setup.ts` (both kept self-contained for that reason)
-  but does not deliver the new files to existing projects yet.
+  and delivers the new files as described below.
+- **`upgrade` delivers the 1.14 standards documents and the API guard to existing projects.**
+  Until now both reached new projects only, through `init`.
+  - `qa/00-standards/`: `init` and `upgrade` read one list,
+    `scripts/lib/standards-docs.js`. `upgrade` creates each missing document and never
+    touches an existing one, even when it differs from the template (the project edits
+    these: `write-safety-policy.md` names its write approver). The report says which were
+    created, which are up to date and which are kept as the project's own.
+  - Integration scaffold: the scripts, fixtures and tests of the API guard, listed with
+    their owner and imports in `scripts/lib/integration-guard-files.js`. A file is
+    delivered only together with every scaffold file it imports, so an upgraded project
+    never imports something missing or foreign. Framework logic (`scripts/*.js`,
+    `fixtures/base.ts`) is installed when missing and refreshed while pristine; catalogs,
+    exclusions, the response contract and the tests are the project's and are only
+    installed when missing. The first delivery is all-or-nothing for the scripts,
+    `base.ts` and the files `base.ts` imports. A project with its own `fixtures/base.ts`
+    receives nothing that imports it, and is told which files were not installed.
+  - A pristine pre-1.14 `tests/example.spec.ts`, which fails with "Invalid URL" under the
+    1.14 config when `QA_BASE_URL` is not set, is refreshed together with what it now
+    imports; when that is not possible the report says so. `package.json` is never
+    edited: a missing `test:write` script is reported with the line to add.
 - **ADO work item full-content read protocol (`qa-ado-integration`).** New reference
   `skills/qa-ado-integration/references/ado-workitem-full-read-protocol.md`, linked from
   the skill as a BLOCKING read rule: before classifying, scoping or concluding anything

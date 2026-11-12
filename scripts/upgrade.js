@@ -67,6 +67,13 @@
  *         the surrounding code differs per project and a bad rewrite of a
  *         working login is worse than the finding.
  *
+ *   DELIVERS (v1.14.0, install-if-missing, never overwrites the project's files):
+ *     - qa/00-standards/*.md - the list shared with init (scripts/lib/standards-docs.js).
+ *       Created when missing; an existing document is never touched, even if it differs.
+ *     - qa/07-automation/integration/ API guard set (scripts/lib/integration-guard-files.js):
+ *       scripts/, fixtures/ and tests/ of the read-only client and write gates. A file
+ *       is delivered only with every scaffold file it imports; see deliverApiGuard().
+ *
  *   NEVER touches (project-owned):
  *     - qa/01-specifications/       <- Your specs
  *     - qa/02-test-plans/           <- Your test plans
@@ -87,6 +94,8 @@ const path = require('path');
 
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
 const { isSprintCycleEnabled, renderAllAgents } = require('./lib/claude-agents');
+const { STANDARDS_DOCS, standardsDocContent } = require('./lib/standards-docs');
+const { INTEGRATION_GUARD_FILES } = require('./lib/integration-guard-files');
 
 // Version stamped into the rule files. Always the package running the upgrade, never
 // the consumer's frameworkVersion: that is a copy init wrote once and nothing updates
@@ -192,6 +201,49 @@ const SHIPPED_SCAFFOLD_HASHES = {
   ],
   'integration-scaffold/.env.example': [
     '671461d7dc9883505cec314aefa1129a336b6a03b31a0eb2eb2ede2adda7c4ac', // v1.11.0 - v1.13.2
+  ],
+  // The API guard set (scripts/lib/integration-guard-files.js). Only owner 'framework'
+  // files and tests/example.spec.ts are ever refreshed from these; the 'user' entries
+  // are recorded so a later release can still tell an untouched copy from an edited one.
+  'integration-scaffold/tests/example.spec.ts': [
+    'f578077fecdba7ddace9eff6f08bcfe98af0a5d7e41df5bbf00909d60bd78240', // v1.11.0 - v1.14.0-rc.2
+    '7c9d20b58bc5d8cd973f65e50940fc389931c838e33566a263faa26a9a6a8e47', // unreleased: WP2.2 read catalog and response contract
+  ],
+  'integration-scaffold/scripts/hard-exclusions.js': [
+    '7e6f2dd9ce6ddf494663c5717f6cb96142a70f4b3954210a5a0839483ef5d3e7', // unreleased: WP2.2
+  ],
+  'integration-scaffold/scripts/api-guard.js': [
+    '32b362a7dcb28e8b4957f795966e88149ae759bb3b8022f45032290bd9d5269e', // unreleased: WP2.2
+  ],
+  'integration-scaffold/scripts/run-write-tests.js': [
+    '3d60721b3bb94a292e171caab0967185b0ad66ff75dfbfbba30a3b8e4c378324', // unreleased: WP2.2
+  ],
+  'integration-scaffold/fixtures/base.ts': [
+    '61ad21f8a21f3fce8cc70bdccbd1fff39ed53e750bd39044dc60872d0db87c0c', // unreleased: WP2.2
+  ],
+  'integration-scaffold/fixtures/read-catalog.ts': [
+    '443fdefe3856b5e181fc4ce13e213f57c294cc6558b7083063829cf9d49cbbed', // unreleased: WP2.2
+  ],
+  'integration-scaffold/fixtures/write-catalog.ts': [
+    'a35b255db64491bb2491062f1e85bf324da1e11fef90a793e042646cad2028cf', // unreleased: WP2.2
+  ],
+  'integration-scaffold/fixtures/project-exclusions.ts': [
+    '1827c9be4210dde8f430ef5407e396a3f93b13f2a55f2658e5791190df081411', // unreleased: WP2.2
+  ],
+  'integration-scaffold/fixtures/contract.ts': [
+    '38c071e518eeebd085bef4cd3e8f6d523557db29bbb6548973f1d4f4cfacc916', // unreleased: WP2.2
+  ],
+  'integration-scaffold/tests/security/read-only-guard.spec.ts': [
+    '5d1dbafafcd8f4f5a05f238fc1b638ed23140e0cb5336a1bc142e7c92d2914ec', // unreleased: WP2.2
+  ],
+  'integration-scaffold/tests/security/catalogs.spec.ts': [
+    'b47787be5d106fa322a39a0c7fdec0e1f09c59d6c67ab992e9e02afea35b478b', // unreleased: WP2.2
+  ],
+  'integration-scaffold/tests/security/no-session.spec.ts': [
+    '6501c733de07a64bfff3c9b55216a6b40743ea9e8dc27d3129aa7727b233edf3', // unreleased: WP2.2
+  ],
+  'integration-scaffold/tests/write/example-write-cycle.spec.ts': [
+    '2770c603d4dea514baed8082a3bde76646fcb161c766ad1a74702491d05917ee', // unreleased: WP2.2
   ],
 };
 
@@ -464,28 +516,18 @@ const integrationDir      = path.join(automationDir, 'integration');
 const integrationScaffold = path.resolve(__dirname, '..', 'templates', 'integration-scaffold');
 const integrationReadme   = path.join(integrationDir, 'README.md');
 const loadReadme          = path.join(automationDir, 'load', 'README.md');
-if (!fs.existsSync(integrationReadme)) {
-  if (!dryRun) {
-    fs.mkdirSync(integrationDir, { recursive: true });
-    for (const file of ['package.json', 'playwright.config.ts', 'global-setup.ts', 'README.md', '.env.example']) {
-      const dest = path.join(integrationDir, file);
-      if (!fs.existsSync(dest)) {
-        fs.copyFileSync(path.join(integrationScaffold, file), dest);
-        updated.push(dest);
-        console.log(`  [created] ${path.relative(cwd, dest)}`);
-      }
+// The tests and fixtures (tests/example.spec.ts included) are delivered by section 9's
+// API guard step, which installs them only together with the files they import.
+const integrationCreatedNow = !fs.existsSync(integrationReadme);
+if (integrationCreatedNow) {
+  if (!dryRun) fs.mkdirSync(integrationDir, { recursive: true });
+  for (const file of ['package.json', 'playwright.config.ts', 'global-setup.ts', 'README.md', '.env.example']) {
+    const dest = path.join(integrationDir, file);
+    if (!fs.existsSync(dest)) {
+      if (!dryRun) fs.copyFileSync(path.join(integrationScaffold, file), dest);
+      updated.push(dest);
+      console.log(`  [created] ${path.relative(cwd, dest)}`);
     }
-    const integrationTestsDir = path.join(integrationDir, 'tests');
-    fs.mkdirSync(integrationTestsDir, { recursive: true });
-    const exampleSpec = path.join(integrationTestsDir, 'example.spec.ts');
-    if (!fs.existsSync(exampleSpec)) {
-      fs.copyFileSync(path.join(integrationScaffold, 'tests', 'example.spec.ts'), exampleSpec);
-      updated.push(exampleSpec);
-      console.log(`  [created] ${path.relative(cwd, exampleSpec)}`);
-    }
-  } else {
-    updated.push(integrationReadme);
-    console.log(`  [created] ${path.relative(cwd, integrationReadme)}`);
   }
 }
 if (!fs.existsSync(loadReadme)) {
@@ -710,6 +752,33 @@ if (fs.existsSync(memoryDir)) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 8b. qa/00-standards/ documents (write-safety-policy.md added in v1.14.0)
+//     Same list as init (scripts/lib/standards-docs.js). Installed when missing;
+//     an existing document is never touched, even when it differs from the template:
+//     the project edits these (write-safety-policy.md names its write approver).
+// ---------------------------------------------------------------------------
+if (fs.existsSync(qaRoot)) {
+  const standardsDir = path.join(qaRoot, '00-standards');
+  for (const doc of STANDARDS_DOCS) {
+    const dest = path.join(standardsDir, doc.file);
+    const content = standardsDocContent(doc);
+    if (!fs.existsSync(dest)) {
+      if (!dryRun) {
+        fs.mkdirSync(standardsDir, { recursive: true });
+        fs.writeFileSync(dest, content, 'utf8');
+      }
+      updated.push(dest);
+      console.log(`  [created] 00-standards/${doc.file}`);
+    } else if (sameContent(dest, content)) {
+      skipped.push(dest);
+    } else {
+      // The project's own version: never overwritten, never merged.
+      kept.push(dest);
+    }
+  }
+}
+
 
 // ---------------------------------------------------------------------------
 // 9. Migration v1.11.x -> v1.12.0: lane-aware automation scaffold
@@ -865,18 +934,24 @@ if (hasAutomationScaffold) {
 }
 
 // --- integration scaffold: no lane coupling, so purely per-file -------------
-// Same reasoning as above: require a real scaffold file, not just the folder.
-const hasIntegrationScaffold = ['playwright.config.ts', 'global-setup.ts', 'package.json']
-  .some((f) => fs.existsSync(path.join(integrationDir, f)));
+// Same reasoning as above: require a real scaffold file, not just the folder. A project
+// whose integration/ holds only the pre-v1.11 placeholder README gets nothing here. In
+// a dry run, section 5d only reported the scaffold it would create, so count it.
+const hasIntegrationScaffold = (dryRun && integrationCreatedNow) ||
+  ['playwright.config.ts', 'global-setup.ts', 'package.json']
+    .some((f) => fs.existsSync(path.join(integrationDir, f)));
 
 if (hasIntegrationScaffold) {
   const integrationSrc = path.resolve(__dirname, '..', 'templates', 'integration-scaffold');
+  // Scaffold files (relative to integration/) that equal the template once this run ends.
+  const integrationCurrent = new Set();
   for (const file of ['playwright.config.ts', 'global-setup.ts']) {
     const dest = path.join(integrationDir, file);
     const key  = `integration-scaffold/${file}`;
     if (!fs.existsSync(dest) || isPristine(dest, key)) {
       forceWrite(dest, fs.readFileSync(path.join(integrationSrc, file), 'utf8'));
       console.log(`  [updated]  integration/${file}`);
+      integrationCurrent.add(file);
     } else {
       warnUserOwned(dest, path.join(integrationSrc, file), `integration/${file}`, key);
     }
@@ -887,6 +962,7 @@ if (hasIntegrationScaffold) {
     'integration-scaffold/.env.example',
     'integration/.env.example'
   );
+  deliverApiGuard(integrationSrc, integrationCurrent);
   reportTraceSafety(integrationDir);
 }
 
@@ -896,7 +972,7 @@ if (hasIntegrationScaffold) {
 console.log('\n--- Results ---');
 if (updated.length) {
   console.log('\n  Updated (framework-owned):');
-  for (const f of updated) console.log(`    ✅ ${path.relative(cwd, f)}`);
+  for (const f of new Set(updated)) console.log(`    ✅ ${path.relative(cwd, f)}`);
 }
 if (skipped.length) {
   console.log('\n  Skipped (already up to date):');
@@ -1009,6 +1085,15 @@ function sameAsTemplate(dest, src) {
   }
 }
 
+// sameAsTemplate() for content that is not a template file (an inline standards doc).
+function sameContent(dest, content) {
+  try {
+    return scaffoldHash(fs.readFileSync(dest, 'utf8')) === scaffoldHash(content);
+  } catch {
+    return false;
+  }
+}
+
 // Reports a user-owned file (its hash is not one the framework shipped) that upgrade
 // leaves untouched. Such a file is NOT up to date: it misses whatever this release
 // changed in the template, so say so and point at the template to merge from.
@@ -1049,6 +1134,217 @@ function reportHeldBackGroup(members, blockers) {
     `    next upgrade once the files above are merged by hand or restored):\n` +
     heldBack.map((m) => `      e2e/${m.rel}`).join('\n')
   );
+}
+
+// ---------------------------------------------------------------------------
+// API guard set of the integration scaffold (read-only client and write gates, v1.14.0)
+//
+// The files, their owner and their imports are listed once, in
+// scripts/lib/integration-guard-files.js. The rules:
+//
+//   - Coherence first: a file is delivered only when every scaffold file it imports
+//     will be the framework's version after this run. No installed file may import
+//     something missing or foreign (fixtures/base.ts without scripts/api-guard.js
+//     cannot even load).
+//   - fixtures/base.ts decides whose guard this is:
+//       absent    first delivery. Installed as ONE group - the three scripts, base.ts
+//                 and the three files base.ts imports (catalogs, exclusions) - only
+//                 when none of them exists as someone else's file. One foreign member
+//                 and nothing of the set is installed: a catalog of unknown shape would
+//                 break base.ts, and a foreign script would run under our client.
+//       pristine  installed by the framework earlier. Scripts refresh together (they
+//                 require() each other) and only when all are pristine; base.ts follows
+//                 them. Missing catalogs are reinstalled (base.ts imports them); edited
+//                 catalogs and contract are the project's and count as satisfied.
+//       user's    the project runs its own client. Nothing that imports base.ts is
+//                 installed. The scripts are refreshed in place only when all three
+//                 exist and are pristine, as with the lane scripts (base.ts keeps
+//                 working: scripts never drop a released export).
+//   - 'user' files are installed when missing and never touched once they exist, except
+//     a pristine older tests/example.spec.ts (refreshWhenPristine).
+// ---------------------------------------------------------------------------
+function deliverApiGuard(srcDir, current) {
+  const entries = INTEGRATION_GUARD_FILES.map((spec) => {
+    const dest = path.join(integrationDir, ...spec.rel.split('/'));
+    const src  = path.join(srcDir, ...spec.rel.split('/'));
+    const key  = `integration-scaffold/${spec.rel}`;
+    let state = 'absent';
+    if (fs.existsSync(dest)) {
+      state = sameAsTemplate(dest, src) ? 'current' : isPristine(dest, key) ? 'old' : 'user';
+    }
+    if (state === 'current') current.add(spec.rel);
+    return { ...spec, dest, src, key, state, label: `integration/${spec.rel}` };
+  });
+  const byRel   = new Map(entries.map((e) => [e.rel, e]));
+  const base    = byRel.get('fixtures/base.ts');
+  const scripts = entries.filter((e) => e.owner === 'framework' && e !== base);
+  // The 'user' files base.ts imports: part of the first-delivery group.
+  const baseData = base.deps.map((rel) => byRel.get(rel)).filter((e) => e.owner === 'user');
+  const dependents = entries.filter((e) => e.owner === 'user' && !baseData.includes(e));
+
+  const install = (e) => {
+    forceWrite(e.dest, fs.readFileSync(e.src, 'utf8'));
+    console.log(`  [${e.state === 'absent' ? 'created' : 'updated'}] ${e.label}`);
+    current.add(e.rel);
+  };
+  // A file this run leaves as it is: identical ones are up to date, the project's own
+  // ones are kept. Framework copies held back are named by the caller's warning.
+  // A pristine older copy waiting for a refresh is not the project's content: the
+  // warnings name it instead.
+  const leave = (e) => {
+    if (e.state === 'current') skipped.push(e.dest);
+    else if (e.owner === 'user' && e.state !== 'absent' && !(e.refreshWhenPristine && e.state === 'old')) {
+      kept.push(e.dest);
+    }
+  };
+  const reportStaleExample = () => {
+    const example = byRel.get('tests/example.spec.ts');
+    if (example.state === 'old' && !current.has(example.rel) && current.has('playwright.config.ts')) {
+      warnings.push(
+        `integration/tests/example.spec.ts is the pre-1.14 example and was not refreshed. With the\n` +
+          `    1.14 playwright.config.ts it fails with "Invalid URL" when QA_BASE_URL is not set,\n` +
+          `    instead of stopping with a clear message. Set QA_BASE_URL or delete the example.`
+      );
+    }
+  };
+  const template = 'node_modules/@keber/qa-framework/templates/integration-scaffold/';
+  const list = (items) => items
+    .map((e) => `      ${e.label}${e.owner === 'user' && e.state === 'old' ? ' (its previous version stays)' : ''}`)
+    .join('\n');
+
+  // --- the project's own fixtures/base.ts -------------------------------------
+  if (base.state === 'user') {
+    warnUserOwned(base.dest, base.src, base.label, base.key);
+    const scriptsPristine = scripts.every((e) => e.state === 'current' || e.state === 'old');
+    for (const e of scripts) {
+      if (scriptsPristine && e.state === 'old') install(e);
+      else if (e.state === 'user') warnUserOwned(e.dest, e.src, e.label, e.key);
+      else leave(e);
+    }
+    const notInstalled = entries.filter((e) => e !== base && !current.has(e.rel) &&
+      (e.state === 'absent' || (e.refreshWhenPristine && e.state === 'old')));
+    for (const e of entries) if (e.owner === 'user') leave(e);
+    if (notInstalled.length) {
+      warnings.push(
+        `API guard (read-only client, write gates) NOT installed - integration/fixtures/base.ts is yours.\n` +
+          `    These files import base.ts or exist only for it, so they were not added next to\n` +
+          `    a client they were not written for:\n` +
+          list(notInstalled) +
+          `\n    To adopt the guard, merge by hand from:\n      ${template}`
+      );
+    }
+    reportStaleExample();
+    return;
+  }
+
+  const established = base.state !== 'absent';
+  const scriptsUser = scripts.filter((e) => e.state === 'user');
+
+  // --- first delivery: one group, all or nothing --------------------------------
+  if (!established) {
+    const group = [...scripts, base, ...baseData];
+    const blockers = [...scriptsUser, ...baseData.filter((e) => e.state === 'user')];
+    if (blockers.length) {
+      for (const e of entries) leave(e);
+      const notInstalled = entries.filter((e) => !blockers.includes(e) && !current.has(e.rel) &&
+        (e.state === 'absent' || (e.refreshWhenPristine && e.state === 'old')));
+      warnings.push(
+        `API guard (read-only client, write gates) NOT installed - these files are yours:\n` +
+          list(blockers) +
+          `\n    fixtures/base.ts require()s scripts/api-guard.js and imports the catalogs, and the\n` +
+          `    tests import base.ts, so the set is installed all-or-nothing. Your files are left\n` +
+          `    untouched. Not installed:\n` +
+          list(notInstalled) +
+          `\n    To adopt the guard, merge by hand from:\n      ${template}`
+      );
+      reportStaleExample();
+      return;
+    }
+    for (const e of group) {
+      if (e.state === 'absent' || (e.owner === 'framework' && e.state === 'old')) install(e);
+      else leave(e);
+    }
+  } else {
+    // --- installed earlier by the framework: refresh -----------------------------
+    if (scriptsUser.length === 0) {
+      for (const e of [...scripts, base]) {
+        if (e.state === 'absent' || e.state === 'old') install(e);
+        else leave(e);
+      }
+    } else {
+      const heldBack = [...scripts, base].filter((e) => e.state === 'old' || e.state === 'absent');
+      for (const e of [...scripts, base]) leave(e);
+      warnings.push(
+        `API guard scripts NOT refreshed - user-owned:\n` +
+          list(scriptsUser) +
+          `\n    The scripts require() each other and fixtures/base.ts requires them, so they are\n` +
+          `    refreshed together or not at all. Yours are left untouched.` +
+          (heldBack.length
+            ? `\n    Held back with them (framework copies or missing files, refreshed by the next\n` +
+              `    upgrade once the files above are merged by hand or restored):\n` + list(heldBack)
+            : '') +
+          `\n    Merge the framework's changes by hand from:\n      ${template}scripts/`
+      );
+    }
+    // base.ts exists and imports these: a missing one is restored, an edited one is the
+    // project's catalog and stays.
+    for (const e of baseData) {
+      if (e.state === 'absent') install(e);
+      else leave(e);
+    }
+  }
+
+  // --- contract and tests: the project's from day one -------------------------
+  // A dep is satisfied when it will equal the template, or when it is a 'user' file the
+  // framework installed (pristine, or anything once the guard is established: the
+  // catalogs and contract are meant to be edited, and base.ts relies on the same names).
+  const satisfied = (rel) => {
+    if (current.has(rel)) return true;
+    const dep = byRel.get(rel);
+    if (!dep || dep.owner !== 'user' || dep.state === 'absent') return false;
+    return established || dep.state === 'old';
+  };
+  const notDelivered = [];
+  for (const e of dependents) {
+    const missing = e.deps.filter((rel) => !satisfied(rel));
+    const wanted = e.state === 'absent' || (e.refreshWhenPristine && e.state === 'old');
+    if (!wanted) {
+      leave(e);
+    } else if (missing.length === 0) {
+      install(e);
+    } else {
+      const stays = e.state === 'old' ? '; its previous version stays' : '';
+      notDelivered.push(`      ${e.label} (needs ${missing.join(', ')}${stays})`);
+    }
+  }
+  if (notDelivered.length) {
+    warnings.push(
+      `API guard files NOT installed in integration/ - what they import is missing or yours:\n` +
+        notDelivered.join('\n') +
+        `\n    None of them was written. Merge by hand from:\n      ${template}`
+    );
+  }
+
+  reportStaleExample();
+
+  // npm run test:write lives in package.json, which upgrade never edits.
+  const runner = byRel.get('scripts/run-write-tests.js');
+  const pkgPath = path.join(integrationDir, 'package.json');
+  if ((current.has(runner.rel) || runner.state !== 'absent') && fs.existsSync(pkgPath)) {
+    let hasScript = false;
+    try {
+      hasScript = Boolean(JSON.parse(fs.readFileSync(pkgPath, 'utf8')).scripts?.['test:write']);
+    } catch {
+      hasScript = /"test:write"\s*:/.test(fs.readFileSync(pkgPath, 'utf8'));
+    }
+    if (!hasScript) {
+      warnings.push(
+        `integration/package.json has no "test:write" script, so write runs cannot start\n` +
+          `    (\`npm test\` never writes). Add it to "scripts" by hand:\n` +
+          `      "test:write": "node scripts/run-write-tests.js"`
+      );
+    }
+  }
 }
 
 // Trace safety (see skills/qa-automation/references/patterns.md, "Pattern 7"):

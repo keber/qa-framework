@@ -168,23 +168,12 @@ writeIfMissing(path.join(qaRoot, '03-test-cases', 'README.md'),
 `);
 
 // --- Standards placeholder ---
+// The list lives in scripts/lib/standards-docs.js, shared with upgrade: add a document there.
 const stdDir = path.join(qaRoot, '00-standards');
-writeIfMissing(path.join(stdDir, 'naming-conventions.md'), `# Naming Conventions\n\n> Fill in per your project. See keber/qa-framework docs/spec-driven-philosophy.md.\n`);
-writeIfMissing(path.join(stdDir, 'bug-report-template.md'), fs.readFileSync(
-  path.resolve(__dirname, '..', 'templates', 'defect-report.md'), 'utf8'
-));
-writeIfMissing(path.join(stdDir, 'test-case-template.md'), fs.readFileSync(
-  path.resolve(__dirname, '..', 'templates', 'test-case.md'), 'utf8'
-));
-writeIfMissing(path.join(stdDir, 'execution-report-template.md'), fs.readFileSync(
-  path.resolve(__dirname, '..', 'templates', 'execution-report.md'), 'utf8'
-));
-writeIfMissing(path.join(stdDir, 'test-data-guidelines.md'), fs.readFileSync(
-  path.resolve(__dirname, '..', 'templates', 'test-data-guidelines.md'), 'utf8'
-));
-writeIfMissing(path.join(stdDir, 'write-safety-policy.md'), fs.readFileSync(
-  path.resolve(__dirname, '..', 'templates', 'write-safety-policy.md'), 'utf8'
-));
+const { STANDARDS_DOCS, standardsDocContent } = require('./lib/standards-docs');
+for (const doc of STANDARDS_DOCS) {
+  writeIfMissing(path.join(stdDir, doc.file), standardsDocContent(doc));
+}
 
 // --- Per-module folders ---
 const modules = config.modules ?? [];
