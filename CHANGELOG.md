@@ -9,6 +9,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Lane lock rule for Claude Code projects (`.claude/rules/qa-framework.md`).** Claude
+  Code does not read `.github/instructions/`, and the rules file it does read did not
+  mention lanes, so Claude Code projects got the stale-lane sweep with no rule saying who
+  keeps a lane alive - the setup of the 2026-08-22 incident. `templates/qa-framework.rules.md`
+  now carries rule 12 (same number and title as in `qa-framework.instructions.md`) and a
+  "Lane lock - Claude Code dispatcher protocol" section implementing
+  `docs/decisions/lane-heartbeat-caller.md`: the dispatcher runs a background heartbeat
+  pump (holder check, `heartbeat` every `min(5 min, QA_LANE_STALE_MINUTES / 4)`, ~20 min
+  lease), renews it only while the worker's output grows, stops a worker that went
+  silent for two leases before releasing, and always releases on completion. It also
+  defines how to verify a held lane, how to clear an orphaned one, and what travels in a
+  worker prompt (the worker is never made responsible for liveness). It does not use
+  `TaskOutput`, which consumer projects' local rules still name and Claude Code removed in
+  v2.1.277. `upgrade` overwrites the file, so existing projects receive it. Guarded by
+  `test/claude-rules.test.js`.
+
 ### Fixed
 
 - **`upgrade` moves a path only with positive evidence that it is a framework leftover.**

@@ -1,6 +1,6 @@
 # Decision: the dispatcher calls the lane heartbeat, not the executor
 
-**Status**: accepted, not implemented
+**Status**: accepted, implemented for Claude Code (2026-11-11) - see "Implementation" below
 **Date**: 2026-09-08
 **Scope**: the N-lane work still pending upstream (FRAMEWORK-FIXES v3 items 1-4, v5 items 1, 2, 4)
 
@@ -84,3 +84,50 @@ no equivalent in other agents, and so must not be written into
   recommended this side.
 - `temp/FRAMEWORK-FIXES-qa-framework-v3.md` section 5, for the agent-agnostic versus
   agent-specific split.
+
+## Implementation (2026-11-11)
+
+**Where.** `templates/qa-framework.rules.md`, installed as `.claude/rules/qa-framework.md`:
+rule 12 (the agent-agnostic requirement, same number and title as rule 12 of
+`qa-framework.instructions.md`) and the section "Lane lock - Claude Code dispatcher
+protocol". Until then the Claude Code rules file did not mention lanes at all, and
+Claude Code does not read `.github/instructions/`, so Claude Code projects received the
+sweep with no rule naming who keeps a lane alive. `upgrade` overwrites that file as
+framework-owned, so existing projects get it too. Guarded by `test/claude-rules.test.js`.
+
+**What.** The dispatcher starts a background "heartbeat pump" before launching the worker.
+The pump checks that the lane holder is still the dispatcher's `request_id`, calls
+`heartbeat` every `min(5 min, QA_LANE_STALE_MINUTES / 4)` and exits after about 20
+minutes. Its exit re-invokes the dispatcher, which renews it only while the worker's
+output keeps growing; after two leases without growth it stops the worker with `TaskStop`
+and releases the lane. That is the answer to a completion notification that never
+arrives: the lane cannot be held indefinitely, and it is not swept under a live worker
+because the dispatcher stops the worker before letting the pump lapse.
+
+**Deviation from the mechanism named under Layering.** That section describes a `/loop`
+wrapper with a `ScheduleWakeup` fallback and a non-blocking task-state check. Checked
+against Claude Code 2.1.312 and its documentation on 2026-11-11:
+
+- `TaskOutput(task_id, block:false)`, which the consumer projects' local rules use, was
+  removed in v2.1.277. There is no documented non-blocking task-state tool; the
+  protocol uses the size and modification time of the task's output file instead.
+- `/loop` and `ScheduleWakeup` exist, but scheduled wakeups fire only between turns, so a
+  dispatcher busy on a long turn misses them. A background command keeps beating
+  regardless, re-invokes the dispatcher when it exits, and is cleaned up when the
+  session exits, so a dead dispatcher can never keep a lane alive.
+
+The decision itself is unchanged: the dispatcher calls `heartbeat` from its own wait
+loop, and the loop is now the pump plus its lease check-ins.
+
+**Left out.**
+
+- `heartbeat` and `release` in `lane-lock.js` do not check the holder. After a sweep and a
+  re-acquisition by someone else, a bare `heartbeat` succeeds on the new holder's lane
+  and a late `release` frees it. The protocol works around it by comparing the holder
+  with the recorded `request_id` through `status`; fixing the script itself (an optional
+  `request_id` argument) is pending.
+- `templates/agents/qa-investigador.md` still tells that worker heartbeats are
+  mandatory. It is harmless redundancy under this decision, but its wording contradicts
+  "the executor is not required to call it".
+- Mechanisms for other agents (Copilot, OpenCode) are not written; each agent's
+  adaptation defines its own.
