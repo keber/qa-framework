@@ -1,4 +1,4 @@
-﻿# Integration - playwright-azure-reporter
+# Integration - playwright-azure-reporter
 
 Connects Playwright test results to Azure DevOps Test Plans automatically.
 

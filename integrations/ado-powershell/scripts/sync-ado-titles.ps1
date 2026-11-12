@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Syncs Playwright spec file test titles back to Azure DevOps Work Item titles.
 

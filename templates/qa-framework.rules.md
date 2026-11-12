@@ -100,8 +100,10 @@ The lane was swept or released while your worker was running: another worker may
 - If the worker will itself dispatch workers against lanes, it becomes a dispatcher: include this whole section in its prompt.
 
 ## Formatting rules for generated content
-1. Generate the output in `UTF-8` encoding without BOM (`UTF-8`, no signature).
-2. Ensure the raw output is `UTF-8` encoded with no `EF BB BF` bytes at the beginning.
+The BOM policy is per file type; the two cases are not interchangeable.
+1. **`.ps1` (PowerShell) files: UTF-8 WITH BOM** (the raw output starts with `EF BB BF`). Why: Windows PowerShell 5.1 reads a BOM-less `.ps1` with the system ANSI codepage and corrupts every accented literal in it. Do not work around this by removing accents (rule 11 requires them): add the BOM.
+2. **Every other file (`.md`, `.json`, `.js`, `.ts`, `.yml`, ...): UTF-8 WITHOUT BOM** (no signature): the raw output must not start with `EF BB BF`.
+3. **PowerShell request bodies are UTF-8 bytes.** Any script that sends text to a REST API (POST, PATCH or PUT) must pass `[Text.Encoding]::UTF8.GetBytes($json)` as the body, never a raw `[string]`: PS 5.1 encodes a string body with the system codepage, so accented text arrives corrupted or the request is rejected.
 
 ## Azure DevOps integration
 
