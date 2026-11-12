@@ -176,9 +176,35 @@ function assertProjectsMatchLane(qaLaneOnly, projects, argv, laneLockModule) {
   }
 }
 
+/**
+ * Returns the credentials of the lane about to log in, or throws naming exactly the
+ * variables that are missing.
+ *
+ * Credentials come from the lane's declared account prefix, e.g. account 'QA_USER4'
+ * resolves QA_USER4_EMAIL / QA_USER4_PASSWORD. playwright.config.ts deliberately does
+ * NOT check credentials when it loads: a lane that is not logging in must not be forced
+ * to have credentials loaded, and every lane uses a different account. So this is the
+ * one place a missing credential surfaces, and it has to stay loud. The message names
+ * the variables, never their values.
+ */
+function laneCredentials(laneId, lane, env) {
+  const emailKey = `${lane.account}_EMAIL`;
+  const passwordKey = `${lane.account}_PASSWORD`;
+  const missing = [emailKey, passwordKey].filter((key) => !env[key]);
+  if (missing.length) {
+    throw new Error(
+      `[global-setup] Lane ${laneId} (account ${lane.account}) cannot log in: missing ${missing.join(' and ')}. ` +
+      'Set it in .env or the environment. Every configured lane needs its own credentials, ' +
+      'otherwise two lanes end up sharing an account, which is exactly what lanes exist to prevent.'
+    );
+  }
+  return { email: env[emailKey], password: env[passwordKey], emailKey, passwordKey };
+}
+
 module.exports = {
   assertColdSetupIsIntentional,
   assertLaneIsLocked,
   selectedProjectNamesFromArgv,
   assertProjectsMatchLane,
+  laneCredentials,
 };
