@@ -1,6 +1,6 @@
 # Upstream candidates from consumer projects
 
-**Date**: 2026-11-11
+**Date**: 2026-11-11, local date (America/Santiago, UTC-3 in effect; already 2026-11-12 in UTC)
 **Target framework version**: 1.13.2 (this repo)
 **Status**: point-in-time survey, not a living tracker.
 
@@ -819,7 +819,7 @@ placeholders while all real state went to `AGENT-NEXT-STEPS.md` plus `docs/`.
 
 ### 6D. Filed, still open in the consumer projects
 
-**D1. Who calls `heartbeat`? Decided here, not implemented.** (Exportadora v5
+**D1. Who calls `heartbeat`? Decided, and half shipped.** (Exportadora v5
 item 5.) On 2026-08-22 a subagent investigated for over 20 minutes without
 calling heartbeat; the sweep released lane 5 while it was still in use.
 Generalisable root cause: *a liveness protocol that depends on an uninstructed
@@ -833,11 +833,24 @@ dated 2026-09-08, status *accepted, not implemented*. The dispatcher calls
 must not be relied upon to. Scope stated there: the N-lane work still pending
 upstream (v3 items 1-4, v5 items 1, 2, 4).
 
-So D1 is not an open question, it is unshipped work. The framework already
-ships the sweep while the decision that makes the sweep safe is not implemented,
-so every project that adopts the lane lock today still inherits the 2026-08-22
-incident. The consumer projects have no record of this decision at all: it was
-taken here and never travelled back to them.
+Correction, made the same day: an earlier version of this paragraph said the
+framework ships the sweep with none of the decision implemented, and that the
+decision never reached the consumer projects. Both claims were already false
+when written. The agent-agnostic half shipped on 2026-09-08, the same day as the
+decision, and is part of v1.12.0: rule 12 of
+`templates/qa-framework.instructions.md` (commit `9930f5a`) states that the
+dispatcher keeps the lane alive with `heartbeat` and that the dispatched worker
+must not be relied upon, and `lane-lock.js` ships the `heartbeat` verb and the
+composite staleness predicate. Five of the consumer projects declare 1.12.0.
+
+What is missing is the Claude Code half. `templates/qa-framework.rules.md`, the
+file `scripts/init.js` installs as `.claude/rules/qa-framework.md`, does not
+mention lanes at all, and Claude Code does not read `.github/instructions/`. So a
+project working with Claude Code receives the sweep and no lane rule - not even
+the agent-agnostic one. That is the risk the decision's Consequences section
+warns about, narrowed to one agent. Whether each consumer's copy of
+`.github/instructions/` actually carries rule 12 was not checked in this survey;
+several show stale version headers (see A2).
 
 **D2. Lane capabilities are per-lane state.** There was a period where lanes 4-6
 had no MCP server, so handing lane 5 to a subagent handed it tools that did not
@@ -956,8 +969,9 @@ to keep and which disappeared upstream.
 - Whether skills may carry their own npm dependencies and binary assets.
 - One skip-state vocabulary (6E), one execution-report implementation (6E).
 - D1 needs no decision - `docs/decisions/lane-heartbeat-caller.md` took it on
-  2026-09-08 and it is still unimplemented. What is open is when it ships, and
-  whether the sweep should keep shipping without it.
+  2026-09-08, and its agent-agnostic half shipped in v1.12.0. What is open is
+  the Claude Code half: `templates/qa-framework.rules.md` carries no lane rule
+  at all.
 - Whether the framework publishes for Claude Code as well as Copilot, or keeps
   leaving each project to write its own bridge (C7).
 - Re-verify every candidate against 1.13.2 before porting. No consumer project
