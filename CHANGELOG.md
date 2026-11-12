@@ -34,7 +34,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   `*.login.spec.ts` is listed with file and line ("Login safety"). While any exists, a
   pristine `fixtures/auth.ts` is not refreshed, so those tests keep running until they
   move to `storageState`. `run-opt-in.js` is delivered per file: installed when absent,
-  refreshed when pristine, kept with a warning when edited.
+  refreshed when pristine, kept with a warning when edited. A pristine
+  `playwright.config.ts` is not refreshed while a spec under `tests/` already ends in
+  `.login.spec.ts`, `.writes.spec.ts` or `.slow.spec.ts`, because the new config would
+  silently move it out of the default suite; the files are listed with what to do. In a
+  project without lane scripts this keeps the whole older setup.
 
 - **Defect-suite polarity helper (`qa/07-automation/e2e/fixtures/defects.ts`).** A test
   asserts what the specification requires; when an open defect makes it fail, it is

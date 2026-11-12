@@ -107,3 +107,9 @@ writes follows `qa/00-standards/write-safety-policy.md` before its first run.
 - `upgrade` lists every `loginAs(` call outside a `*.login.spec.ts` ("Login safety").
   While any exists, a pristine `fixtures/auth.ts` is not refreshed, so those tests keep
   running; move them to `storageState` and run `upgrade` again.
+- `upgrade` does not refresh a pristine `playwright.config.ts` while a spec under
+  `tests/` already ends in `.login.spec.ts`, `.writes.spec.ts` or `.slow.spec.ts`: the
+  new config would move those files out of `npm test` without anyone deciding it. It
+  lists them; rename them, or accept the move by copying the config from the package
+  template by hand (a `*.writes.spec.ts` then follows the write-safety policy). In a
+  project without lane scripts yet, this keeps the whole older setup.
