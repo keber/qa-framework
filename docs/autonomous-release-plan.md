@@ -220,6 +220,9 @@ Per release candidate:
 | 2 | WP2.2 API integration scaffold | merged to `dev`; 10 adversarial gate cases all land on the right gate | `235c0a5` | 1.14.0-rc.3 |
 | 2 | WP2.3 `qa-api-integration` skill + conventions | merged to `dev`; no internal names | `b23cad2` | 1.14.0-rc.3 |
 | 2 | WP2.4 `upgrade` delivers new standards and integration files | merged to `dev`; simulated from a real v1.13.2 install, intact and edited; second run changes zero bytes | `eecbcef` | 1.14.0-rc.3 |
+| 2 | Release 1.14.0-rc.3 | **published under `next`**, verified; review request for Marcela in `docs/review-wave2.md` | `fa3a859`, tag `v1.14.0-rc.3` | 1.14.0-rc.3 |
+| 3 | WP3.1 `qa-performance-k6` skill | in progress | `claude/wp31-k6-skill` | next rc |
+| 3 | WP3.3 defect-suite polarity + `qa-automation` links | in progress | `claude/wp33-defect-polarity` | next rc |
 
 ## Decision log
 
@@ -244,5 +247,6 @@ Per release candidate:
 | 2026-11-12 | A promotion branches `release/X.Y.Z` from the promoted rc tag, not from the tip of `dev` | Wave 2 is already on `dev`. Promoting 1.14.0 from the rc.2 tag ships exactly what was verified as rc.2, without wave 2, so wave 1 can be promoted without Marcela's review. The only difference from the rc is the version bump commit |
 | 2026-11-12 | Integrating WP2.3 with WP2.4, the coordinator added the conventions document to the shared `STANDARDS_DOCS` list and moved WP2.3's test to read that list instead of the text of `init.js` | WP2.4 replaced the per-document install calls with one list shared by `init` and `upgrade`; that list is now the single place to add a standards document |
 | 2026-11-12 | **Lesson: workers run on Windows, CI runs on Linux.** Any test that asserts on printed paths must accept both separators | A WP2.4 assertion `/integration\//` passed vacuously on Windows (backslash paths) and failed on Linux on skill names like `qa-api-integration/`. Fixed to match a path segment with either separator and verified against real Windows `upgrade` output. Briefs from now on state the rule |
+| 2026-11-12 | rc.3 note: tarball 852 kB unpacked, +34.4% against 1.13.2 (gate: explain above 20%) | All planned content, measured: 121 kB in 20 new files (API scaffold scripts, fixtures and tests 60 kB; `qa-api-integration` skill 25 kB; ADO full-read protocol 15 kB; write policy and API conventions 15 kB; `scripts/lib` 6 kB) plus growth of `upgrade.js` (+28 kB, delivery logic), `CHANGELOG.md` (+16 kB) and `qa-framework.rules.md` (+13 kB, lane protocol). No binary, no internal document |
 | 2026-11-12 | `integration-scaffold/.env.example` left as is; not bypassed | A permission rule blocks edits to `.env*` paths. The intended change was only a comment ("do not set `QA_API_WRITE` here"); the protection itself is in code. Left for Keber to apply if wanted |
 | 2026-11-12 | Release smoke test installs with `--prefer-online` | A failed install while the registry CDN was still propagating cached package metadata without the new version, and later installs kept failing with ETARGET from that local cache |
