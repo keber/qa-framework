@@ -229,7 +229,7 @@ Per release candidate:
 | 3 | WP3.6 `recommendations/` defect category + `qa-framework clock` | merged to `dev`; HTTP check removed (hard stop 6); upgrade simulated, `improvements/` respected | `83606f3` | 1.14.0-rc.4 |
 | 4 | WP4.1 ADO session scope (A3) + suite pagination (A6) | merged to `dev`; mocks only, PowerShell tests ran on 5.1; A6 root cause is upstream in `@keber/ado-powershell` | `67e9ed5` | 1.14.0-rc.5 |
 | 4 | WP4.3 credential policy + PR review rubric | merged to `dev`; guidance and template only | `7449c83` | 1.14.0-rc.5 |
-| 4 | WP4.2 publish-results, idempotent create-issue, ADO script encoding fixes | merged to `dev`; mocks only, PowerShell 7 untested; real-ADO checklist in the rc report | `dd2e4a2` | 1.14.0-rc.5 |
+| 4 | WP4.2 publish-results, idempotent create-issue, ADO script encoding fixes | merged to `dev`; mocks only, PowerShell 7 untested; real-ADO checklist in the rc report | `dd2e4a2` (+ coordinator fixes `4616899`, `bc90677`) | 1.14.0-rc.5 |
 
 ## Decision log
 
@@ -271,3 +271,6 @@ Per release candidate:
 | 2026-11-12 | The read/write split uses four variables (`ADO_PROJECT_READ/WRITE`, `ADO_PAT_READ/WRITE`) with fallback to `ADO_PROJECT`/`ADO_PAT` | A PAT cannot be scoped to one project, so a project name alone is not an access control |
 | 2026-11-12 | Upstream follow-up, not this repo: `Get-AdoTestSuites` in `@keber/ado-powershell` 1.5.0 lists suites without continuation (truncates at 200) | Another repository; documented as a warning only |
 | 2026-11-12 | `docs/review-wave3.md` added for marcela.berriosc (k6 skill), excluded from npm | The plan has her review WP3.1 with wave 2 |
+| 2026-11-12 | **CI on Linux runs the PowerShell tests under pwsh 7**, so they are not skipped there; it caught two bugs the Windows 5.1 runs could not: a BOM read back as U+FEFF on .NET (`Read-Utf8Text`), and `inject-ado-ids.ps1` turning `specFile` into backslashes, which matched nothing on Linux. Both fixed by the coordinator with static tests that fail on the old code | Lesson extends the Windows/Linux one: PowerShell 5.1 and 7 differ, and CI is the only pwsh 7 run |
+| 2026-11-12 | rc.5 note: 1.09 MB unpacked, +6% against rc.4, +72% against 1.13.2; all planned content (scaffolds, ADO scripts, skills) | Gate: explain above 20% against the last promoted version |
+| 2026-11-12 | All four waves done; the plan's autonomous scope is complete at 1.14.0-rc.5 | Promotion needs: marcela.berriosc's review (`docs/review-wave2.md`, `docs/review-wave3.md`) and Keber's real-ADO check of wave 4 |
