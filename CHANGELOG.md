@@ -11,6 +11,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Defect-suite polarity helper (`qa/07-automation/e2e/fixtures/defects.ts`).** A test
+  asserts what the specification requires; when an open defect makes it fail, it is
+  marked instead of being bent to the current behaviour, so the run stays green while
+  the defect reproduces and goes red the day the behaviour changes.
+  `expectOpenDefect(id, reason, assertions)` marks the test as an expected failure only
+  when an assertion fails, rethrows an `InfraError` unmarked and fails with
+  `<id> no longer reproduces` when every assertion passes; `openDefect(id, reason)` is
+  the bare `test.fail` marker; `InfraError` separates session, availability,
+  response-shape, timeout and selector failures from product defects. Both markers
+  refuse to hide a failure that happened before them. `DEFECTS_DIAG=1` disables the
+  markers to confirm a test fails because of the defect. TypeScript, no new dependency.
+  Guide in `qa-automation` (`references/defect-polarity.md`, prescribed order and
+  example); the skill now points API tests to `qa-api-integration`. `init` installs the
+  helper; `upgrade` delivers it to projects that do not have it and never overwrites a
+  project's own `defects.ts`. The `00-standards` table of the folder-structure guide
+  now lists `write-safety-policy.md` and `api-testing-conventions.md`.
 - **`qa-api-integration` skill and API testing conventions (`qa/00-standards/api-testing-conventions.md`).**
   A ninth skill, for the API track of stage 5 (automation; not a new stage), written
   against the integration scaffold and the write-safety policy as they ship: adding a read

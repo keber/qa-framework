@@ -273,7 +273,7 @@ for (const file of ['lane-config.js', 'lane-lock.js', 'global-setup-guards.js'])
 
 const fixturesDir = path.join(e2eScaffoldDir, 'fixtures');
 fs.mkdirSync(fixturesDir, { recursive: true });
-for (const file of ['auth.ts', 'test-helpers.ts', 'base.ts']) {
+for (const file of ['auth.ts', 'test-helpers.ts', 'base.ts', 'defects.ts']) {
   const dest = path.join(fixturesDir, file);
   if (!fs.existsSync(dest)) {
     fs.copyFileSync(path.join(scaffoldSrc, 'fixtures', file), dest);

@@ -19,6 +19,10 @@ description: >
 
 > **Pipeline rule**: Never automate a TC whose spec contains `PENDING-CODE`. Resolve spec gaps first.
 
+> **API tests** (Playwright `APIRequestContext`, no browser, in `qa/07-automation/integration/`)
+> are the API track of this stage: use the `qa-api-integration` skill
+> (`../qa-api-integration/SKILL.md`), not this one.
+
 ---
 
 ## Inputs Required
@@ -109,8 +113,21 @@ For each TC:
 Every assertion must be verified against the spec, not against the app's 
 observed output.
 
-**Rule**: if the app does X but the spec requires NOT X, use `test.fail()` 
-with the correct assertion - do not adapt the assertion to match the app.
+**Rule**: if the app does X but the spec requires NOT X, keep the correct assertion
+and mark the test with the open defect - do not adapt the assertion to match the app.
+Use the scaffold helper `fixtures/defects.ts`:
+
+- `expectOpenDefect(id, reason, assertions)` around the pure assertions (expected
+  failure while the defect reproduces, red with `no longer reproduces` when it stops);
+- `InfraError` for session, availability, response-shape, timeout and selector
+  failures, which must never count as the defect reproducing;
+- order: every action and observation first, unknowns raised as `InfraError`, the
+  marker only immediately before the pure assertions;
+- check a new or changed marked test once with `DEFECTS_DIAG=1` (marker disabled):
+  it must fail on the spec assertion itself.
+
+Full guide and example: `references/defect-polarity.md`. API tests apply the same
+polarity as described in `../qa-api-integration/SKILL.md`.
 
 Red flags that require review before proceeding:
 - `expect(X).toBe(false)` where the spec describes a positive condition
@@ -160,7 +177,8 @@ Before marking the submodule as ✅ Automation Complete:
 | `auth-fixture` | All authenticated TCs |
 | `fast-fail` | Element state checks where the default timeout would cause silent hangs |
 | `email-intercept` | Email verification flows |
-| `skip-conditional` | TCs blocked by a known app defect (DEF-xxx) |
+| `skip-conditional` | TCs that cannot run at all because of a known app defect (DEF-xxx) |
+| `open-defect` | TCs that run but whose spec assertion fails because of an open defect (`references/defect-polarity.md`) |
 | `beforeAll-setup` | Shared precondition across TC group |
 | `password-env` | Any credential usage |
 | `afterAll-cleanup` | When a test assigns, creates, or modifies persistent data |
