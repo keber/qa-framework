@@ -1,0 +1,25 @@
+{
+  "_comment": "Append-only. Every name a released integration guard script has exported. upgrade refreshes pristine scripts in place next to a project's own fixtures/base.ts, which require()s them, so a released export may never disappear. Recorded from WP2.2 (first shipped in 1.14.0).",
+  "api-guard.js": [
+    "WRITE_OPT_IN_VAR",
+    "READ_METHODS",
+    "WRITE_METHODS",
+    "SCOPES",
+    "GATES",
+    "effectiveExclusions",
+    "matchExclusion",
+    "wordsForm",
+    "resolvePath",
+    "decideRead",
+    "decideWrite",
+    "assertRead",
+    "assertWrite",
+    "pickOwnRecord",
+    "validateCatalogs",
+    "isJsonContentType",
+    "joinUrl"
+  ],
+  "hard-exclusions.js": [
+    "FRAMEWORK_EXCLUSIONS"
+  ]
+}
