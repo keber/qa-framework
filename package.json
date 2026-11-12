@@ -32,6 +32,7 @@
     "templates/",
     "docs/**/*.md",
     "!docs/upstream-candidates.md",
+    "!docs/autonomous-release-plan.md",
     "examples/",
     "integrations/",
     "scripts/",
