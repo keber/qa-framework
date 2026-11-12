@@ -218,8 +218,8 @@ Per release candidate:
 | 1 | Release 1.14.0-rc.2 | **published under `next`**, verified; tag pushed only after CI was green | `07d187d`, tag `v1.14.0-rc.2` | 1.14.0-rc.2 |
 | 2 | WP2.1 write-safety policy | merged to `dev`; no internal names | `e023cc2` | 1.14.0-rc.3 |
 | 2 | WP2.2 API integration scaffold | merged to `dev`; 10 adversarial gate cases all land on the right gate | `235c0a5` | 1.14.0-rc.3 |
-| 2 | WP2.3 `qa-api-integration` skill + conventions | in progress | `claude/wp23-api-skill` | 1.14.0-rc.3 |
-| 2 | WP2.4 `upgrade` delivers new standards and integration files | in progress | `claude/wp24-upgrade-delivery` | 1.14.0-rc.3 |
+| 2 | WP2.3 `qa-api-integration` skill + conventions | merged to `dev`; no internal names | `b23cad2` | 1.14.0-rc.3 |
+| 2 | WP2.4 `upgrade` delivers new standards and integration files | merged to `dev`; simulated from a real v1.13.2 install, intact and edited; second run changes zero bytes | `eecbcef` | 1.14.0-rc.3 |
 
 ## Decision log
 
@@ -242,5 +242,7 @@ Per release candidate:
 | 2026-11-12 | WP2.2 cut from the WP2.1 branch, not from `dev` | It implements the policy WP2.1 wrote |
 | 2026-11-12 | Accept WP2.2's change to the integration scaffold's token handling, flagged for Marcela | The brief said to stop on an auth redesign. This is a fix, not a redesign: the token was stored in `localStorage`, which `APIRequestContext` never reads, so token auth never worked. Exposure is nil: no consumer runs the pristine integration scaffold (six have it untouched or unused; the one real suite is user-owned and is not touched by `upgrade`) |
 | 2026-11-12 | A promotion branches `release/X.Y.Z` from the promoted rc tag, not from the tip of `dev` | Wave 2 is already on `dev`. Promoting 1.14.0 from the rc.2 tag ships exactly what was verified as rc.2, without wave 2, so wave 1 can be promoted without Marcela's review. The only difference from the rc is the version bump commit |
+| 2026-11-12 | Integrating WP2.3 with WP2.4, the coordinator added the conventions document to the shared `STANDARDS_DOCS` list and moved WP2.3's test to read that list instead of the text of `init.js` | WP2.4 replaced the per-document install calls with one list shared by `init` and `upgrade`; that list is now the single place to add a standards document |
+| 2026-11-12 | **Lesson: workers run on Windows, CI runs on Linux.** Any test that asserts on printed paths must accept both separators | A WP2.4 assertion `/integration\//` passed vacuously on Windows (backslash paths) and failed on Linux on skill names like `qa-api-integration/`. Fixed to match a path segment with either separator and verified against real Windows `upgrade` output. Briefs from now on state the rule |
 | 2026-11-12 | `integration-scaffold/.env.example` left as is; not bypassed | A permission rule blocks edits to `.env*` paths. The intended change was only a comment ("do not set `QA_API_WRITE` here"); the protection itself is in code. Left for Keber to apply if wanted |
 | 2026-11-12 | Release smoke test installs with `--prefer-online` | A failed install while the registry CDN was still propagating cached package metadata without the new version, and later installs kept failing with ETARGET from that local cache |

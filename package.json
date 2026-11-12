@@ -33,6 +33,7 @@
     "docs/**/*.md",
     "!docs/upstream-candidates.md",
     "!docs/autonomous-release-plan.md",
+    "!docs/review-wave2.md",
     "examples/",
     "integrations/",
     "scripts/",
