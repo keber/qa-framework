@@ -67,6 +67,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`upgrade` reported user-owned files as "already up to date".** A user-edited
+  `playwright.config.ts` next to pristine lane scripts was left untouched (correct) but
+  listed under "Skipped (already up to date)", telling the user there was nothing to do
+  while the file was missing this release's change. That category now means only "identical
+  (BOM/CRLF-normalised) to the current template". A user-owned file that differs - lane host
+  files, fixtures, integration scaffold, `.env.example` - is reported as a warning that says
+  it was left untouched, that this release's changes were NOT applied, and which template
+  under `node_modules/@keber/qa-framework/templates/` to merge from. Framework copies held
+  back by a blocked lane group are named in that group's warning instead of being called up
+  to date, and files that were never installed are no longer listed at all. Edited
+  `qa/memory/` seed files are listed under a new "Kept (your content, never overwritten)"
+  heading. Only the report changed: which files are written, and the pristine/user-owned
+  classification, are unchanged.
 - **Published files violated rule 11.** `test/rule-11.test.js` now runs the forbidden-character
   check over every file in the real `npm pack` list, so a template, skill or doc can no
   longer ship with an em-dash again (1.10.0 shipped `qa-framework.instructions.md` with

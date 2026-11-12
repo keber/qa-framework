@@ -194,7 +194,12 @@ const SHIPPED_SCAFFOLD_HASHES = {
 };
 
 const updated  = [];
+// "Skipped (already up to date)" means exactly one thing: the file is identical to what
+// this release would write. Anything left untouched for another reason goes to `kept`
+// (the user's own content, nothing to merge) or to `warnings` (it differs from the
+// template and misses this release's change). Never push a differing file here.
 const skipped  = [];
+const kept     = [];
 const warnings = [];
 const errors   = [];
 
@@ -694,8 +699,11 @@ if (fs.existsSync(memoryDir)) {
       }
       updated.push(dest);
       console.log(`  [created] memory/${file}`);
-    } else {
+    } else if (sameAsTemplate(dest, path.join(memorySrc, file))) {
       skipped.push(dest);
+    } else {
+      // Seeded once, then the team's own notes: never overwritten, nothing to merge.
+      kept.push(dest);
     }
   }
 }
@@ -797,19 +805,20 @@ if (hasAutomationScaffold) {
           forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
           console.log(`  [updated]  e2e/${m.rel}`);
         } else {
-          skipped.push(m.dest);
+          warnUserOwned(m.dest, m.src, `e2e/${m.rel}`, m.key);
         }
       }
     } else {
+      const heldBack = reportHeldBackGroup(groupMembers, blockers);
       warnings.push(
         `Lane scripts NOT refreshed - user-owned:\n` +
           blockers.map((m) => `      e2e/${m.rel}`).join('\n') +
           `\n    The three scripts require() each other, so they are refreshed together or not at\n` +
           `    all. Yours are left untouched. Fixes in the framework's version (for example the\n` +
           `    request_id holder check in lane-lock.js) must be merged by hand from:\n` +
-          `      node_modules/@keber/qa-framework/templates/automation-scaffold/scripts/`
+          `      node_modules/@keber/qa-framework/templates/automation-scaffold/scripts/` +
+          heldBack
       );
-      for (const m of groupMembers) skipped.push(m.dest);
     }
   } else if (blockers.length === 0) {
     for (const m of groupMembers) {
@@ -817,15 +826,16 @@ if (hasAutomationScaffold) {
       console.log(`  [updated]  e2e/${m.rel}`);
     }
   } else {
+    const heldBack = reportHeldBackGroup(groupMembers, blockers);
     warnings.push(
       `Lane-aware automation scaffold (v1.12.0) NOT installed - these files are user-owned:\n` +
         blockers.map((m) => `      e2e/${m.rel}`).join('\n') +
         `\n    playwright.config.ts and global-setup.ts require() e2e/scripts/*.js, so the\n` +
         `    group is installed all-or-nothing. Your current setup is left working and\n` +
         `    untouched. To adopt lanes, merge these by hand from:\n` +
-        `      node_modules/@keber/qa-framework/templates/automation-scaffold/`
+        `      node_modules/@keber/qa-framework/templates/automation-scaffold/` +
+        heldBack
     );
-    for (const m of groupMembers) skipped.push(m.dest);
   }
 
   // --- (b) fixtures, per file ----------------------------------------------
@@ -836,10 +846,7 @@ if (hasAutomationScaffold) {
       forceWrite(dest, fs.readFileSync(path.join(scaffoldSrc, 'fixtures', file), 'utf8'));
       console.log(`  [updated]  e2e/fixtures/${file}`);
     } else {
-      skipped.push(dest);
-      warnings.push(
-        `e2e/fixtures/${file} is user-owned - kept as is (v1.12.0 version not applied).`
-      );
+      warnUserOwned(dest, path.join(scaffoldSrc, 'fixtures', file), `e2e/fixtures/${file}`, key);
     }
   }
 
@@ -869,8 +876,7 @@ if (hasIntegrationScaffold) {
       forceWrite(dest, fs.readFileSync(path.join(integrationSrc, file), 'utf8'));
       console.log(`  [updated]  integration/${file}`);
     } else {
-      skipped.push(dest);
-      warnings.push(`integration/${file} is user-owned - kept as is (v1.12.0 version not applied).`);
+      warnUserOwned(dest, path.join(integrationSrc, file), `integration/${file}`, key);
     }
   }
   upgradeReferenceEnvExample(
@@ -893,6 +899,10 @@ if (updated.length) {
 if (skipped.length) {
   console.log('\n  Skipped (already up to date):');
   for (const f of skipped) console.log(`    - ${path.relative(cwd, f)}`);
+}
+if (kept.length) {
+  console.log('\n  Kept (your content, never overwritten):');
+  for (const f of kept) console.log(`    - ${path.relative(cwd, f)}`);
 }
 if (warnings.length) {
   console.log('\n  Warnings:');
@@ -982,12 +992,61 @@ function upgradeReferenceEnvExample(dest, src, key, label) {
     forceWrite(dest, fs.readFileSync(src, 'utf8'));
     console.log(`  [updated]  ${label}`);
   } else {
-    skipped.push(dest);
-    warnings.push(
-      `${label} is user-owned - kept as is. New v1.12.0 keys may be missing; compare against\n` +
-        `    node_modules/@keber/qa-framework/templates/${key}`
-    );
+    warnUserOwned(dest, src, label, key);
   }
+}
+
+// True when `dest` exists and equals `src` after the same normalisation the pristine
+// check uses (BOM and CRLF). This is the only condition under which a file left as it
+// is may be reported as "already up to date".
+function sameAsTemplate(dest, src) {
+  try {
+    return scaffoldHash(fs.readFileSync(dest, 'utf8')) === scaffoldHash(fs.readFileSync(src, 'utf8'));
+  } catch {
+    return false;
+  }
+}
+
+// Reports a user-owned file (its hash is not one the framework shipped) that upgrade
+// leaves untouched. Such a file is NOT up to date: it misses whatever this release
+// changed in the template, so say so and point at the template to merge from.
+function warnUserOwned(dest, src, label, key) {
+  if (sameAsTemplate(dest, src)) {
+    skipped.push(dest);
+    return;
+  }
+  warnings.push(
+    `${label} is user-owned - left untouched, so this release's changes to it were NOT applied.\n` +
+      `    Your version differs from the framework template. Merge the changes by hand from:\n` +
+      `      node_modules/@keber/qa-framework/templates/${key}`
+  );
+}
+
+// Classifies the members of a lane group that was NOT refreshed because `blockers` are
+// user-owned. Identical members are up to date; other user-owned ones get their own
+// warning; framework copies that are simply outdated are returned as text for the
+// group warning, because they are held back by the blockers, not by the user. A member
+// that does not exist is covered by the group warning ("NOT installed").
+function reportHeldBackGroup(members, blockers) {
+  const heldBack = [];
+  for (const m of members) {
+    if (blockers.includes(m)) continue;
+    if (sameAsTemplate(m.dest, m.src)) {
+      skipped.push(m.dest);
+    } else if (!fs.existsSync(m.dest)) {
+      continue;
+    } else if (!isPristine(m.dest, m.key)) {
+      warnUserOwned(m.dest, m.src, `e2e/${m.rel}`, m.key);
+    } else {
+      heldBack.push(m);
+    }
+  }
+  if (heldBack.length === 0) return '';
+  return (
+    `\n    Held back with them (framework copies, not edited by you; they are refreshed by the\n` +
+    `    next upgrade once the files above are merged by hand or restored):\n` +
+    heldBack.map((m) => `      e2e/${m.rel}`).join('\n')
+  );
 }
 
 // Trace safety (see skills/qa-automation/references/patterns.md, "Pattern 7"):

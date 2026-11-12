@@ -932,3 +932,165 @@ test('upgrade A1: 02-test-plans/{automated,manual}/ move only when they hold pre
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+// --- Report honesty (WP1.7) ------------------------------------------------------------
+//
+// "Skipped (already up to date)" must mean exactly one thing: the consumer's file is
+// identical (normalised) to the template this release ships. A user-owned file that
+// differs was left untouched and is MISSING the framework's change; listing it as up to
+// date tells the user there is nothing to do, which is false. Those files must be
+// reported as a warning that names the template to merge from.
+
+/** The paths listed under one "--- Results ---" heading, as forward-slash relpaths. */
+function reportSection(stdout, heading) {
+  const lines = stdout.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === heading);
+  if (start === -1) return [];
+  const out = [];
+  for (const line of lines.slice(start + 1)) {
+    const match = line.match(/^ {4}- (.+)$/);
+    if (!match) break;
+    out.push(match[1].trim().replace(/\\/g, '/'));
+  }
+  return out;
+}
+
+const upToDate = (stdout) => reportSection(stdout, 'Skipped (already up to date):');
+
+/**
+ * Every scaffold file listed as up to date must really equal its current template.
+ * Non-scaffold paths (memory seeds and the like) are checked by their own tests.
+ */
+function assertUpToDateIsTrue(root, stdout) {
+  const scaffolds = [
+    ['qa/07-automation/e2e/', AUTOMATION_SRC],
+    ['qa/07-automation/integration/', INTEGRATION_SRC],
+  ];
+  for (const rel of upToDate(stdout)) {
+    for (const [prefix, src] of scaffolds) {
+      if (!rel.startsWith(prefix)) continue;
+      const template = path.join(src, ...rel.slice(prefix.length).split('/'));
+      if (!fs.existsSync(template)) continue;
+      const consumer = path.join(root, ...rel.split('/'));
+      assert.ok(fs.existsSync(consumer), `${rel} is listed as up to date but does not exist`);
+      assert.equal(
+        scaffoldHash(fs.readFileSync(consumer, 'utf8')),
+        scaffoldHash(fs.readFileSync(template, 'utf8')),
+        `${rel} is listed as "already up to date" but differs from the current template`
+      );
+    }
+  }
+}
+
+test('report: a user-owned playwright.config.ts next to pristine lane scripts is warned, not "up to date"', () => {
+  const { root, configPath, custom } = makeV1120Project();
+  try {
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), custom, 'the user config must survive');
+
+    assert.ok(
+      !upToDate(result.stdout).includes('qa/07-automation/e2e/playwright.config.ts'),
+      'a user-owned config that misses this release\'s change is not "already up to date"'
+    );
+    assert.match(
+      result.stdout,
+      /e2e\/playwright\.config\.ts is user-owned - left untouched[\s\S]*?node_modules\/@keber\/qa-framework\/templates\/automation-scaffold\/playwright\.config\.ts/
+    );
+    assertUpToDateIsTrue(root, result.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('report: files held back by a blocked lane group are not "up to date"', () => {
+  const root = makeLegacyProject();
+  try {
+    const configPath = path.join(e2e(root), 'playwright.config.ts');
+    fs.writeFileSync(configPath, '// hand-tuned by the team\nexport default { fullyParallel: true };\n', 'utf8');
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+
+    const listed = upToDate(result.stdout);
+    for (const rel of ['playwright.config.ts', 'global-setup.ts', ...LANE_SCRIPTS.map((f) => `scripts/${f}`)]) {
+      assert.ok(!listed.includes(`qa/07-automation/e2e/${rel}`), `e2e/${rel} must not be "already up to date"`);
+    }
+    // The pristine-but-outdated global-setup.ts stays as it was and is named as held back.
+    assert.match(result.stdout, /NOT installed[\s\S]*?Held back with them[\s\S]*?e2e\/global-setup\.ts/);
+    assertUpToDateIsTrue(root, result.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('report: a user-owned fixture is warned with its template path, not "up to date"', () => {
+  const root = makeLegacyProject();
+  try {
+    const target = path.join(e2e(root), 'fixtures', 'base.ts');
+    fs.writeFileSync(target, '// our own base fixture\n', 'utf8');
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(!upToDate(result.stdout).includes('qa/07-automation/e2e/fixtures/base.ts'));
+    assert.match(
+      result.stdout,
+      /e2e\/fixtures\/base\.ts is user-owned - left untouched[\s\S]*?templates\/automation-scaffold\/fixtures\/base\.ts/
+    );
+    assertUpToDateIsTrue(root, result.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('report: a user-owned integration config is warned with its template path, not "up to date"', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    const target = path.join(integration(root), 'playwright.config.ts');
+    fs.writeFileSync(target, '// our own integration config\n', 'utf8');
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(!upToDate(result.stdout).includes('qa/07-automation/integration/playwright.config.ts'));
+    assert.match(
+      result.stdout,
+      /integration\/playwright\.config\.ts is user-owned - left untouched[\s\S]*?templates\/integration-scaffold\/playwright\.config\.ts/
+    );
+    assertUpToDateIsTrue(root, result.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('report: an edited memory seed file is reported as kept, not "up to date"', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    const memoryFile = path.join(root, 'qa', 'memory', 'ci-pipeline-findings.md');
+    assert.ok(fs.existsSync(memoryFile), 'init seeds qa/memory/');
+    const mine = '# CI findings\n\n- our own finding\n';
+    fs.writeFileSync(memoryFile, mine, 'utf8');
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(fs.readFileSync(memoryFile, 'utf8'), mine);
+    assert.ok(!upToDate(result.stdout).includes('qa/memory/ci-pipeline-findings.md'));
+    assert.ok(reportSection(result.stdout, 'Kept (your content, never overwritten):').includes('qa/memory/ci-pipeline-findings.md'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('report: a second run lists only files that really equal the current template', () => {
+  const { root } = makeV1120Project({ customConfig: false });
+  try {
+    assert.equal(runUpgrade(root).status, 0);
+    const second = runUpgrade(root);
+    assert.equal(second.status, 0, second.stderr);
+    assert.ok(upToDate(second.stdout).includes('qa/07-automation/e2e/playwright.config.ts'));
+    assertUpToDateIsTrue(root, second.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
