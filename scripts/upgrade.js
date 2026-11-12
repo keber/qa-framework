@@ -175,6 +175,10 @@ const SHIPPED_SCAFFOLD_HASHES = {
     'e2298972dea50e7df54265a7a94a232c0ff35c969f1b8778929079cfa2a1a541', // v1.0.1 - v1.11.3
     '44d2e940f89de221cf5ace42e437d010a4bf1215f8024127e9f6bb24eff600b0', // v1.12.0 - v1.13.2
   ],
+  // Introduced by WP3.3. A copy matching none of these is user-authored.
+  'automation-scaffold/fixtures/defects.ts': [
+    'f1c5d28d34a2526f74a3e965de758a09d6d2c40403dea7a65dd5d55c03855f4f', // unreleased: WP3.3 defect-suite polarity
+  ],
   // Introduced in v1.12.0. A copy matching none of these is user-authored (two live
   // installations hand-wrote their own lane-lock.js before v1.12.0).
   'automation-scaffold/scripts/lane-config.js': [
@@ -799,7 +803,7 @@ if (fs.existsSync(qaRoot)) {
 //         upgrade continues. This is a coherent skip, not an abort: the project keeps
 //         the working setup it already had, so it is never left half-migrated.
 //
-//      b) fixtures/{auth,base,test-helpers}.ts are per-file. They are leaf modules -
+//      b) fixtures/{auth,base,test-helpers,defects}.ts are per-file. They are leaf modules -
 //         nothing in the scaffold require()s them by path - so a mixed state is
 //         still coherent.
 //
@@ -819,7 +823,7 @@ if (fs.existsSync(qaRoot)) {
 //    edit to a working login is exactly the breakage this section must avoid.
 // ---------------------------------------------------------------------------
 const AUTOMATION_LANE_SCRIPTS = ['lane-config.js', 'lane-lock.js', 'global-setup-guards.js'];
-const AUTOMATION_FIXTURES     = ['auth.ts', 'base.ts', 'test-helpers.ts'];
+const AUTOMATION_FIXTURES     = ['auth.ts', 'base.ts', 'test-helpers.ts', 'defects.ts'];
 
 // A bare e2e/ directory is not evidence of an automation setup: section 5 above
 // creates e2e/tests/{helpers/debug,seeds}/ unconditionally. Only migrate a project

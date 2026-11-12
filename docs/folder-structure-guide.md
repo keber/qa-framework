@@ -142,6 +142,8 @@ updates every command that references it - no regeneration needed, zero drift po
 | `bug-report-template.md` | Full defect document template |
 | `test-data-guidelines.md` | How to structure test data, credential policy |
 | `execution-report-template.md` | How to write an execution report |
+| `write-safety-policy.md` | The single write policy for tests that can change data in a system under test (API, load, scripts) |
+| `api-testing-conventions.md` | The project's own API values and observations; the method lives in the `qa-api-integration` skill |
 
 ---
 
@@ -316,6 +318,7 @@ See `docs/generalization-decisions.md §7` for the full evaluation of this folde
 │   ├── .auth/                      <- storageState files (gitignored)
 │   ├── fixtures/                   <- Installed by init
 │   │   ├── auth.ts             <- loginAs(page, role) helper
+│   │   ├── defects.ts          <- openDefect / expectOpenDefect / InfraError (defect polarity)
 │   │   └── test-helpers.ts     <- EXEC_IDX, date helpers, etc.
 │   ├── page-objects/               <- Page Object Model classes (project-maintained)
 │   ├── tests/                      <- Spec files, organized by module
