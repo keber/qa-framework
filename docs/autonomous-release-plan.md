@@ -227,6 +227,9 @@ Per release candidate:
 | 3 | WP3.5 `AGENTS.md` template | merged to `dev`; installed as `qa/00-standards/agents-md-template.md`, never as a root `AGENTS.md` | `3110f85` | 1.14.0-rc.4 |
 | 3 | WP3.2 Azure Load Testing research | merged to `dev`; proposal only, excluded from npm; recommends no build yet | `777467e` | (not shipped) |
 | 3 | WP3.6 `recommendations/` defect category + `qa-framework clock` | merged to `dev`; HTTP check removed (hard stop 6); upgrade simulated, `improvements/` respected | `83606f3` | 1.14.0-rc.4 |
+| 4 | WP4.1 ADO session scope (A3) + suite pagination (A6) | merged to `dev`; mocks only, PowerShell tests ran on 5.1; A6 root cause is upstream in `@keber/ado-powershell` | `67e9ed5` | 1.14.0-rc.5 |
+| 4 | WP4.3 credential policy + PR review rubric | merged to `dev`; guidance and template only | `7449c83` | 1.14.0-rc.5 |
+| 4 | WP4.2 publish-results, idempotent create-issue, ADO script encoding fixes | merged to `dev`; mocks only, PowerShell 7 untested; real-ADO checklist in the rc report | `dd2e4a2` | 1.14.0-rc.5 |
 
 ## Decision log
 
@@ -263,3 +266,8 @@ Per release candidate:
 | 2026-11-12 | **WP3.6 `--check-http` removed before merge** | The coordinator's brief asked for it, but new network access in a shipped script is hard stop 6. Removed instead of stopping; a source test now forbids network modules in `scripts/clock.js`. Can return with Keber's OK |
 | 2026-11-12 | WP3.6 was built by an in-process subagent, not a session | The app refuses to start sessions in a turn started by another session's message |
 | 2026-11-12 | B3 category named `recommendations/` (`REC-` IDs); an existing `improvements/` folder is respected | Broader of the two converged names |
+| 2026-11-12 | Wave 4 built by in-process subagents with isolated worktrees, WP4.1 and WP4.3 in parallel, WP4.2 after WP4.1 | Sessions cannot be started from event-driven turns; WP4.1 and WP4.2 share `integrations/ado-powershell/` |
+| 2026-11-12 | WP4.2 also took the WP4.1 follow-ups (BOM written into user spec files by `inject-ado-ids.ps1`, BOM in JSON output, wrong `@keber/ado-powershell` auto-load path) and adopted the read/write split | Same files; the BOM bug could corrupt users' `.ts` files |
+| 2026-11-12 | The read/write split uses four variables (`ADO_PROJECT_READ/WRITE`, `ADO_PAT_READ/WRITE`) with fallback to `ADO_PROJECT`/`ADO_PAT` | A PAT cannot be scoped to one project, so a project name alone is not an access control |
+| 2026-11-12 | Upstream follow-up, not this repo: `Get-AdoTestSuites` in `@keber/ado-powershell` 1.5.0 lists suites without continuation (truncates at 200) | Another repository; documented as a warning only |
+| 2026-11-12 | `docs/review-wave3.md` added for marcela.berriosc (k6 skill), excluded from npm | The plan has her review WP3.1 with wave 2 |

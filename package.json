@@ -34,6 +34,7 @@
     "!docs/upstream-candidates.md",
     "!docs/autonomous-release-plan.md",
     "!docs/review-wave2.md",
+    "!docs/review-wave3.md",
     "!docs/proposals/azure-load-testing.md",
     "examples/",
     "integrations/",
