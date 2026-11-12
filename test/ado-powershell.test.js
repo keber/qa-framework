@@ -169,6 +169,18 @@ test('every ReadAllText in a shipped .ps1 lives in Read-Utf8Text, which drops a 
   }
 });
 
+// FullName uses '/' on Linux and macOS: turning a path into backslashes before comparing
+// it with FullName matches nothing there. Found by CI on Linux (pwsh 7).
+test('no shipped .ps1 converts a path to backslashes to compare it with FullName', () => {
+  const scripts = shipped((f) => f.startsWith('integrations/ado-powershell/') && f.endsWith('.ps1'));
+  for (const rel of scripts) {
+    readText(rel).split(/\r?\n/).forEach((line, i) => {
+      if (/^\s*#/.test(line)) return;
+      assert.ok(!/-replace\s+'\/',\s*'\\\\?'/.test(line), `${rel}:${i + 1} converts '/' to '\\' for a path comparison`);
+    });
+  }
+});
+
 test('no shipped .ps1 writes a file with a UTF-8 BOM (users\' .ts and .json stay BOM-less)', () => {
   const offenders = shipped((f) => f.endsWith('.ps1')).flatMap((f) =>
     bomWriteViolations(readText(f)).map((v) => `${f} ${v}`)

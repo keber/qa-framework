@@ -90,9 +90,11 @@ foreach ($f in $adoIdFiles) {
         $wiId     = $entry.adoWiId
         $specHint = $entry.specFile
 
-        $specHintNorm = $specHint -replace '/', '\'
+        # Compare with forward slashes on both sides: specFile may be written with either
+        # separator, and FullName uses '\' on Windows but '/' on Linux and macOS.
+        $specHintNorm = $specHint -replace '\\', '/'
         $specFiles = @(Get-ChildItem -Path $SpecDir -Recurse -Filter '*.spec.ts' |
-                     Where-Object { $_.FullName -like "*$specHintNorm*" })
+                     Where-Object { ($_.FullName -replace '\\', '/') -like "*$specHintNorm*" })
 
         foreach ($sf in $specFiles) {
             # Read-Utf8Text drops a BOM when present and keeps CRLF/LF as they are.
