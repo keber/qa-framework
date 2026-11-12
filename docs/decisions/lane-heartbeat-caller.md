@@ -131,13 +131,20 @@ verifiable owner. The protocol passes the `request_id` to both verbs and keeps i
 `status` comparison as defense in depth, since an older `lane-lock.js` silently ignores
 the extra argument.
 
+**Delivery to existing projects (2026-11-11, follow-up).** The holder check now reaches
+projects installed with v1.12.0 to v1.13.2 through `upgrade`, provided their three lane
+scripts are untouched. Two things blocked it: `SHIPPED_SCAFFOLD_HASHES` had no v1.12.0
+hash for any scaffold file, so the framework's own copy counted as user code the moment
+the template changed; and the lane group was all-or-nothing with `playwright.config.ts`
+and `global-setup.ts`, which nearly every project edits. The table now holds every
+released hash and a test keeps the current one in it; once the scripts are installed
+they refresh together whenever all three are pristine, regardless of the host files.
+A project whose lane scripts are hand-written or edited (QA_Sispro_Exportadora's
+434-line `lane-lock.js`) is left untouched and warned; it does not get the holder
+check, and the protocol's `status` comparison remains its only protection.
+
 **Left out.**
 
-- `upgrade` does not deliver the fixed `lane-lock.js` to existing projects.
-  `SHIPPED_SCAFFOLD_HASHES['automation-scaffold/scripts/lane-lock.js']` is empty, so the
-  copy the framework itself installed in v1.12.0 to v1.13.2 is classified as user-owned
-  and the whole lane group is skipped with a warning. Adding that release's hash to the
-  table would fix it; it is pending a decision on `scripts/upgrade.js`.
 - `templates/agents/qa-investigador.md` still tells that worker heartbeats are
   mandatory. It is harmless redundancy under this decision, but its wording contradicts
   "the executor is not required to call it".

@@ -1,0 +1,47 @@
+{
+  "_comment": "Append-only. Every name any released lane script has exported. upgrade refreshes a pristine lane script in place next to a user-owned playwright.config.ts / global-setup.ts, which require() these modules, so a released export may never disappear. Recorded from v1.12.0 (unchanged through v1.13.2).",
+  "lane-config.js": [
+    "DEFAULT_LANE_TABLE",
+    "findConfigPath",
+    "laneTableFromConfig",
+    "loadLaneTable",
+    "laneIdForQaLaneOnly",
+    "storageStateForLaneOnly",
+    "lanesWithCapability",
+    "assertLaneHasCapability"
+  ],
+  "lane-lock.js": [
+    "LANE_INFO",
+    "LOCKS_DIR",
+    "LOCKS_DIR_SOURCE",
+    "STATE_FILE",
+    "STALE_MINUTES",
+    "MAX_QUEUE",
+    "defaultState",
+    "loadState",
+    "saveState",
+    "withMutex",
+    "acquireMutex",
+    "releaseMutex",
+    "genRequestId",
+    "laneIdForQaLaneOnly",
+    "storageStateForLaneOnly",
+    "isLaneStale",
+    "sweepStale",
+    "cmdAcquire",
+    "cmdReserve",
+    "cmdRelease",
+    "cmdHeartbeat",
+    "cmdStatus",
+    "parseCapabilityFlag",
+    "parseSingleEnvKey",
+    "resolveLocksDir",
+    "readLocksDirFromEnvFile"
+  ],
+  "global-setup-guards.js": [
+    "assertColdSetupIsIntentional",
+    "assertLaneIsLocked",
+    "selectedProjectNamesFromArgv",
+    "assertProjectsMatchLane"
+  ]
+}

@@ -266,6 +266,154 @@ test('upgrade: a hand-written lane-lock.js also blocks the whole group', () => {
   }
 });
 
+// --- In-place refresh of an installed lane scaffold (v1.12.0+) ----------------------
+//
+// The lane group is atomic for its INSTALLATION (v1.11 -> v1.12), where a subset leaves
+// Playwright unable to start. Once the three scripts exist, refreshing a pristine one
+// changes no require() path; the remaining coupling is the module API, which the
+// export invariant below pins. So a user-owned playwright.config.ts no longer freezes
+// the framework's own scripts forever.
+
+const V1120_SRC = path.join(__dirname, 'fixtures', 'scaffold-v1.12.0');
+
+/** A project as v1.12.0 installed it, with the team's own playwright.config.ts. */
+function makeV1120Project({ customConfig = true } = {}) {
+  const root = tmpProject();
+  assert.equal(runInit(root).status, 0);
+  fs.copyFileSync(
+    path.join(V1120_SRC, 'scripts', 'lane-lock.js'),
+    path.join(e2e(root), 'scripts', 'lane-lock.js')
+  );
+  const configPath = path.join(e2e(root), 'playwright.config.ts');
+  const custom =
+    fs.readFileSync(configPath, 'utf8') + '\n// hand-tuned by the team: extra reporter\n';
+  if (customConfig) fs.writeFileSync(configPath, custom, 'utf8');
+  return { root, configPath, custom };
+}
+
+test('fixtures: the v1.12.0 lane-lock.js is shipped content, and older than the template', () => {
+  const v1120 = scaffoldHash(fs.readFileSync(path.join(V1120_SRC, 'scripts', 'lane-lock.js'), 'utf8'));
+  const current = scaffoldHash(fs.readFileSync(path.join(AUTOMATION_SRC, 'scripts', 'lane-lock.js'), 'utf8'));
+  assert.ok(shippedScaffoldHashes()['automation-scaffold/scripts/lane-lock.js'].includes(v1120));
+  assert.notEqual(v1120, current, 'the refresh tests would pass without upgrade doing anything');
+});
+
+test('upgrade: a pristine v1.12.0 lane-lock.js is refreshed even when playwright.config.ts is user-owned', () => {
+  const { root, configPath, custom } = makeV1120Project();
+  try {
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    for (const file of LANE_SCRIPTS) {
+      assert.equal(
+        fs.readFileSync(path.join(e2e(root), 'scripts', file), 'utf8'),
+        fs.readFileSync(path.join(AUTOMATION_SRC, 'scripts', file), 'utf8'),
+        `${file} should match the current template`
+      );
+    }
+    assert.match(fs.readFileSync(path.join(e2e(root), 'scripts', 'lane-lock.js'), 'utf8'), /request_id/);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), custom, 'the user config must survive');
+    assert.doesNotMatch(result.stdout, /NOT installed/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: a user-modified lane-lock.js in an installed scaffold is kept and warned about', () => {
+  // QA_Sispro_Exportadora shape: its own lane-lock.js next to the other scripts.
+  const { root } = makeV1120Project();
+  try {
+    const lockPath = path.join(e2e(root), 'scripts', 'lane-lock.js');
+    const mine = fs.readFileSync(lockPath, 'utf8') + '\n// our own sweep tweak\n';
+    fs.writeFileSync(lockPath, mine, 'utf8');
+    const before = snapshot(path.join(e2e(root), 'scripts'));
+
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), mine);
+    // The scripts require() each other, so they refresh together or not at all.
+    assert.deepEqual(snapshot(path.join(e2e(root), 'scripts')), before);
+    assert.match(result.stdout, /Lane scripts NOT refreshed - user-owned:[\s\S]*e2e\/scripts\/lane-lock\.js/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade: an installed scaffold with a pristine config refreshes the whole group', () => {
+  const { root, configPath } = makeV1120Project({ customConfig: false });
+  try {
+    assert.equal(runUpgrade(root).status, 0);
+    assert.equal(
+      fs.readFileSync(path.join(e2e(root), 'scripts', 'lane-lock.js'), 'utf8'),
+      fs.readFileSync(path.join(AUTOMATION_SRC, 'scripts', 'lane-lock.js'), 'utf8')
+    );
+    assert.equal(
+      fs.readFileSync(configPath, 'utf8'),
+      fs.readFileSync(path.join(AUTOMATION_SRC, 'playwright.config.ts'), 'utf8')
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// --- Invariants that keep the table from going stale again ---------------------------
+
+test('invariant: the current hash of every scaffold file is in SHIPPED_SCAFFOLD_HASHES', () => {
+  // Changing a scaffold file fails here until its new hash is registered, so every
+  // released version is in the table before it ships. Without this, the first change
+  // to a file turns every existing pristine copy of it into "user-owned" - which is
+  // exactly how lane-lock.js stopped being deliverable after v1.13.2.
+  const table = shippedScaffoldHashes();
+  for (const key of Object.keys(table)) {
+    const current = scaffoldHash(fs.readFileSync(path.join(REPO_ROOT, 'templates', ...key.split('/')), 'utf8'));
+    assert.ok(
+      table[key].includes(current),
+      `${key}: current hash ${current} is not in SHIPPED_SCAFFOLD_HASHES (scripts/upgrade.js). ` +
+        'Append it - never replace the older hashes, projects still carry them.'
+    );
+  }
+});
+
+test('invariant: every lane script in the scaffold is tracked by SHIPPED_SCAFFOLD_HASHES', () => {
+  const table = shippedScaffoldHashes();
+  for (const file of fs.readdirSync(path.join(AUTOMATION_SRC, 'scripts'))) {
+    assert.ok(
+      Array.isArray(table[`automation-scaffold/scripts/${file}`]),
+      `automation-scaffold/scripts/${file} has no SHIPPED_SCAFFOLD_HASHES entry`
+    );
+  }
+});
+
+test('invariant: lane scripts never drop an export that a released version had', () => {
+  // A user-owned playwright.config.ts / global-setup.ts keeps require()-ing whatever
+  // the version it was written against exported; the in-place refresh relies on this.
+  const recorded = JSON.parse(
+    fs.readFileSync(path.join(__dirname, 'fixtures', 'scaffold-script-exports.json'), 'utf8')
+  );
+  const cwd = tmpProject();
+  try {
+    for (const file of LANE_SCRIPTS) {
+      const r = spawnSync(
+        process.execPath,
+        ['-e', `console.log(JSON.stringify(Object.keys(require(process.argv[1]))))`, path.join(AUTOMATION_SRC, 'scripts', file)],
+        { cwd, encoding: 'utf8' }
+      );
+      assert.equal(r.status, 0, r.stderr);
+      const current = JSON.parse(r.stdout.trim().split('\n').pop());
+      for (const name of recorded[file]) {
+        assert.ok(current.includes(name), `${file} dropped the released export "${name}"`);
+      }
+      for (const name of current) {
+        assert.ok(
+          recorded[file].includes(name),
+          `${file} exports "${name}", which is not in test/fixtures/scaffold-script-exports.json - append it`
+        );
+      }
+    }
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test('upgrade: --dry-run reports the migration but writes nothing', () => {
   const root = makeLegacyProject();
   try {

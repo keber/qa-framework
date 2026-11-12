@@ -36,8 +36,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   on a mismatch they exit 1 and leave the state untouched. Without it they work as
   before and print a warning on stderr (exit code unchanged), so existing callers do not
   break. `force-release` is unchanged. The Claude Code dispatcher protocol now passes the
-  `request_id` to both verbs. Note: `upgrade` does not yet deliver the new `lane-lock.js`
-  to projects installed with v1.12.0 to v1.13.2 (it reports the lane group as user-owned).
+  `request_id` to both verbs.
+- **`upgrade` refreshes the framework's own lane scripts again.** Two defects made every
+  lane script installed by v1.12.0 to v1.13.2 undeliverable as soon as a template
+  changed:
+  - `SHIPPED_SCAFFOLD_HASHES` stopped at v1.11.3. All twelve entries lacked their
+    v1.12.0 hash (the three lane scripts had an empty list), and
+    `automation-scaffold/playwright.config.ts` also lacked v1.0.1 to v1.6.1. Pristine
+    copies were classified as user code. The table now holds every released hash, and
+    a test fails until the current template's hash is appended, so it cannot go stale
+    again.
+  - The lane scripts were refreshed only together with `playwright.config.ts` and
+    `global-setup.ts`, which almost every project edits. That all-or-nothing rule now
+    applies to the installation only (v1.11 -> v1.12). Once the three scripts exist,
+    they are refreshed together whenever all three are pristine, and a user-owned
+    config or global-setup is kept. A second test pins that no released script export
+    is ever removed, since those host files `require()` the scripts.
+  Hand-written or edited lane scripts are still never touched and are now reported as
+  "Lane scripts NOT refreshed - user-owned".
 
 - **`upgrade` moves a path only with positive evidence that it is a framework leftover.**
   The field report against v1.12.0 (`lib/` and `node_modules/` moved into `e2e/tests/`,

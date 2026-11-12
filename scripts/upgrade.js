@@ -113,48 +113,73 @@ const skillsDest = path.join(githubDir, 'skills');
 const skillsSrc  = path.resolve(__dirname, '..', 'skills');
 
 // Normalised sha256 of every version of these scaffold files that this framework has
-// shipped (v1.8.0 through v1.11.3). A project file matching one of these was written
-// by the framework and never edited, so v1.12.0 may safely replace it. Anything else
-// is user-owned. Regenerate by hashing `git show <tag>:templates/<key>` for each tag.
+// shipped, v1.0.1 through the current release. A project file matching one of these
+// was written by the framework and never edited, so upgrade may safely replace it.
+// Anything else is user-owned. Regenerate by hashing `git show <tag>:templates/<key>`
+// with scaffoldHash() for each tag.
+//
+// APPEND-ONLY, and the current template's hash must always be here:
+// test/upgrade.test.js ("invariant: the current hash of every scaffold file...") fails
+// until it is. That rule exists because the table used to stop at v1.11.3: once a file
+// changed after v1.13.2, every copy the framework itself had installed in v1.12.0 to
+// v1.13.2 no longer matched anything and was treated as user code forever.
 //
 // Deliberately hash-based rather than version-based: the frameworkVersion recorded in
 // real installations is unreliable (observed values include 1.1.3 and 1.0.0, neither
 // of which corresponds to a released scaffold).
 const SHIPPED_SCAFFOLD_HASHES = {
   'automation-scaffold/playwright.config.ts': [
-    '948635c118553e293447930ba3dcff9155446718554dd3bbcffac2720baebba1',
-    'f145fda0a7215942b5431a779188609f8958e51a048b161ede605576efba3ef8',
+    '0b6bc44b9fa3f78ff156fa91b19cfc15c37af6f7705dbc2a2589d812f1b0b3db', // v1.0.1 - v1.5.1
+    '4f522542c494d5b550a447b3cc7688448d498e7c749d37c043f811c8afff49e4', // v1.5.2
+    '9dbb21c6b5e84c58be8fd86d8da31b00aeedd3d7adbbd40e06f97b386d461ad0', // v1.6.1
+    '948635c118553e293447930ba3dcff9155446718554dd3bbcffac2720baebba1', // v1.6.2 - v1.10.0
+    'f145fda0a7215942b5431a779188609f8958e51a048b161ede605576efba3ef8', // v1.11.0 - v1.11.3
+    '59acff16e745ccd802254e65a1a5f8ddec549328c9c1fa94f715fb9daf449a1a', // v1.12.0 - v1.13.2
   ],
   'automation-scaffold/global-setup.ts': [
-    '077580914881ee71ac082d47579dc4cffa01e8348b0744fced6b8de2863e0bd1',
-    '7b3e7ca54929e525055d19ba8cd9643de722c7092c67b1a2e273072dd712ec7a',
+    '077580914881ee71ac082d47579dc4cffa01e8348b0744fced6b8de2863e0bd1', // v1.0.1 - v1.10.0
+    '7b3e7ca54929e525055d19ba8cd9643de722c7092c67b1a2e273072dd712ec7a', // v1.11.0 - v1.11.3
+    '849b265ac82ffd082c96b68f9542331f3083d81e61709abf009450c35da39948', // v1.12.0 - v1.13.2
   ],
   'automation-scaffold/.env.example': [
-    '18fab7c165085a4a585a6911b42c49b97177265d46261c8362c3508a7436c65c',
-    '29dc3a97e42350fbe7a16681837ba8db2a539574f8aa86fe269204bc3081bff9',
+    '18fab7c165085a4a585a6911b42c49b97177265d46261c8362c3508a7436c65c', // v1.0.1 - v1.10.0
+    '29dc3a97e42350fbe7a16681837ba8db2a539574f8aa86fe269204bc3081bff9', // v1.11.0 - v1.11.3
+    '3a0625520f583e42b1a1fc70190ba780dfe09da3c76b073cbe463b33da31c6a0', // v1.12.0 - v1.13.2
   ],
   'automation-scaffold/fixtures/auth.ts': [
-    'a856df26d80d521a0ad349879096698191ed6a2f919fac96d85980ab1d435c3e',
+    'a856df26d80d521a0ad349879096698191ed6a2f919fac96d85980ab1d435c3e', // v1.0.1 - v1.11.3
+    '7b84947aa078d96a99fed4d4f662c1b34305595b9f5ee7fe73c993f5a30d74a5', // v1.12.0 - v1.13.2
   ],
   'automation-scaffold/fixtures/base.ts': [
-    '7c52ea17fad732825e327af59a7f0f3bf53db166f7191932ae51c97fd2825a39',
+    '7c52ea17fad732825e327af59a7f0f3bf53db166f7191932ae51c97fd2825a39', // v1.11.0 - v1.11.3
+    '64d5eb20b623efedf6aabe556235fc4b28680eb8728c310eaeac411f21f7578a', // v1.12.0 - v1.13.2
   ],
   'automation-scaffold/fixtures/test-helpers.ts': [
-    'e2298972dea50e7df54265a7a94a232c0ff35c969f1b8778929079cfa2a1a541',
+    'e2298972dea50e7df54265a7a94a232c0ff35c969f1b8778929079cfa2a1a541', // v1.0.1 - v1.11.3
+    '44d2e940f89de221cf5ace42e437d010a4bf1215f8024127e9f6bb24eff600b0', // v1.12.0 - v1.13.2
   ],
-  // Introduced in v1.12.0 - never shipped before, so an existing copy in a project is
-  // always user-authored (two live installations hand-wrote their own lane-lock.js).
-  'automation-scaffold/scripts/lane-config.js': [],
-  'automation-scaffold/scripts/lane-lock.js': [],
-  'automation-scaffold/scripts/global-setup-guards.js': [],
+  // Introduced in v1.12.0. A copy matching none of these is user-authored (two live
+  // installations hand-wrote their own lane-lock.js before v1.12.0).
+  'automation-scaffold/scripts/lane-config.js': [
+    '962e47f06854f2542069abd5c68f84f2f307dec88412e10954034c4299c0be14', // v1.12.0 - v1.13.2
+  ],
+  'automation-scaffold/scripts/lane-lock.js': [
+    '84d2706e953968c3d2af51c67af24473db3c31e4e604c99a677ddd1b6adb07e0', // v1.12.0 - v1.13.2
+    '82f90f20a871bc080ff58c359bc480010ca6534a05d46c65bf6f6413303f6f90', // unreleased: request_id holder check
+  ],
+  'automation-scaffold/scripts/global-setup-guards.js': [
+    'f8584209a241222552c9f34a6e5535265e8903782131e216e6b68c717e360da8', // v1.12.0 - v1.13.2
+  ],
   'integration-scaffold/playwright.config.ts': [
-    '7276ed4fda85f80e37381257bc559f4bb48055d359858f69f6b838f3671a9e2d',
+    '7276ed4fda85f80e37381257bc559f4bb48055d359858f69f6b838f3671a9e2d', // v1.11.0 - v1.11.3
+    '6eacaa9fe5bf660182cc4357b3a5fedd77958c7bf81897454443fd27378cc6c4', // v1.12.0 - v1.13.2
   ],
   'integration-scaffold/global-setup.ts': [
-    'f63f9588c4746a16e46345d1d4b781f2905b652481d563cfc075d9d8c8481bde',
+    'f63f9588c4746a16e46345d1d4b781f2905b652481d563cfc075d9d8c8481bde', // v1.11.0 - v1.11.3
+    'c212471c9a7eb9b6110c25d2823eb50114c4783cca9e1ab149134d96d7212403', // v1.12.0 - v1.13.2
   ],
   'integration-scaffold/.env.example': [
-    '671461d7dc9883505cec314aefa1129a336b6a03b31a0eb2eb2ede2adda7c4ac',
+    '671461d7dc9883505cec314aefa1129a336b6a03b31a0eb2eb2ede2adda7c4ac', // v1.11.0 - v1.13.2
   ],
 };
 
@@ -732,9 +757,51 @@ if (hasAutomationScaffold) {
     })),
   ];
 
-  const blockers = groupMembers.filter((m) => fs.existsSync(m.dest) && !isPristine(m.dest, m.key));
+  const scriptMembers = groupMembers.filter((m) => m.rel.startsWith('scripts/'));
+  const hostMembers   = groupMembers.filter((m) => !m.rel.startsWith('scripts/'));
+  const laneScaffoldInstalled = scriptMembers.every((m) => fs.existsSync(m.dest));
 
-  if (blockers.length === 0) {
+  // Atomicity protects the INSTALLATION: a v1.11 project receiving a subset ends up
+  // with a config that require()s a script that is not there. Once all three scripts
+  // exist, refreshing them changes no require() path. What remains coupled is:
+  //   - the scripts with each other (lane-lock requires lane-config, the guards
+  //     require lane-lock), so they refresh together or not at all;
+  //   - the scripts' module API with the host files, which the export invariant in
+  //     test/upgrade.test.js pins (a released export is never removed).
+  // So a user-owned playwright.config.ts / global-setup.ts - which almost every
+  // project has - no longer freezes the framework's own scripts forever.
+  const blockers = laneScaffoldInstalled
+    ? scriptMembers.filter((m) => !isPristine(m.dest, m.key))
+    : groupMembers.filter((m) => fs.existsSync(m.dest) && !isPristine(m.dest, m.key));
+
+  if (laneScaffoldInstalled) {
+    if (blockers.length === 0) {
+      for (const m of scriptMembers) {
+        forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
+        console.log(`  [updated]  e2e/${m.rel}`);
+      }
+      // Host files follow only when pristine; a user-owned one keeps working because
+      // every export it was written against is still there.
+      for (const m of hostMembers) {
+        if (!fs.existsSync(m.dest) || isPristine(m.dest, m.key)) {
+          forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
+          console.log(`  [updated]  e2e/${m.rel}`);
+        } else {
+          skipped.push(m.dest);
+        }
+      }
+    } else {
+      warnings.push(
+        `Lane scripts NOT refreshed - user-owned:\n` +
+          blockers.map((m) => `      e2e/${m.rel}`).join('\n') +
+          `\n    The three scripts require() each other, so they are refreshed together or not at\n` +
+          `    all. Yours are left untouched. Fixes in the framework's version (for example the\n` +
+          `    request_id holder check in lane-lock.js) must be merged by hand from:\n` +
+          `      node_modules/@keber/qa-framework/templates/automation-scaffold/scripts/`
+      );
+      for (const m of groupMembers) skipped.push(m.dest);
+    }
+  } else if (blockers.length === 0) {
     for (const m of groupMembers) {
       forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
       console.log(`  [updated]  e2e/${m.rel}`);
