@@ -19,7 +19,7 @@ description: >
 **Output**: ADO Test Plan populated with Test Suites and Test Cases (with steps) + `qa/08-azure-integration/module-registry.json` updated
 **Use any time** after Stage 3 (Plan de Pruebas) is ready - Stage 4 and 5 are not required
 
-> **Credential rule**: NEVER hardcode PAT, username, or organization URL in any file. Always read from env vars or `<PLACEHOLDER>` in documentation.
+> **Credential rule**: NEVER hardcode PAT, username, or organization URL in any file. Always read from env vars or `<PLACEHOLDER>` in documentation. Where each credential lives, how it rotates, and the read/write split (`ADO_PROJECT_READ`/`ADO_PROJECT_WRITE`, a read-only PAT for tooling that never writes): `references/credential-policy.md`.
 > **Steps rule**: ADO Test Cases must have steps. Do not sync TCs from a Plan de Pruebas with empty or summary-only steps - run Stage 4 first to expand them.
 > **Work item read rule (BLOCKING)**: Never conclude anything about an ADO work item from its title or State. Read it in full first - see "Reading ADO work items" below.
 
@@ -36,6 +36,12 @@ Whenever this skill, another stage, or a sub-agent reads an ADO work item (Task,
 5. The parent/child hierarchy - the parent User Story is read with the same protocol
 
 The reference holds the reasons, the local cache convention, a PowerShell example (which depends on the separate `@keber/ado-powershell` package, not on `integrations/ado-powershell/`), and the equivalent REST calls. A verdict reached without all five points is provisional and must say so.
+
+---
+
+## Reviewing pull requests
+
+When QA is asked to review or vote on pull requests, apply the project's rubric in `qa/00-standards/pr-review-rubric.md` (installed by `init` when missing; the project owns and edits it). Review by work item, not by PR; vote by the escalation level of the failing criteria; write the report with the template in its section 10, keeping "Observations for QA" and "Limitations of this analysis". Reading PRs needs only read access: use the read variables of `references/credential-policy.md`. Publishing a vote or a comment is a write: it needs the write PAT (Code: Read and write) and the user's go-ahead.
 
 ---
 
@@ -75,6 +81,8 @@ Required env vars:
 - `$env:ADO_ORG` - organization URL (e.g., `https://dev.azure.com/myorg`)
 - `$env:ADO_PROJECT` - project name
 - `$env:ADO_PAT` - PAT token
+
+These are the variables the scripts read today. When QA reads from one ADO project and writes to another, or when read-only sessions must not hold write scope, apply the read/write split in `references/credential-policy.md` (section 5): the loader sets `ADO_PROJECT` and `ADO_PAT` per process, here from the write variables.
 
 ### Step 3 - Sync test cases from Plan de Pruebas
 
