@@ -104,6 +104,14 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Reads a text file as UTF-8 and drops a leading BOM. On PowerShell 7 (.NET), ReadAllText
+# with an explicit encoding can return the BOM as U+FEFF.
+function Read-Utf8Text([string]$Path) {
+    $text = [System.IO.File]::ReadAllText($Path, (New-Object System.Text.UTF8Encoding($false)))
+    if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
+    return $text
+}
+
 # Single entry point for every ADO HTTP call (tests replace the cmdlet it uses).
 # The body is always sent as UTF-8 bytes, never as a raw [string]; the response is
 # decoded from its bytes as UTF-8. Returns the parsed JSON and the continuation token.
@@ -201,7 +209,7 @@ if ($Description -and $DescriptionFile) { throw 'Pass -Description or -Descripti
 if ($DescriptionFile) {
     $descPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($DescriptionFile)
     if (-not (Test-Path -LiteralPath $descPath)) { throw "Description file not found: $DescriptionFile" }
-    $Description = [System.IO.File]::ReadAllText($descPath, (New-Object System.Text.UTF8Encoding($false)))
+    $Description = Read-Utf8Text $descPath
 }
 if (-not $Description.Trim()) { throw 'A description is required: pass -Description or -DescriptionFile.' }
 if ($DedupKey -match '[;,]') { throw "DedupKey '$DedupKey' must not contain ';' or ',' (it is stored as a tag)." }

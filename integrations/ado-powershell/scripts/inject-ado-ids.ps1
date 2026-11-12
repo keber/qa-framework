@@ -59,6 +59,14 @@ $ErrorActionPreference = 'Stop'
 # UTF-8 without BOM: users' .ts files must never gain a BOM (Encoding.UTF8 writes one).
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
+# Reads a text file as UTF-8 and drops a leading BOM. On PowerShell 7 (.NET), ReadAllText
+# with an explicit encoding can return the BOM as U+FEFF, which would then be written back.
+function Read-Utf8Text([string]$Path) {
+    $text = [System.IO.File]::ReadAllText($Path, (New-Object System.Text.UTF8Encoding($false)))
+    if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
+    return $text
+}
+
 # Collect input files based on mode
 $adoIdFiles = @(if ($PSCmdlet.ParameterSetName -eq 'SingleFile') {
     if (-not (Test-Path -LiteralPath $MappingFile)) { throw "Not found: $MappingFile" }
@@ -74,7 +82,7 @@ $totalSkipped = 0
 
 foreach ($f in $adoIdFiles) {
     # Piping enumerates the array (Windows PowerShell 5.1 emits it as one object).
-    $entries = @(([System.IO.File]::ReadAllText($f.FullName, $utf8NoBom) | ConvertFrom-Json) | ForEach-Object { $_ })
+    $entries = @(((Read-Utf8Text $f.FullName) | ConvertFrom-Json) | ForEach-Object { $_ })
     Write-Host "  $($f.Name) ($($entries.Count) entries)"
 
     foreach ($entry in $entries) {
@@ -87,8 +95,8 @@ foreach ($f in $adoIdFiles) {
                      Where-Object { $_.FullName -like "*$specHintNorm*" })
 
         foreach ($sf in $specFiles) {
-            # ReadAllText strips a BOM when present and keeps CRLF/LF as they are.
-            $content  = [System.IO.File]::ReadAllText($sf.FullName, $utf8NoBom)
+            # Read-Utf8Text drops a BOM when present and keeps CRLF/LF as they are.
+            $content  = Read-Utf8Text $sf.FullName
             $wiPrefix = "[$wiId]"
 
             # Idempotent: skip if this wiId is already associated with this localId

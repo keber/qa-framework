@@ -150,6 +150,25 @@ test('bomWriteViolations: flags BOM-producing writes and accepts UTF8Encoding($f
   assert.deepEqual(bomWriteViolations('# Set-Content $f -Encoding UTF8 (comment)'), []);
 });
 
+// PowerShell 7 (.NET) can return a BOM as U+FEFF from ReadAllText with an explicit
+// encoding; written back, it puts the BOM into the user's file. Found by CI on Linux.
+test('every ReadAllText in a shipped .ps1 lives in Read-Utf8Text, which drops a leading BOM', () => {
+  const scripts = shipped((f) => f.startsWith('integrations/ado-powershell/') && f.endsWith('.ps1'));
+  assert.ok(scripts.length > 0);
+  for (const rel of scripts) {
+    const text = readText(rel);
+    const lines = text.split(/\r?\n/);
+    lines.forEach((line, i) => {
+      if (!/ReadAllText\(/.test(line)) return;
+      const inHelper = lines.slice(Math.max(0, i - 3), i).some((l) => /function Read-Utf8Text/.test(l));
+      assert.ok(inHelper, `${rel}:${i + 1} reads with ReadAllText outside Read-Utf8Text`);
+    });
+    if (/function Read-Utf8Text/.test(text)) {
+      assert.match(text, /\[char\]0xFEFF/, `${rel}: Read-Utf8Text must drop a leading U+FEFF`);
+    }
+  }
+});
+
 test('no shipped .ps1 writes a file with a UTF-8 BOM (users\' .ts and .json stay BOM-less)', () => {
   const offenders = shipped((f) => f.endsWith('.ps1')).flatMap((f) =>
     bomWriteViolations(readText(f)).map((v) => `${f} ${v}`)

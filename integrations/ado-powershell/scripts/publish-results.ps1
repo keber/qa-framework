@@ -91,6 +91,14 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Reads a text file as UTF-8 and drops a leading BOM. On PowerShell 7 (.NET), ReadAllText
+# with an explicit encoding can return the BOM as U+FEFF.
+function Read-Utf8Text([string]$Path) {
+    $text = [System.IO.File]::ReadAllText($Path, (New-Object System.Text.UTF8Encoding($false)))
+    if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
+    return $text
+}
+
 $ValidOutcomes = @('Passed', 'Failed', 'Blocked', 'NotApplicable', 'Paused', 'NotExecuted')
 $MaxCommentLength = 1000
 $ResultsPageSize = 1000
@@ -183,7 +191,7 @@ function Get-QaProp {
 
 $resultsPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ResultsFile)
 if (-not (Test-Path -LiteralPath $resultsPath)) { throw "Results file not found: $ResultsFile" }
-$resultsData = [System.IO.File]::ReadAllText($resultsPath, (New-Object System.Text.UTF8Encoding($false))) | ConvertFrom-Json
+$resultsData = (Read-Utf8Text $resultsPath) | ConvertFrom-Json
 
 if ($PlanId -le 0)  { $PlanId  = [int](Get-QaProp $resultsData 'planId') }
 if ($SuiteId -le 0) { $SuiteId = [int](Get-QaProp $resultsData 'suiteId') }
