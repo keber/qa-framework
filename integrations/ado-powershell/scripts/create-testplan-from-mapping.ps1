@@ -11,17 +11,26 @@
     Add-AdoTestCaseToSuite) and an ADO session. Load them with:
         . .github/skills/ado-powershell/load.ps1
     load.ps1 creates $AdoSession automatically when ADO_ORG, ADO_PROJECT and
-    ADO_PAT env vars are set.
+    ADO_PAT env vars are set. When the helpers are not loaded, the script looks
+    for node_modules/@keber/ado-powershell walking up from the current directory
+    (the project root), then from the script's own folder, and dot-sources its
+    load.ps1; if none is found it stops with an error that says how to install it.
 
     The session (Org, Project, ApiV, Headers) is passed EXPLICITLY to every
     helper call. The helpers' own defaults read $script:AdoSession, which is not
     visible to them in every call pattern (for example when load.ps1 was
     dot-sourced inside another script): without the explicit session every
     Test Case fails. Session resolution order:
-      1. -Session parameter.
+      1. -Session parameter, used as given.
       2. A visible $AdoSession variable (set by load.ps1 or Initialize-AdoSession).
-    If neither yields Org, Project and Headers (with Authorization), the script
+         This script writes to ADO, so ADO_PROJECT_WRITE and ADO_PAT_WRITE, when
+         set, replace its Project and Authorization (credential-policy.md read/write
+         split).
+      3. The environment: ADO_ORG, ADO_PROJECT_WRITE (else ADO_PROJECT) and
+         ADO_PAT_WRITE (else ADO_PAT).
+    If none yields Org, Project and Headers (with Authorization), the script
     stops before any ADO call with an error that says what is missing.
+    ado-ids.json is written as a UTF-8 JSON array without BOM.
 
 .PARAMETER PlanId
     ADO Test Plan ID.
@@ -78,8 +87,9 @@ function Resolve-QaAdoSession {
     param([object] $InputSession)
     if ($null -eq $InputSession) {
         throw ("ADO session not found. Pass -Session `$AdoSession (from Initialize-AdoSession), " +
-               "or dot-source .github/skills/ado-powershell/load.ps1 with ADO_ORG, ADO_PROJECT " +
-               "and ADO_PAT set before running this script.")
+               "dot-source .github/skills/ado-powershell/load.ps1, or set ADO_ORG, " +
+               "ADO_PROJECT_WRITE (or ADO_PROJECT) and ADO_PAT_WRITE (or ADO_PAT) " +
+               "before running this script.")
     }
     $org     = Get-QaSessionValue $InputSession 'Org'
     $project = Get-QaSessionValue $InputSession 'Project'
@@ -122,27 +132,81 @@ function Select-QaSupportedArgs {
     return $selected
 }
 
+# Nearest node_modules/@keber/ado-powershell, walking up from each start directory in
+# order. The project root comes first: when this script runs from
+# node_modules/@keber/qa-framework/..., a path relative to the script does not reach it.
+function Find-QaAdoPowerShellPackage {
+    param([string[]] $StartDirs)
+    foreach ($start in $StartDirs) {
+        if (-not $start) { continue }
+        $dir = [System.IO.Path]::GetFullPath($start)
+        while ($dir) {
+            $candidate = Join-Path $dir 'node_modules/@keber/ado-powershell'
+            if (Test-Path -LiteralPath $candidate -PathType Container) { return $candidate }
+            $dir = Split-Path -Parent $dir
+        }
+    }
+    return $null
+}
+
+# Returns a session hashtable from ADO_ORG and the write variables, or $null.
+function Get-QaEnvWriteSession {
+    $org     = $env:ADO_ORG
+    $project = if ($env:ADO_PROJECT_WRITE) { $env:ADO_PROJECT_WRITE } else { $env:ADO_PROJECT }
+    $pat     = if ($env:ADO_PAT_WRITE)     { $env:ADO_PAT_WRITE }     else { $env:ADO_PAT }
+    if (-not ($org -or $project -or $pat)) { return $null }
+    # The helpers take the organization name; accept a dev.azure.com URL too.
+    if ($org) { $org = $org.TrimEnd('/') -replace '^https?://dev\.azure\.com/', '' }
+    $headers = @{}
+    if ($pat) { $headers['Authorization'] = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat")) }
+    return @{ Org = $org; Project = $project; ApiV = '7.1'; Headers = $headers }
+}
+
+# Applies ADO_PROJECT_WRITE / ADO_PAT_WRITE over a loader session (credential policy).
+function Set-QaWriteOverrides {
+    param([hashtable] $SessionArgs)
+    if ($env:ADO_PROJECT_WRITE) {
+        $SessionArgs.Project = $env:ADO_PROJECT_WRITE
+        Write-Host "[create-testplan] Project from ADO_PROJECT_WRITE"
+    }
+    if ($env:ADO_PAT_WRITE) {
+        $SessionArgs.Headers['Authorization'] = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($env:ADO_PAT_WRITE)"))
+        Write-Host "[create-testplan] Authorization from ADO_PAT_WRITE"
+    }
+    return $SessionArgs
+}
+
 # Auto-load ADO helpers if not already active
 if (-not (Get-Command 'New-AdoTestCase' -ErrorAction SilentlyContinue)) {
-    $loadScript = Join-Path $PSScriptRoot '..\..\..\node_modules\@keber\ado-powershell\.github\skills\ado-powershell\load.ps1'
-    if (Test-Path $loadScript) {
-        . $loadScript
-    } else {
-        Write-Error "ADO session not loaded and load.ps1 not found. Run: . node_modules\@keber\ado-powershell\.github\skills\ado-powershell\load.ps1"
-        exit 1
+    $package = Find-QaAdoPowerShellPackage @((Get-Location).ProviderPath, $PSScriptRoot)
+    if (-not $package) {
+        throw ("The @keber/ado-powershell helpers are not loaded and node_modules/@keber/ado-powershell " +
+               "was not found from $((Get-Location).ProviderPath) upwards. Install it in the project root " +
+               "(npm install @keber/ado-powershell) or dot-source its load.ps1 before running this script.")
     }
+    $loadScript = Join-Path $package '.github/skills/ado-powershell/load.ps1'
+    if (-not (Test-Path -LiteralPath $loadScript)) {
+        throw "Found $package but not its load.ps1 ($loadScript). Reinstall @keber/ado-powershell (requires >= 1.3.0)."
+    }
+    . $loadScript
 }
 
 if (-not (Get-Command 'New-AdoTestCase' -ErrorAction SilentlyContinue)) {
-    Write-Error "New-AdoTestCase not available after loading ado-powershell. Check the skill version (requires >= 1.3.0)."
-    exit 1
+    throw "New-AdoTestCase not available after loading ado-powershell. Check the skill version (requires >= 1.3.0)."
 }
 
-# Resolve the session: explicit parameter first, then a visible $AdoSession.
-if ($null -eq $Session) {
-    $Session = Get-Variable -Name 'AdoSession' -ValueOnly -ErrorAction SilentlyContinue
+# Resolve the session: explicit parameter, then a visible $AdoSession (with the write
+# overrides), then the environment.
+if ($null -ne $Session) {
+    $adoSessionArgs = Resolve-QaAdoSession $Session
+} else {
+    $visible = Get-Variable -Name 'AdoSession' -ValueOnly -ErrorAction SilentlyContinue
+    if ($null -ne $visible) {
+        $adoSessionArgs = Set-QaWriteOverrides (Resolve-QaAdoSession $visible)
+    } else {
+        $adoSessionArgs = Resolve-QaAdoSession (Get-QaEnvWriteSession)
+    }
 }
-$adoSessionArgs = Resolve-QaAdoSession $Session
 $createArgs     = Select-QaSupportedArgs 'New-AdoTestCase' $adoSessionArgs
 $addArgs        = Select-QaSupportedArgs 'Add-AdoTestCaseToSuite' $adoSessionArgs
 
@@ -194,6 +258,11 @@ foreach ($tc in $tcList) {
 $outFile = if ($OutputFile) { $OutputFile } else {
     Join-Path (Split-Path $MappingFile) 'ado-ids.json'
 }
-$results | ConvertTo-Json -Depth 5 | Set-Content $outFile -Encoding UTF8
+# Always a JSON array (one created item would otherwise become a bare object), and
+# UTF-8 WITHOUT BOM (Set-Content -Encoding UTF8 writes one on Windows PowerShell 5.1).
+# .NET resolves a relative path against the process directory, not the PowerShell location.
+$outFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($outFile)
+$json = ConvertTo-Json -Depth 5 -InputObject @($results)
+[System.IO.File]::WriteAllText($outFile, $json, (New-Object System.Text.UTF8Encoding($false)))
 Write-Host ""
 Write-Host "[create-testplan] Done. $($results.Count) WIs created. Output: $outFile"

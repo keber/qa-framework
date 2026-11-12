@@ -187,15 +187,20 @@ argument reports false failures.
 > version 1.4.0 does not ship. With an older version, or with any other tool, use the REST calls
 > in the next section.
 
-Requirements: `ADO_ORG`, `ADO_PROJECT` and `ADO_PAT` set in the environment (never hardcoded). Run
+Requirements: `ADO_ORG` plus the read pair `ADO_PROJECT_READ` and `ADO_PAT_READ` set in the
+environment (never hardcoded), each falling back to `ADO_PROJECT` / `ADO_PAT` when not set. This
+recipe only reads, so it never needs the write PAT (see `credential-policy.md`, section 5). Run
 the loader and the queries in ONE PowerShell invocation - write one `.ps1` script - because the
 session object the functions rely on does not survive between separate invocations.
 
 ```powershell
+# Read-only: load.ps1 reads ADO_PROJECT and ADO_PAT, so point them at the read pair in THIS process.
+if ($env:ADO_PROJECT_READ) { $env:ADO_PROJECT = $env:ADO_PROJECT_READ }
+if ($env:ADO_PAT_READ)     { $env:ADO_PAT     = $env:ADO_PAT_READ }
 . .github/skills/ado-powershell/load.ps1    # initializes the session from ADO_* env vars
 
 $id      = <ID>
-$project = $env:ADO_PROJECT                 # the project that holds the work items
+$project = if ($env:ADO_PROJECT_READ) { $env:ADO_PROJECT_READ } else { $env:ADO_PROJECT }    # holds the work items
 $cache   = "qa/01-specifications/source/ado-workitems-cache/$id"
 
 $wi = Get-AdoWorkItem -Id $id -Project $project    # -Expand All is the default: fields + relations
@@ -241,7 +246,8 @@ Notes on the recipe:
 
 ### Equivalent REST calls (any tool)
 
-All calls use the PAT as Basic authentication (empty user name), read from the environment.
+All calls use the read PAT (`ADO_PAT_READ`, else `ADO_PAT`) as Basic authentication (empty user
+name), read from the environment; `{project}` is `ADO_PROJECT_READ`, else `ADO_PROJECT`.
 
 | Point | Call |
 |---|---|

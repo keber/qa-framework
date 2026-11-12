@@ -75,8 +75,9 @@ config is the model:
 
 `integrations.azureDevOps.organization` and `integrations.azureDevOps.project` hold
 placeholders or the real (non-secret) names. A project that reads from one ADO project and
-writes to another records both names where its team can review them; the framework scripts do
-not read a second project key yet (see section 5).
+writes to another records both names where its team can review them; the framework scripts
+take the target projects from the `ADO_PROJECT_READ` / `ADO_PROJECT_WRITE` environment
+variables, not from the config (see section 5).
 
 ## 5. Read and write access
 
@@ -110,11 +111,15 @@ Rules for the split:
   reach. PAT scopes cannot be limited to one project. Real isolation comes from the identity's
   permissions in ADO (project membership and security groups) plus the read-only PAT for tools
   that do not write.
-- **Fallback for existing scripts.** The framework scripts and many project scripts still read
-  `ADO_PROJECT` and `ADO_PAT`. A loader keeps them working by setting, in the process that runs
-  a given script, `ADO_PROJECT` to the read or write project and `ADO_PAT` to the read or write
-  PAT that script needs. Set them per process, never globally, so a read-only session never
-  inherits the write PAT through the fallback.
+- **Framework scripts.** The shipped scripts in `integrations/ado-powershell/` that call ADO
+  all write, so they prefer `ADO_PROJECT_WRITE` and `ADO_PAT_WRITE` and fall back to
+  `ADO_PROJECT` and `ADO_PAT`; read-only recipes prefer `ADO_PROJECT_READ` and `ADO_PAT_READ`
+  with the same fallback. `references/scripts-and-config.md` lists which script uses which.
+- **Fallback for other scripts.** Many project scripts and the `@keber/ado-powershell` loader
+  still read only `ADO_PROJECT` and `ADO_PAT`. A loader keeps them working by setting, in the
+  process that runs a given script, `ADO_PROJECT` to the read or write project and `ADO_PAT` to
+  the read or write PAT that script needs. Set them per process, never globally, so a read-only
+  session never inherits the write PAT through the fallback.
 - When one project serves both directions, set both project variables to the same name; keep
   the two PATs separate anyway.
 

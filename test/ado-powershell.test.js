@@ -125,6 +125,75 @@ test('no shipped script or ADO doc lists suites through the paged flat list', ()
   assert.deepEqual(offenders, []);
 });
 
+/**
+ * File writes that produce a UTF-8 BOM on Windows PowerShell 5.1: `Set-Content`,
+ * `Add-Content` or `Out-File` with `-Encoding UTF8`, and `WriteAllText`/`WriteAllLines`
+ * with `[Text.Encoding]::UTF8` (its preamble is the BOM). A BOM-less write uses
+ * `New-Object Text.UTF8Encoding($false)`.
+ */
+function bomWriteViolations(text) {
+  const out = [];
+  text.split(/\r?\n/).forEach((line, i) => {
+    const code = line.replace(/#.*$/, '');
+    if (/\b(?:Set-Content|Add-Content|Out-File)\b.*-Encoding\s+['"]?UTF8\b/i.test(code)) out.push(`line ${i + 1}: ${code.trim()}`);
+    if (/Write(?:AllText|AllLines)\s*\(.*\[(?:System\.)?Text\.Encoding\]::UTF8\s*\)/i.test(code)) out.push(`line ${i + 1}: ${code.trim()}`);
+  });
+  return out;
+}
+
+test('bomWriteViolations: flags BOM-producing writes and accepts UTF8Encoding($false)', () => {
+  assert.equal(bomWriteViolations('$json | Set-Content $out -Encoding UTF8').length, 1);
+  assert.equal(bomWriteViolations("$x | Out-File -FilePath $f -Encoding 'utf8'").length, 1);
+  assert.equal(bomWriteViolations('[System.IO.File]::WriteAllText($f, $json, [System.Text.Encoding]::UTF8)').length, 1);
+  assert.deepEqual(bomWriteViolations('[IO.File]::WriteAllText($f, $json, (New-Object Text.UTF8Encoding($false)))'), []);
+  assert.deepEqual(bomWriteViolations('$t = [IO.File]::ReadAllText($f, [Text.Encoding]::UTF8)'), []);
+  assert.deepEqual(bomWriteViolations('# Set-Content $f -Encoding UTF8 (comment)'), []);
+});
+
+test('no shipped .ps1 writes a file with a UTF-8 BOM (users\' .ts and .json stay BOM-less)', () => {
+  const offenders = shipped((f) => f.endsWith('.ps1')).flatMap((f) =>
+    bomWriteViolations(readText(f)).map((v) => `${f} ${v}`)
+  );
+  assert.deepEqual(offenders, []);
+});
+
+test('the results and issue scripts ship next to the other ADO scripts', () => {
+  const files = shipped((f) => f.startsWith('integrations/ado-powershell/scripts/'));
+  for (const name of ['publish-results.ps1', 'create-issue.ps1']) {
+    assert.ok(files.includes(`integrations/ado-powershell/scripts/${name}`), `${name} is not published`);
+  }
+});
+
+test('the new ADO scripts send every HTTP request through the single Invoke-AdoRest seam', () => {
+  for (const name of ['publish-results.ps1', 'create-issue.ps1']) {
+    const text = readText(`integrations/ado-powershell/scripts/${name}`);
+    const code = text
+      .replace(/<#[\s\S]*?#>/g, '')
+      .split(/\r?\n/)
+      .filter((l) => !/^\s*#/.test(l))
+      .join('\n');
+    const direct = code.match(/\bInvoke-(?:RestMethod|WebRequest)\b/gi) || [];
+    assert.equal(direct.length, 1, `${name}: expected exactly one direct HTTP cmdlet call (inside Invoke-AdoRest)`);
+    assert.match(code, /function Invoke-AdoRest\b/, `${name}: Invoke-AdoRest missing`);
+    assert.match(code, /\[switch\]\s*\$DryRun/i, `${name}: -DryRun missing`);
+  }
+});
+
+test('ADO docs document the read/write variables and the new scripts', () => {
+  const config = readText('skills/qa-ado-integration/references/scripts-and-config.md');
+  for (const name of ['ADO_PROJECT_READ', 'ADO_PROJECT_WRITE', 'ADO_PAT_READ', 'ADO_PAT_WRITE']) {
+    assert.match(config, new RegExp(`\`${name}\``), `scripts-and-config.md does not document ${name}`);
+  }
+  assert.match(config, /### publish-results\.ps1/);
+  assert.match(config, /### create-issue\.ps1/);
+  const readme = readText('integrations/ado-powershell/README.md');
+  assert.match(readme, /publish-results\.ps1/);
+  assert.match(readme, /create-issue\.ps1/);
+  const protocol = readText('skills/qa-ado-integration/references/ado-workitem-full-read-protocol.md');
+  assert.match(protocol, /\$env:ADO_PROJECT_READ/, 'the full-read recipe must read from ADO_PROJECT_READ');
+  assert.match(protocol, /else \{ \$env:ADO_PROJECT \}/, 'the full-read recipe must fall back to ADO_PROJECT');
+});
+
 test('the ADO docs prescribe reading child suites with expand=children', () => {
   const docs = ['integrations/ado-powershell/README.md', 'skills/qa-ado-integration/references/scripts-and-config.md'];
   for (const doc of docs) {
@@ -215,25 +284,36 @@ const FAKE_SESSION = `[pscustomobject]@{ Org = 'example-org'; Project = 'Example
 
 /**
  * Runs `body` (PowerShell) after the mocks in a fresh process and returns
- * { calls, error, warnings, stdout, stderr, status }. `body` runs the script under
- * test with `&`; its terminating error is captured, not rethrown.
+ * { calls, error, warnings, output, stdout, stderr, status }. `body` runs the script
+ * under test with `&`; its terminating error is captured, not rethrown; the objects it
+ * writes to the pipeline are returned in `output`.
+ * Every ADO_* / AZURE_TOKEN variable inherited from the machine is removed first, so a
+ * developer's real credentials never reach a script under test; `env` then sets fakes.
  */
-function runPs(dir, { mocks = HELPER_MOCKS, body }) {
+function runPs(dir, { mocks = HELPER_MOCKS, body, env = {} }) {
   const resultFile = path.join(dir, 'result.json');
+  const envLines = Object.entries(env)
+    .map(([name, value]) => `$env:${name} = ${psQuote(value)}`)
+    .join('\n');
   const harness = `
 $ErrorActionPreference = 'Stop'
+Get-ChildItem env: | Where-Object { $_.Name -like 'ADO_*' -or $_.Name -eq 'AZURE_TOKEN' } |
+    ForEach-Object { Remove-Item -LiteralPath "env:$($_.Name)" }
+${envLines}
 ${MOCKS}
 ${mocks}
 $qaError = $null
 $qaWarnings = @()
+$qaOutput = @()
 try {
     ${body} 3>&1 | ForEach-Object {
         if ($_ -is [System.Management.Automation.WarningRecord]) { $qaWarnings += $_.Message }
+        else { $qaOutput += $_ }
     }
 } catch {
     $qaError = $_.Exception.Message
 }
-$result = [ordered]@{ calls = @($global:QaCalls); error = $qaError; warnings = @($qaWarnings) }
+$result = [ordered]@{ calls = @($global:QaCalls); error = $qaError; warnings = @($qaWarnings); output = @($qaOutput) }
 [IO.File]::WriteAllText(${psQuote(resultFile)}, (ConvertTo-Json -InputObject $result -Depth 8), (New-Object Text.UTF8Encoding($false)))
 `;
   const harnessFile = path.join(dir, 'harness.ps1');
@@ -244,7 +324,14 @@ $result = [ordered]@{ calls = @($global:QaCalls); error = $qaError; warnings = @
   const r = spawnSync(POWERSHELL, args, { cwd: dir, encoding: 'utf8', timeout: 120000, windowsHide: true });
   assert.ok(fs.existsSync(resultFile), `harness produced no result.\nstdout: ${r.stdout}\nstderr: ${r.stderr}`);
   const result = JSON.parse(fs.readFileSync(resultFile, 'utf8'));
-  return { ...result, calls: result.calls || [], warnings: result.warnings || [], stdout: r.stdout, stderr: r.stderr };
+  return {
+    ...result,
+    calls: result.calls || [],
+    warnings: result.warnings || [],
+    output: result.output || [],
+    stdout: r.stdout,
+    stderr: r.stderr,
+  };
 }
 
 function tempDir() {
@@ -392,4 +479,635 @@ psTest('sync-ado-titles: -WhatIf makes no REST call', () => {
   });
   assert.equal(r.error, null, r.stderr);
   assert.deepEqual(r.calls, []);
+});
+
+// ---------------------------------------------------------------------------
+// WP4.1 follow-ups: write split, encodings, helper auto-load
+// ---------------------------------------------------------------------------
+
+const INJECT_SCRIPT = path.join(SCRIPTS_DIR, 'inject-ado-ids.ps1');
+const MD_SCRIPT = path.join(SCRIPTS_DIR, 'md-to-tc-mapping.ps1');
+const PUBLISH_SCRIPT = path.join(SCRIPTS_DIR, 'publish-results.ps1');
+const ISSUE_SCRIPT = path.join(SCRIPTS_DIR, 'create-issue.ps1');
+
+const basic = (pat) => `Basic ${Buffer.from(`:${pat}`).toString('base64')}`;
+const hasBom = (file) => fs.readFileSync(file).subarray(0, 3).equals(BOM);
+
+psTest('sync-ado-titles: without -ProjectName/-Token it prefers ADO_PROJECT_WRITE and ADO_PAT_WRITE', () => {
+  const dir = tempDir();
+  const { specDir, mapping } = writeSyncFixture(dir);
+  const r = runPs(dir, {
+    mocks: '',
+    env: {
+      ADO_ORG: 'https://ado.invalid/example-org',
+      ADO_PROJECT: 'GenericProject',
+      ADO_PROJECT_WRITE: 'WriteProject',
+      ADO_PAT: 'generic-fake',
+      ADO_PAT_WRITE: 'write-fake',
+    },
+    body: `& ${psQuote(SYNC_SCRIPT)} -MappingFile ${psQuote(mapping)} -SpecDir ${psQuote(specDir)} -Confirm:$false`,
+  });
+  assert.equal(r.error, null, r.stderr);
+  assert.equal(r.calls.length, 1, JSON.stringify(r.calls));
+  assert.equal(r.calls[0].uri, 'https://ado.invalid/example-org/WriteProject/_apis/wit/workitems/4242?api-version=7.1');
+  assert.equal(r.calls[0].auth, basic('write-fake'));
+});
+
+psTest('sync-ado-titles: falls back to ADO_PROJECT and ADO_PAT, and names the variables when nothing is set', () => {
+  const dir = tempDir();
+  const { specDir, mapping } = writeSyncFixture(dir);
+  const fallback = runPs(dir, {
+    mocks: '',
+    env: { ADO_ORG: 'https://ado.invalid/example-org', ADO_PROJECT: 'GenericProject', ADO_PAT: 'generic-fake' },
+    body: `& ${psQuote(SYNC_SCRIPT)} -MappingFile ${psQuote(mapping)} -SpecDir ${psQuote(specDir)} -Confirm:$false`,
+  });
+  assert.equal(fallback.error, null, fallback.stderr);
+  assert.match(fallback.calls[0].uri, /\/GenericProject\/_apis\//);
+  assert.equal(fallback.calls[0].auth, basic('generic-fake'));
+
+  const missing = runPs(tempDir(), {
+    mocks: '',
+    body: `& ${psQuote(SYNC_SCRIPT)} -MappingFile ${psQuote(mapping)} -SpecDir ${psQuote(specDir)} -Confirm:$false`,
+  });
+  assert.match(missing.error || '', /ADO_ORG/);
+  assert.match(missing.error, /ADO_PROJECT_WRITE/);
+  assert.match(missing.error, /ADO_PAT_WRITE/);
+  assert.deepEqual(missing.calls, []);
+});
+
+psTest('create-testplan: with no session it builds one from ADO_ORG and the write variables', () => {
+  const dir = tempDir();
+  const mapping = writeMapping(dir);
+  const r = runPs(dir, {
+    env: { ADO_ORG: 'example-org', ADO_PROJECT_WRITE: 'ExampleProject', ADO_PAT_WRITE: 'write-fake' },
+    body: `& ${psQuote(CREATE_SCRIPT)} -PlanId 101 -MappingFile ${psQuote(mapping)}`,
+  });
+  assert.equal(r.error, null, r.stderr);
+  const helperCalls = r.calls.filter((c) => c.fn !== 'Invoke-RestMethod');
+  assert.equal(helperCalls.length, 4, JSON.stringify(r.calls));
+  for (const c of helperCalls) {
+    assert.equal(c.org, 'example-org');
+    assert.equal(c.project, 'ExampleProject');
+    assert.equal(c.auth, basic('write-fake'));
+  }
+});
+
+psTest('create-testplan: ADO_PROJECT_WRITE and ADO_PAT_WRITE override a loader $AdoSession, not an explicit -Session', () => {
+  const dir = tempDir();
+  const mapping = writeMapping(dir);
+  const env = { ADO_PROJECT_WRITE: 'WriteProject', ADO_PAT_WRITE: 'write-fake' };
+  const loader = runPs(dir, {
+    env,
+    body: `$global:AdoSession = ${FAKE_SESSION}
+    & ${psQuote(CREATE_SCRIPT)} -PlanId 101 -MappingFile ${psQuote(mapping)}`,
+  });
+  assert.equal(loader.error, null, loader.stderr);
+  const loaderCalls = loader.calls.filter((c) => c.fn === 'New-AdoTestCase');
+  assert.equal(loaderCalls.length, 2);
+  assert.ok(loaderCalls.every((c) => c.project === 'WriteProject' && c.auth === basic('write-fake')), JSON.stringify(loaderCalls));
+
+  const explicit = runPs(tempDir(), {
+    env,
+    body: `& ${psQuote(CREATE_SCRIPT)} -PlanId 101 -MappingFile ${psQuote(mapping)} -Session (${FAKE_SESSION})`,
+  });
+  assert.equal(explicit.error, null, explicit.stderr);
+  assertSessionPassed(explicit.calls);
+});
+
+psTest('create-testplan: ado-ids.json is UTF-8 without BOM, a JSON array, accents intact', () => {
+  const dir = tempDir();
+  const file = path.join(dir, 'tc-mapping.json');
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      planId: 101,
+      suiteId: 202,
+      testCases: [{ localId: 'TC-MOD-009', title: 'Revisión de año fiscal', specFile: 'mod/a.spec.ts' }],
+    }),
+    'utf8'
+  );
+  const out = path.join(dir, 'ado-ids.json');
+  const r = runPs(dir, {
+    body: `& ${psQuote(CREATE_SCRIPT)} -PlanId 101 -MappingFile ${psQuote(file)} -OutputFile ${psQuote(out)} -Session (${FAKE_SESSION})`,
+  });
+  assert.equal(r.error, null, r.stderr);
+  assert.ok(!hasBom(out), 'ado-ids.json must not start with a BOM');
+  const ids = JSON.parse(fs.readFileSync(out, 'utf8'));
+  assert.ok(Array.isArray(ids), 'a single created test case must still be written as an array');
+  assert.equal(ids[0].title, 'Revisión de año fiscal');
+});
+
+/** A fake project root whose node_modules holds an @keber/ado-powershell load.ps1. */
+function writeFakeHelperPackage(root) {
+  const skillDir = path.join(root, 'node_modules', '@keber', 'ado-powershell', '.github', 'skills', 'ado-powershell');
+  fs.mkdirSync(skillDir, { recursive: true });
+  const load = `${HELPER_MOCKS}
+$AdoSession = ${FAKE_SESSION}
+`;
+  fs.writeFileSync(path.join(skillDir, 'load.ps1'), Buffer.concat([BOM, Buffer.from(load, 'utf8')]));
+}
+
+psTest('create-testplan: auto-loads @keber/ado-powershell from the project root node_modules (walking up)', () => {
+  const dir = tempDir();
+  writeFakeHelperPackage(dir);
+  const sub = path.join(dir, 'qa', '08-azure-integration');
+  fs.mkdirSync(sub, { recursive: true });
+  const mapping = writeMapping(sub);
+  const r = runPs(dir, {
+    mocks: '',
+    body: `Set-Location -LiteralPath ${psQuote(sub)}
+    & ${psQuote(CREATE_SCRIPT)} -PlanId 101 -MappingFile ${psQuote(mapping)}`,
+  });
+  assert.equal(r.error, null, r.stderr);
+  assertSessionPassed(r.calls);
+});
+
+psTest('create-testplan: without @keber/ado-powershell it fails with a clear error and no call', () => {
+  const dir = tempDir();
+  const mapping = writeMapping(dir);
+  const r = runPs(dir, {
+    mocks: '',
+    body: `& ${psQuote(CREATE_SCRIPT)} -PlanId 101 -MappingFile ${psQuote(mapping)} -Session (${FAKE_SESSION})`,
+  });
+  assert.match(r.error || '', /node_modules[\\/]@keber[\\/]ado-powershell/);
+  assert.match(r.error, /npm install/);
+  assert.deepEqual(r.calls, []);
+});
+
+psTest('md-to-tc-mapping: writes tc-mapping.json as UTF-8 without BOM with accents intact', () => {
+  const dir = tempDir();
+  const plan = path.join(dir, 'Plan-de-Pruebas-Ejemplo.md');
+  fs.writeFileSync(
+    plan,
+    [
+      '# Plan',
+      '',
+      '## Tabla de Pruebas',
+      '',
+      '| TC-ID | Tipo | Titulo | Steps | Resultado esperado |',
+      '|---|---|---|---|---|',
+      '| TC-MOD-001 | E2E | Búsqueda por año | 1. Abrir la pantalla<br>2. Buscar por año | Se muestran los registros del año |',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+  const out = path.join(dir, 'out', 'tc-mapping.json');
+  const r = runPs(dir, {
+    mocks: '',
+    body: `& ${psQuote(MD_SCRIPT)} -PlanFile ${psQuote(plan)} -SpecFile 'mod/a.spec.ts' -OutputFile ${psQuote(out)}`,
+  });
+  assert.equal(r.error, null, r.stderr);
+  assert.ok(!hasBom(out), 'tc-mapping.json must not start with a BOM');
+  const mapping = JSON.parse(fs.readFileSync(out, 'utf8'));
+  assert.equal(mapping.testCases[0].title, 'Búsqueda por año');
+  assert.deepEqual(mapping.testCases[0].steps, ['Abrir la pantalla', 'Buscar por año']);
+});
+
+psTest('inject-ado-ids: keeps spec files BOM-less, accents intact and line endings unchanged', () => {
+  const dir = tempDir();
+  const specDir = path.join(dir, 'e2e');
+  fs.mkdirSync(path.join(specDir, 'mod'), { recursive: true });
+  const crlf = path.join(specDir, 'mod', 'crlf.spec.ts');
+  const lf = path.join(specDir, 'mod', 'lf.spec.ts');
+  const bom = path.join(specDir, 'mod', 'bom.spec.ts');
+  fs.writeFileSync(crlf, "import { test } from '@playwright/test';\r\ntest('[TC-MOD-001] Validación de año', async () => {});\r\n", 'utf8');
+  fs.writeFileSync(lf, "test('[TC-MOD-002] Creación con ñandú', async () => {});\n// comentario: acción\n", 'utf8');
+  fs.writeFileSync(bom, Buffer.concat([BOM, Buffer.from("test('[TC-MOD-003] Revisión', async () => {});\n", 'utf8')]));
+  const mapping = path.join(dir, 'ado-ids.json');
+  fs.writeFileSync(
+    mapping,
+    JSON.stringify([
+      { localId: 'TC-MOD-001', adoWiId: 4001, specFile: 'mod/crlf.spec.ts' },
+      { localId: 'TC-MOD-002', adoWiId: 4002, specFile: 'mod/lf.spec.ts' },
+      { localId: 'TC-MOD-003', adoWiId: 4003, specFile: 'mod/bom.spec.ts' },
+    ]),
+    'utf8'
+  );
+  const r = runPs(dir, {
+    mocks: '',
+    body: `& ${psQuote(INJECT_SCRIPT)} -SpecDir ${psQuote(specDir)} -MappingFile ${psQuote(mapping)}`,
+  });
+  assert.equal(r.error, null, r.stderr);
+  for (const f of [crlf, lf, bom]) assert.ok(!hasBom(f), `${path.basename(f)} must not gain or keep a BOM`);
+  assert.equal(
+    fs.readFileSync(crlf, 'utf8'),
+    "import { test } from '@playwright/test';\r\ntest('[4001] [TC-MOD-001] Validación de año', async () => {});\r\n"
+  );
+  assert.equal(fs.readFileSync(lf, 'utf8'), "test('[4002] [TC-MOD-002] Creación con ñandú', async () => {});\n// comentario: acción\n");
+  assert.equal(fs.readFileSync(bom, 'utf8'), "test('[4003] [TC-MOD-003] Revisión', async () => {});\n");
+});
+
+psTest('inject-ado-ids: -DryRun leaves the file byte-identical', () => {
+  const dir = tempDir();
+  const specDir = path.join(dir, 'e2e');
+  fs.mkdirSync(specDir, { recursive: true });
+  const spec = path.join(specDir, 'a.spec.ts');
+  const original = Buffer.concat([BOM, Buffer.from("test('[TC-MOD-001] Validación', async () => {});\r\n", 'utf8')]);
+  fs.writeFileSync(spec, original);
+  const mapping = path.join(dir, 'ado-ids.json');
+  fs.writeFileSync(mapping, JSON.stringify([{ localId: 'TC-MOD-001', adoWiId: 4001, specFile: 'a.spec.ts' }]), 'utf8');
+  const r = runPs(dir, {
+    mocks: '',
+    body: `& ${psQuote(INJECT_SCRIPT)} -SpecDir ${psQuote(specDir)} -MappingFile ${psQuote(mapping)} -DryRun`,
+  });
+  assert.equal(r.error, null, r.stderr);
+  assert.ok(fs.readFileSync(spec).equals(original), 'dry run must not touch the file');
+});
+
+// ---------------------------------------------------------------------------
+// publish-results.ps1 and create-issue.ps1 (Invoke-WebRequest is the HTTP seam)
+// ---------------------------------------------------------------------------
+
+/**
+ * Replaces Invoke-WebRequest with a router: each route is { method, uri (regex), body,
+ * token }. The first route whose method and uri match answers with `body` as UTF-8 JSON
+ * and, when given, an x-ms-continuationtoken header. An unmatched request throws.
+ */
+function webMock(routes) {
+  const rules = routes
+    .map(
+      (r) =>
+        `    [pscustomobject]@{ method = ${psQuote(r.method)}; uri = ${psQuote(r.uri)}; body = ${psQuote(
+          r.body === undefined ? '' : JSON.stringify(r.body)
+        )}; token = ${psQuote(r.token || '')} }`
+    )
+    .join(',\n');
+  return `
+$global:QaRoutes = @(
+${rules}
+)
+function global:Invoke-WebRequest {
+    param($Method, $Uri, $Headers, $Body, $ContentType, [switch]$UseBasicParsing)
+    $bodyInfo = if ($null -eq $Body) { $null }
+                elseif ($Body -is [byte[]]) { 'bytes:' + [Convert]::ToBase64String($Body) }
+                else { 'string:' + [string]$Body }
+    [void]$global:QaCalls.Add([ordered]@{
+        fn = 'Invoke-WebRequest'; method = [string]$Method; uri = [string]$Uri
+        auth = if ($Headers) { [string]$Headers['Authorization'] } else { $null }
+        contentType = [string]$ContentType; body = $bodyInfo; basic = [bool]$UseBasicParsing })
+    $route = $global:QaRoutes | Where-Object { ([string]$Method -ieq $_.method) -and ([string]$Uri -match $_.uri) } | Select-Object -First 1
+    if (-not $route) { throw "unexpected request: $Method $Uri" }
+    $bytes = [Text.Encoding]::UTF8.GetBytes($route.body)
+    $responseHeaders = @{}
+    if ($route.token) { $responseHeaders['x-ms-continuationtoken'] = $route.token }
+    return [pscustomobject]@{
+        StatusCode = 200; Headers = $responseHeaders; Content = $route.body
+        RawContentStream = (New-Object IO.MemoryStream (,$bytes)) }
+}
+`;
+}
+
+/** Decodes the JSON body of a recorded call; fails when it was not sent as UTF-8 bytes. */
+function jsonBody(call) {
+  assert.ok(call.body && call.body.startsWith('bytes:'), `body of ${call.method} ${call.uri} must be UTF-8 bytes`);
+  return JSON.parse(Buffer.from(call.body.slice('bytes:'.length), 'base64').toString('utf8'));
+}
+
+const ORG = 'https://ado.invalid/example-org';
+const BASE = `${ORG}/ExampleProject/_apis`;
+const WRITE_ENV = { ADO_ORG: ORG, ADO_PROJECT_WRITE: 'ExampleProject', ADO_PAT_WRITE: 'write-fake' };
+
+function writeResults(dir, results, extra = {}) {
+  const file = path.join(dir, 'results.json');
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ planId: 101, suiteId: 202, runName: 'Ejecución manual - módulo', ...extra, results }, null, 2),
+    'utf8'
+  );
+  return file;
+}
+
+const TWO_RESULTS = [
+  { testCaseId: 4242, outcome: 'Passed', comment: 'Validación correcta' },
+  { adoWiId: 4243, outcome: 'failed', comment: 'Falla en la búsqueda por año' },
+];
+
+/** Routes for a suite with two points over two pages and a run 777 with two results. */
+function publishRoutes({ outcome1 = 'unspecified' } = {}) {
+  return [
+    {
+      method: 'GET',
+      uri: 'TestPoint\\?api-version=7\\.1&continuationToken=page2$',
+      body: { value: [{ id: 9002, testCaseReference: { id: 4243 }, results: { outcome: 'unspecified' } }] },
+    },
+    {
+      method: 'GET',
+      uri: '/testplan/Plans/101/Suites/202/TestPoint\\?api-version=7\\.1$',
+      body: { value: [{ id: 9001, testCaseReference: { id: 4242 }, results: { outcome: outcome1 } }] },
+      token: 'page2',
+    },
+    { method: 'POST', uri: '/test/runs\\?api-version=7\\.1$', body: { id: 777, state: 'InProgress' } },
+    {
+      method: 'GET',
+      uri: '/test/Runs/777/results\\?',
+      body: {
+        value: [
+          { id: 100000, testCase: { id: '4242' }, testPoint: { id: '9001' } },
+          { id: 100001, testCase: { id: '4243' }, testPoint: { id: '9002' } },
+        ],
+      },
+    },
+    { method: 'PATCH', uri: '/test/Runs/777/results\\?api-version=7\\.1$', body: { value: [] } },
+    { method: 'PATCH', uri: '/test/runs/777\\?api-version=7\\.1$', body: { id: 777, state: 'Completed' } },
+  ];
+}
+
+psTest('publish-results: creates a run bound to the points, records outcomes and closes the run', () => {
+  const dir = tempDir();
+  const results = writeResults(dir, TWO_RESULTS);
+  const r = runPs(dir, {
+    mocks: webMock(publishRoutes()),
+    env: WRITE_ENV,
+    body: `& ${psQuote(PUBLISH_SCRIPT)} -ResultsFile ${psQuote(results)}`,
+  });
+  assert.equal(r.error, null, `${r.error}\n${r.stderr}`);
+  const seq = r.calls.map((c) => `${c.method.toUpperCase()} ${c.uri.replace(BASE, '')}`);
+  assert.deepEqual(seq, [
+    'GET /testplan/Plans/101/Suites/202/TestPoint?api-version=7.1',
+    'GET /testplan/Plans/101/Suites/202/TestPoint?api-version=7.1&continuationToken=page2',
+    'POST /test/runs?api-version=7.1',
+    'GET /test/Runs/777/results?$top=1000&$skip=0&api-version=7.1',
+    'PATCH /test/Runs/777/results?api-version=7.1',
+    'PATCH /test/runs/777?api-version=7.1',
+  ]);
+  for (const c of r.calls) {
+    assert.equal(c.auth, basic('write-fake'));
+    assert.equal(c.basic, true, 'Invoke-WebRequest must use -UseBasicParsing (Windows PowerShell 5.1)');
+  }
+  const run = jsonBody(r.calls[2]);
+  assert.equal(run.name, 'Ejecución manual - módulo');
+  assert.deepEqual(run.plan, { id: '101' });
+  assert.deepEqual(run.pointIds, [9001, 9002]);
+  assert.equal(run.isAutomated, false);
+  assert.deepEqual(jsonBody(r.calls[4]), [
+    { id: 100000, outcome: 'Passed', state: 'Completed', comment: 'Validación correcta' },
+    { id: 100001, outcome: 'Failed', state: 'Completed', comment: 'Falla en la búsqueda por año' },
+  ]);
+  assert.deepEqual(jsonBody(r.calls[5]), { state: 'Completed' });
+  assert.equal(r.output.length, 1, JSON.stringify(r.output));
+  assert.equal(r.output[0].runId, 777);
+  assert.equal(r.output[0].published, 2);
+});
+
+psTest('publish-results: a single result is still sent as JSON arrays', () => {
+  const dir = tempDir();
+  const results = writeResults(dir, [TWO_RESULTS[0]]);
+  const r = runPs(dir, {
+    mocks: webMock(publishRoutes()),
+    env: WRITE_ENV,
+    body: `& ${psQuote(PUBLISH_SCRIPT)} -ResultsFile ${psQuote(results)}`,
+  });
+  assert.equal(r.error, null, `${r.error}\n${r.stderr}`);
+  const post = r.calls.find((c) => /POST/i.test(c.method));
+  assert.deepEqual(jsonBody(post).pointIds, [9001]);
+  const patch = r.calls.find((c) => /PATCH/i.test(c.method) && /results/.test(c.uri));
+  const body = jsonBody(patch);
+  assert.ok(Array.isArray(body), 'the results PATCH body must be an array');
+  assert.equal(body.length, 1);
+  assert.equal(body[0].id, 100000);
+});
+
+psTest('publish-results: -DryRun sends nothing, needs no PAT and returns the planned requests', () => {
+  const dir = tempDir();
+  const results = writeResults(dir, TWO_RESULTS);
+  const r = runPs(dir, {
+    mocks: webMock([]),
+    env: { ADO_ORG: 'example-org', ADO_PROJECT: 'ExampleProject' },
+    body: `& ${psQuote(PUBLISH_SCRIPT)} -ResultsFile ${psQuote(results)} -DryRun`,
+  });
+  assert.equal(r.error, null, `${r.error}\n${r.stderr}`);
+  assert.deepEqual(r.calls, [], 'a dry run must not send any request');
+  const [plan] = r.output;
+  assert.equal(plan.dryRun, true);
+  const base = 'https://dev.azure.com/example-org/ExampleProject/_apis';
+  assert.deepEqual(
+    plan.requests.map((q) => `${q.method} ${q.uri}`),
+    [
+      `GET ${base}/testplan/Plans/101/Suites/202/TestPoint?api-version=7.1`,
+      `POST ${base}/test/runs?api-version=7.1`,
+      `GET ${base}/test/Runs/{runId}/results?$top=1000&$skip=0&api-version=7.1`,
+      `PATCH ${base}/test/Runs/{runId}/results?api-version=7.1`,
+      `PATCH ${base}/test/runs/{runId}?api-version=7.1`,
+    ]
+  );
+  const update = JSON.parse(plan.requests[3].json);
+  assert.deepEqual(update.map((u) => u.outcome), ['Passed', 'Failed']);
+  assert.equal(update[1].comment, 'Falla en la búsqueda por año');
+  assert.doesNotMatch(JSON.stringify(r.output) + r.stdout, /Authorization|Basic /);
+});
+
+psTest('publish-results: points that already have an outcome stop it before any write unless -Force', () => {
+  const dir = tempDir();
+  const results = writeResults(dir, TWO_RESULTS);
+  const guarded = runPs(dir, {
+    mocks: webMock(publishRoutes({ outcome1: 'passed' })),
+    env: WRITE_ENV,
+    body: `& ${psQuote(PUBLISH_SCRIPT)} -ResultsFile ${psQuote(results)}`,
+  });
+  assert.match(guarded.error || '', /already have an outcome/);
+  assert.match(guarded.error, /4242/);
+  assert.match(guarded.error, /-Force/);
+  assert.ok(guarded.calls.length > 0 && guarded.calls.every((c) => /^get$/i.test(c.method)), 'only reads before the guard');
+
+  const forced = runPs(tempDir(), {
+    mocks: webMock(publishRoutes({ outcome1: 'passed' })),
+    env: WRITE_ENV,
+    body: `& ${psQuote(PUBLISH_SCRIPT)} -ResultsFile ${psQuote(results)} -Force`,
+  });
+  assert.equal(forced.error, null, `${forced.error}\n${forced.stderr}`);
+  assert.equal(forced.output[0].runId, 777);
+});
+
+psTest('publish-results: invalid outcomes and unknown test cases fail before any write', () => {
+  const dir = tempDir();
+  const bad = writeResults(dir, [{ testCaseId: 4242, outcome: 'Aprobado' }]);
+  const invalid = runPs(dir, {
+    mocks: webMock(publishRoutes()),
+    env: WRITE_ENV,
+    body: `& ${psQuote(PUBLISH_SCRIPT)} -ResultsFile ${psQuote(bad)}`,
+  });
+  assert.match(invalid.error || '', /Aprobado/);
+  assert.match(invalid.error, /Passed/);
+  assert.deepEqual(invalid.calls, []);
+
+  const dir2 = tempDir();
+  const unknown = writeResults(dir2, [{ testCaseId: 9999, outcome: 'Passed' }]);
+  const unmatched = runPs(dir2, {
+    mocks: webMock(publishRoutes()),
+    env: WRITE_ENV,
+    body: `& ${psQuote(PUBLISH_SCRIPT)} -ResultsFile ${psQuote(unknown)}`,
+  });
+  assert.match(unmatched.error || '', /9999/);
+  assert.ok(unmatched.calls.every((c) => /^get$/i.test(c.method)), 'no write when a test case has no point');
+});
+
+psTest('publish-results: missing credentials are named, never guessed', () => {
+  const dir = tempDir();
+  const results = writeResults(dir, TWO_RESULTS);
+  const r = runPs(dir, {
+    mocks: webMock(publishRoutes()),
+    env: { ADO_ORG: ORG, ADO_PROJECT: 'ExampleProject' },
+    body: `& ${psQuote(PUBLISH_SCRIPT)} -ResultsFile ${psQuote(results)}`,
+  });
+  assert.match(r.error || '', /ADO_PAT_WRITE/);
+  assert.match(r.error, /ADO_PAT\b/);
+  assert.deepEqual(r.calls, []);
+});
+
+function writeDescription(dir) {
+  const file = path.join(dir, 'defect.html');
+  fs.writeFileSync(file, '<p>La búsqueda por año no devuelve registros.</p>', 'utf8');
+  return file;
+}
+
+const ISSUE_TITLE = "Búsqueda por año no devuelve registros en 'Detalle'";
+
+psTest('create-issue: no existing item -> exact-title WIQL, then one create with UTF-8 JSON Patch', () => {
+  const dir = tempDir();
+  const desc = writeDescription(dir);
+  const r = runPs(dir, {
+    mocks: webMock([
+      { method: 'POST', uri: '/_apis/wit/wiql\\?', body: { workItems: [] } },
+      { method: 'POST', uri: '/_apis/wit/workitems/\\$Bug\\?api-version=7\\.1$', body: { id: 5555, fields: { 'System.State': 'New' } } },
+    ]),
+    env: WRITE_ENV,
+    body: `& ${psQuote(ISSUE_SCRIPT)} -Title ${psQuote(ISSUE_TITLE)} -DescriptionFile ${psQuote(desc)} -Priority 2 -Tags 'qa','regresión' -AreaPath 'ExampleProject\\QA' -IterationPath 'ExampleProject\\Sprint 1' -TestedBy 4242,4243`,
+  });
+  assert.equal(r.error, null, `${r.error}\n${r.stderr}`);
+  assert.equal(r.calls.length, 2, JSON.stringify(r.calls));
+  const [wiql, create] = r.calls;
+  assert.equal(wiql.uri, `${BASE}/wit/wiql?$top=50&api-version=7.1`);
+  const query = jsonBody(wiql).query;
+  assert.match(query, /\[System\.TeamProject\] = 'ExampleProject'/);
+  assert.match(query, /\[System\.WorkItemType\] = 'Bug'/);
+  assert.ok(query.includes("[System.Title] = 'Búsqueda por año no devuelve registros en ''Detalle'''"), query);
+  assert.equal(create.uri, `${BASE}/wit/workitems/$Bug?api-version=7.1`);
+  assert.equal(create.contentType, 'application/json-patch+json');
+  const ops = jsonBody(create);
+  assert.ok(Array.isArray(ops));
+  const field = (p) => ops.find((o) => o.path === p);
+  assert.equal(field('/fields/System.Title').value, ISSUE_TITLE);
+  assert.equal(field('/fields/Microsoft.VSTS.TCM.ReproSteps').value, '<p>La búsqueda por año no devuelve registros.</p>');
+  assert.equal(field('/fields/Microsoft.VSTS.Common.Priority').value, 2);
+  assert.equal(field('/fields/System.Tags').value, 'qa; regresión');
+  assert.equal(field('/fields/System.AreaPath').value, 'ExampleProject\\QA');
+  assert.equal(field('/fields/System.IterationPath').value, 'ExampleProject\\Sprint 1');
+  assert.deepEqual(
+    ops.filter((o) => o.path === '/relations/-').map((o) => o.value),
+    [
+      { rel: 'Microsoft.VSTS.Common.TestedBy-Forward', url: `${ORG}/_apis/wit/workItems/4242` },
+      { rel: 'Microsoft.VSTS.Common.TestedBy-Forward', url: `${ORG}/_apis/wit/workItems/4243` },
+    ]
+  );
+  assert.equal(r.output[0].id, 5555);
+  assert.equal(r.output[0].created, true);
+});
+
+psTest('create-issue: an existing item with the same title is returned, nothing is created', () => {
+  const dir = tempDir();
+  const r = runPs(dir, {
+    mocks: webMock([
+      { method: 'POST', uri: '/_apis/wit/wiql\\?', body: { workItems: [{ id: 321 }, { id: 654 }] } },
+      {
+        method: 'GET',
+        uri: '/_apis/wit/workitems\\?ids=321,654&',
+        body: {
+          value: [
+            { id: 321, fields: { 'System.Title': ISSUE_TITLE, 'System.State': 'Active', 'System.Tags': 'qa' } },
+            { id: 654, fields: { 'System.Title': ISSUE_TITLE, 'System.State': 'New' } },
+          ],
+        },
+      },
+    ]),
+    env: WRITE_ENV,
+    body: `& ${psQuote(ISSUE_SCRIPT)} -Title ${psQuote(ISSUE_TITLE)} -Description '<p>x</p>'`,
+  });
+  assert.equal(r.error, null, `${r.error}\n${r.stderr}`);
+  assert.ok(!r.calls.some((c) => /workitems\/\$/i.test(c.uri)), 'must not create a duplicate');
+  assert.equal(r.output[0].id, 321);
+  assert.equal(r.output[0].created, false);
+  assert.equal(r.output[0].state, 'Active');
+  assert.ok(r.warnings.some((w) => /654/.test(w)), `the other match is reported: ${JSON.stringify(r.warnings)}`);
+});
+
+psTest('create-issue: -DedupKey searches by tag, ignores partial tag matches and adds the key as a tag', () => {
+  const routes = (tags) => [
+    { method: 'POST', uri: '/_apis/wit/wiql\\?', body: { workItems: [{ id: 321 }] } },
+    {
+      method: 'GET',
+      uri: '/_apis/wit/workitems\\?ids=321&',
+      body: { value: [{ id: 321, fields: { 'System.Title': 'Otro título', 'System.State': 'Active', 'System.Tags': tags } }] },
+    },
+    { method: 'POST', uri: '/_apis/wit/workitems/\\$Issue\\?', body: { id: 5556 } },
+  ];
+  const partial = runPs(tempDir(), {
+    mocks: webMock(routes('qa; DEF-MOD-0011')),
+    env: WRITE_ENV,
+    body: `& ${psQuote(ISSUE_SCRIPT)} -Type Issue -Title 'Nuevo título' -Description '<p>x</p>' -DedupKey 'DEF-MOD-001' -Tags 'qa'`,
+  });
+  assert.equal(partial.error, null, `${partial.error}\n${partial.stderr}`);
+  const query = jsonBody(partial.calls[0]).query;
+  assert.match(query, /\[System\.Tags\] CONTAINS 'DEF-MOD-001'/);
+  assert.doesNotMatch(query, /System\.Title/);
+  const create = partial.calls.find((c) => /workitems\/\$Issue/.test(c.uri));
+  assert.ok(create, 'a partial tag match is not the same defect');
+  const ops = jsonBody(create);
+  assert.equal(ops.find((o) => o.path === '/fields/System.Tags').value, 'qa; DEF-MOD-001');
+  assert.ok(ops.some((o) => o.path === '/fields/System.Description'), 'an Issue gets System.Description');
+  assert.equal(partial.output[0].created, true);
+
+  const exact = runPs(tempDir(), {
+    mocks: webMock(routes('qa; DEF-MOD-001')),
+    env: WRITE_ENV,
+    body: `& ${psQuote(ISSUE_SCRIPT)} -Type Issue -Title 'Nuevo título' -Description '<p>x</p>' -DedupKey 'DEF-MOD-001'`,
+  });
+  assert.equal(exact.error, null, `${exact.error}\n${exact.stderr}`);
+  assert.equal(exact.output[0].id, 321);
+  assert.equal(exact.output[0].created, false);
+});
+
+psTest('create-issue: -DryRun sends nothing and returns the search and create requests', () => {
+  const dir = tempDir();
+  const r = runPs(dir, {
+    mocks: webMock([]),
+    env: { ADO_ORG: 'example-org', ADO_PROJECT: 'ExampleProject' },
+    body: `& ${psQuote(ISSUE_SCRIPT)} -Title ${psQuote(ISSUE_TITLE)} -Description '<p>x</p>' -DryRun`,
+  });
+  assert.equal(r.error, null, `${r.error}\n${r.stderr}`);
+  assert.deepEqual(r.calls, []);
+  const [plan] = r.output;
+  assert.equal(plan.dryRun, true);
+  assert.deepEqual(
+    plan.requests.map((q) => `${q.method} ${q.uri}`),
+    [
+      'POST https://dev.azure.com/example-org/ExampleProject/_apis/wit/wiql?$top=50&api-version=7.1',
+      'POST https://dev.azure.com/example-org/ExampleProject/_apis/wit/workitems/$Bug?api-version=7.1',
+    ]
+  );
+  const ops = JSON.parse(plan.requests[1].json);
+  assert.equal(ops.find((o) => o.path === '/fields/System.Title').value, ISSUE_TITLE);
+  assert.doesNotMatch(JSON.stringify(r.output) + r.stdout, /Authorization|Basic /);
+});
+
+psTest('create-issue: prefers the write variables and validates input before any call', () => {
+  const routes = [
+    { method: 'POST', uri: '/_apis/wit/wiql\\?', body: { workItems: [] } },
+    { method: 'POST', uri: '/_apis/wit/workitems/', body: { id: 1 } },
+  ];
+  const r = runPs(tempDir(), {
+    mocks: webMock(routes),
+    env: { ...WRITE_ENV, ADO_PROJECT: 'ReadProject', ADO_PAT: 'generic-fake' },
+    body: `& ${psQuote(ISSUE_SCRIPT)} -Title 'Defecto' -Description '<p>x</p>'`,
+  });
+  assert.equal(r.error, null, `${r.error}\n${r.stderr}`);
+  assert.equal(r.calls.length, 2);
+  assert.ok(r.calls.every((c) => c.uri.startsWith(`${BASE}/`) && c.auth === basic('write-fake')), JSON.stringify(r.calls));
+
+  const noDesc = runPs(tempDir(), {
+    mocks: webMock(routes),
+    env: WRITE_ENV,
+    body: `& ${psQuote(ISSUE_SCRIPT)} -Title 'Defecto'`,
+  });
+  assert.match(noDesc.error || '', /-Description/);
+  assert.deepEqual(noDesc.calls, []);
 });

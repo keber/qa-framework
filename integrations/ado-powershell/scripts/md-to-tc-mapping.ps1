@@ -10,6 +10,8 @@
   Paths are resolved relative to the current working directory (project root).
   Always run this script from the project root.
 
+  The plan is read as UTF-8 and tc-mapping.json is written as UTF-8 without BOM.
+
 .PARAMETER PlanFile
   Path to the Plan-de-Pruebas-*.md file to parse (relative to project root or absolute).
 
@@ -191,6 +193,7 @@ if (-not (Test-Path $outputDir)) {
 }
 
 $json = $output | ConvertTo-Json -Depth 10
-[System.IO.File]::WriteAllText($OutputFile, $json, [System.Text.Encoding]::UTF8)
+# UTF-8 WITHOUT BOM: Encoding.UTF8 would prepend one on Windows PowerShell 5.1.
+[System.IO.File]::WriteAllText($OutputFile, $json, (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "(ok) Generated $($tcList.Count) TC mappings -> $OutputFile" -ForegroundColor Green

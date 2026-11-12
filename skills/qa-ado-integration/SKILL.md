@@ -49,7 +49,7 @@ When QA is asked to review or vote on pull requests, apply the project's rubric 
 
 1. `qa/qa-framework.config.json` - ADO org URL, project name, test plan ID (or "create new")
 2. `qa/02-test-plans/sprints/Sprint-{N}/Plan-de-Pruebas-{proyecto}-Sprint-{N}-{modulo}.md` - one file per module; each file's Tabla de Pruebas becomes one Test Suite in ADO
-3. `ADO_PAT` environment variable - personal access token with Test Plans read/write
+3. `ADO_PAT_WRITE` (or `ADO_PAT`) environment variable - personal access token with Test Plans read/write
 4. Optionally: `qa/08-azure-integration/module-registry.json` for existing ID mapping
 
 > **Note**: The consolidated `Plan-de-Pruebas-{proyecto}-Sprint-{N}.md` (without module suffix)
@@ -78,11 +78,13 @@ Use the PowerShell script: `integrations/ado-powershell/scripts/create-testplan-
 See `references/scripts-and-config.md` for usage, parameters, and required env vars.
 
 Required env vars:
-- `$env:ADO_ORG` - organization URL (e.g., `https://dev.azure.com/myorg`)
-- `$env:ADO_PROJECT` - project name
-- `$env:ADO_PAT` - PAT token
+- `$env:ADO_ORG` - organization name (e.g., `myorg`) or URL (e.g., `https://dev.azure.com/myorg`)
+- `$env:ADO_PROJECT_WRITE` - project name (falls back to `$env:ADO_PROJECT`)
+- `$env:ADO_PAT_WRITE` - PAT token (falls back to `$env:ADO_PAT`)
 
-These are the variables the scripts read today. When QA reads from one ADO project and writes to another, or when read-only sessions must not hold write scope, apply the read/write split in `references/credential-policy.md` (section 5): the loader sets `ADO_PROJECT` and `ADO_PAT` per process, here from the write variables.
+The shipped scripts that call ADO all write, so they prefer the `_WRITE` variables; read-only work (gap analysis, the work item full-read protocol, PR reviews) uses `ADO_PROJECT_READ` / `ADO_PAT_READ`. See the read/write split in `references/credential-policy.md` (section 5) and the variable table in `references/scripts-and-config.md`.
+
+Manual execution results go to ADO with `publish-results.ps1` (a test run bound to the test points); defects are opened with `create-issue.ps1`, which returns the existing item instead of creating a duplicate. Preview both with `-DryRun` and get the user's go-ahead before the real run: they write to ADO.
 
 ### Step 3 - Sync test cases from Plan de Pruebas
 
