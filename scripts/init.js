@@ -453,6 +453,12 @@ cd qa/07-automation/integration && npm install
 - Copy \`qa/07-automation/e2e/.env.example\` -> \`qa/07-automation/e2e/.env\` and fill in credentials
 - Copy \`qa/07-automation/integration/.env.example\` -> \`qa/07-automation/integration/.env\` and fill in credentials
 - Add both \`.env\` files and both \`.auth/\` folders to \`.gitignore\`
+
+### 4. Optional: review rulebook (AGENTS.md)
+If the repository has no \`AGENTS.md\` at its root, copy \`qa/00-standards/agents-md-template.md\`
+to \`AGENTS.md\` and fill in its placeholders with the user. It gives reviewers rule IDs to cite,
+a register of tracked exceptions and a list of what NOT to report. If an \`AGENTS.md\` already
+exists, do not replace it: offer to merge the sections it lacks. The framework never edits it.
 `;
 const nextStepsPath = path.join(qaRoot, 'AGENT-NEXT-STEPS.md');
 writeIfMissing(nextStepsPath, nextStepsContent);

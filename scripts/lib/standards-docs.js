@@ -31,6 +31,11 @@ const STANDARDS_DOCS = Object.freeze([
   Object.freeze({ file: 'test-data-guidelines.md', template: 'test-data-guidelines.md' }),
   Object.freeze({ file: 'write-safety-policy.md', template: 'write-safety-policy.md' }),
   Object.freeze({ file: 'api-testing-conventions.md', template: 'api-testing-conventions.md' }),
+  // The AGENTS.md review-rulebook template is installed HERE, never as a root AGENTS.md:
+  // several coding agents load a root AGENTS.md automatically, so writing a placeholder
+  // rulebook there from a postinstall would feed unfilled rules to every agent session.
+  // The project copies it to the root itself; the framework never writes or edits that file.
+  Object.freeze({ file: 'agents-md-template.md', template: 'AGENTS.md' }),
 ]);
 
 /** The content a standards entry installs. */
