@@ -1,4 +1,4 @@
-name: Publish to GitHub Packages
+name: Publish to npm
 
 on:
   push:
@@ -11,10 +11,14 @@ jobs:
     permissions:
       id-token: write
       contents: read
-      packages: write      # permiso necesario para publicar en GitHub Packages
+      packages: write      # GitHub Packages only; publishing goes to registry.npmjs.org via id-token
 
     steps:
+      # fetch-depth: 0 fetches every branch, so origin/main exists for the
+      # release guard's ancestry check. A shallow clone would make it fail.
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v6
         with:
@@ -22,12 +26,26 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@keber'
 
-      # ci.yml runs on pushes to main and on pull requests - it never sees a tag.
+      # Decides the dist-tag and refuses to publish when the tag is malformed,
+      # when package.json version differs from the tag, or when a plain tag
+      # (latest) points to a commit that is not on main. Prerelease tags
+      # (vX.Y.Z-rc.N) publish under next. The tag is passed through env, never
+      # interpolated into the script.
+      - name: Check the tag and choose the dist-tag
+        id: guard
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: node .github/scripts/release-guard.js --tag "$RELEASE_TAG" --commit "$RELEASE_SHA" --main-ref origin/main
+
+      # ci.yml runs on pushes to main and dev and on pull requests - it never sees a tag.
       # Publishing is triggered by a tag push, so until now nothing was verified on
       # the path that actually reaches npm: a tag could ship code no suite had run.
       # The package has no dependencies, so the suite runs without an install step.
       - name: Run the test suite before publishing
         run: npm test
 
-      - run: npm publish --access public
-
+      - name: Publish
+        env:
+          DIST_TAG: ${{ steps.guard.outputs.dist-tag }}
+        run: npm publish --access public --tag "$DIST_TAG"
