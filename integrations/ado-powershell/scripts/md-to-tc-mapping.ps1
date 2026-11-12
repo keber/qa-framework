@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Generates a tc-mapping.json from a Plan-de-Pruebas markdown file.
 

@@ -18,11 +18,10 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs');
-const { execFileSync, execSync } = require('node:child_process');
 
 const { scanText } = require('../scripts/check-forbidden-chars.js');
+const { REPO_ROOT, publishedFiles } = require('./helpers/published-files.js');
 
-const REPO_ROOT = path.join(__dirname, '..');
 const RULE_FILES = [
   path.join(REPO_ROOT, 'templates', 'qa-framework.instructions.md'),
   path.join(REPO_ROOT, 'templates', 'qa-framework.rules.md'),
@@ -36,19 +35,6 @@ function rule11(file) {
     .find((l) => l.startsWith('11. '));
   assert.ok(line, `${path.basename(file)} has no rule 11`);
   return line;
-}
-
-/** Files `npm pack` would publish, as paths relative to the repo root. */
-function publishedFiles() {
-  const args = ['pack', '--dry-run', '--json', '--ignore-scripts'];
-  // Under `npm test` npm_execpath is npm's own CLI script: running it with the current
-  // node avoids depending on a shell to resolve npm.cmd on Windows.
-  const execPath = process.env.npm_execpath;
-  const out = execPath && execPath.endsWith('.js')
-    ? execFileSync(process.execPath, [execPath, ...args], { cwd: REPO_ROOT, encoding: 'utf8' })
-    : execSync(`npm ${args.join(' ')}`, { cwd: REPO_ROOT, encoding: 'utf8' });
-  const [pack] = JSON.parse(out);
-  return pack.files.map((f) => f.path);
 }
 
 test('rule 11 is identical in instructions.md and rules.md', () => {

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Prepends Azure DevOps Work Item IDs to Playwright spec file test titles.
 

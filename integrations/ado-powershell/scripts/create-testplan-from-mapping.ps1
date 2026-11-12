@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Creates Azure DevOps Test Cases from a local tc-mapping.json file.
 

@@ -1,4 +1,4 @@
-function New-AdoTestCase {
+﻿function New-AdoTestCase {
     <#
     .SYNOPSIS
       Creates a Test Case work item with optional steps.
