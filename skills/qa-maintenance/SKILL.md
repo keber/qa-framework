@@ -80,6 +80,9 @@ last-updated: {date}
 change-summary: {one-line description of what changed}
 ```
 
+`{date}` comes from the OS clock, never from memory: run `npx qa-framework clock --date`
+(add `--tz <IANA zone>` when the project works in a zone other than the machine's).
+
 ### Step 6 - Update README and close session
 
 - Update `qa/README.md` module row (spec version, TC count if changed, automation status)
@@ -98,6 +101,7 @@ change-summary: {one-line description of what changed}
 | Obsolete TCs | Mark as OBSOLETE, keep file | Delete TC files |
 | Scope discipline | Only touch artifacts linked to the change | Rewrite unrelated specs "while you're there" |
 | Version tracking | Bump version + log change summary | Silently update spec content |
+| Dates and timestamps | Read from `npx qa-framework clock` (offline, names its IANA zone) | Typed from memory or inferred from file dates |
 
 ---
 

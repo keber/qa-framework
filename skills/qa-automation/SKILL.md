@@ -127,6 +127,11 @@ Use the scaffold helper `fixtures/defects.ts`:
 - check a new or changed marked test once with `DEFECTS_DIAG=1` (marker disabled):
   it must fail on the spec assertion itself.
 
+A finding that violates no business rule (usability, accessibility, testability,
+technical debt) is not a defect: it is filed in `qa/06-defects/recommendations/` and
+never gets a defect marker or a `test.fail()`. Without a spec rule there is nothing to
+assert.
+
 Full guide and example: `references/defect-polarity.md`. API tests apply the same
 polarity as described in `../qa-api-integration/SKILL.md`.
 

@@ -39,7 +39,7 @@ qa/
 ├── 03-test-cases/
 ├── 04-test-data/
 ├── 05-test-execution/
-├── 06-defects/open|resolved/
+├── 06-defects/open|disputed|resolved|recommendations/
 ├── 07-automation/
 │   ├── e2e/                        <- Playwright project (self-contained)
 │   │   ├── playwright.config.ts

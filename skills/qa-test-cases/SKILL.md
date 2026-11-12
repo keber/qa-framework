@@ -89,6 +89,7 @@ Before marking stage complete:
 | Step granularity | One action + one observable result | Multi-action vague steps |
 | Data references | `{QA_USER_EMAIL}`, `EXEC_IDX`, named env var | Hardcoded credentials |
 | ID stability | Never re-number existing TC-IDs | Renaming breaks ADO links |
+| Expected results | Each one traces to a business rule; an observation with no rule behind it goes to `qa/06-defects/recommendations/` | An expected result written from preference, which turns a suggestion into a failing TC |
 
 ---
 

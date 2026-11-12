@@ -96,6 +96,11 @@ const { buildCommandContent, discoverSkillNames, commandFileName } = require('./
 const { isSprintCycleEnabled, renderAllAgents } = require('./lib/claude-agents');
 const { STANDARDS_DOCS, standardsDocContent } = require('./lib/standards-docs');
 const { INTEGRATION_GUARD_FILES } = require('./lib/integration-guard-files');
+const {
+  DISPUTED_README,
+  RECOMMENDATIONS_README,
+  LEGACY_RECOMMENDATION_FOLDERS,
+} = require('./lib/defect-categories');
 
 // Version stamped into the rule files. Always the package running the upgrade, never
 // the consumer's frameworkVersion: that is a copy init wrote once and nothing updates
@@ -700,45 +705,46 @@ if (!fs.existsSync(testCasesReadme)) {
 }
 
 // ---------------------------------------------------------------------------
-// 7. Ensure 06-defects/disputed/ exists (added in v1.11.0)
-//    Safe: only creates if missing. Never touches existing files.
+// 7. Ensure the 06-defects/ category folders exist
+//    disputed/ (added in v1.11.0), recommendations/ (added in v1.14.0).
+//    Safe: only creates a missing folder or a missing README. Never touches
+//    existing files. recommendations/ is not added when the project already
+//    keeps the same category under a legacy name (e.g. improvements/).
 // ---------------------------------------------------------------------------
-const defectsDir   = path.join(qaRoot, '06-defects');
-const disputedDir  = path.join(defectsDir, 'disputed');
-const disputedReadme = path.join(disputedDir, 'README.md');
+const defectsDir = path.join(qaRoot, '06-defects');
 
-if (fs.existsSync(defectsDir) && !fs.existsSync(disputedDir)) {
-  if (!dryRun) {
-    fs.mkdirSync(disputedDir, { recursive: true });
-    fs.writeFileSync(disputedReadme,
-`# 06-defects/disputed/
-
-Use this folder for defects where QA has reproducible evidence but the business or
-development team disputes whether the observed behavior is actually a defect.
-
-A defect stays here while the functional decision is pending. Once the team reaches
-a formal conclusion, move the file to open/ (confirmed defect) or resolved/ (accepted
-behavior or won't fix).
-`, 'utf8');
+function ensureDefectFolder(name, readmeContent) {
+  const dir = path.join(defectsDir, name);
+  const readme = path.join(dir, 'README.md');
+  if (!fs.existsSync(dir)) {
+    if (!dryRun) {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(readme, readmeContent, 'utf8');
+    }
+    updated.push(dir);
+    console.log(`  [created] 06-defects/${name}/`);
+    console.log(`  [created] 06-defects/${name}/README.md`);
+  } else if (!fs.existsSync(readme)) {
+    if (!dryRun) fs.writeFileSync(readme, readmeContent, 'utf8');
+    updated.push(readme);
+    console.log(`  [created] 06-defects/${name}/README.md`);
   }
-  updated.push(disputedDir);
-  console.log(`  [created] 06-defects/disputed/`);
-  console.log(`  [created] 06-defects/disputed/README.md`);
-} else if (!fs.existsSync(disputedReadme) && fs.existsSync(disputedDir)) {
-  if (!dryRun) {
-    fs.writeFileSync(disputedReadme,
-`# 06-defects/disputed/
+}
 
-Use this folder for defects where QA has reproducible evidence but the business or
-development team disputes whether the observed behavior is actually a defect.
+if (fs.existsSync(defectsDir)) {
+  ensureDefectFolder('disputed', DISPUTED_README);
 
-A defect stays here while the functional decision is pending. Once the team reaches
-a formal conclusion, move the file to open/ (confirmed defect) or resolved/ (accepted
-behavior or won't fix).
-`, 'utf8');
+  const legacyRecommendations = LEGACY_RECOMMENDATION_FOLDERS.find((name) =>
+    fs.existsSync(path.join(defectsDir, name))
+  );
+  if (legacyRecommendations && !fs.existsSync(path.join(defectsDir, 'recommendations'))) {
+    console.log(
+      `  [skip]    06-defects/recommendations/ - the project keeps this category in ` +
+      `06-defects/${legacyRecommendations}/ (left as is)`
+    );
+  } else {
+    ensureDefectFolder('recommendations', RECOMMENDATIONS_README);
   }
-  updated.push(disputedReadme);
-  console.log(`  [created] 06-defects/disputed/README.md`);
 }
 
 // ---------------------------------------------------------------------------

@@ -289,13 +289,19 @@ updates every command that references it - no regeneration needed, zero drift po
 │   └── DEF-{NNN}-{slug}.md
 ├── disputed/
 │   └── DEF-{NNN}-{slug}.md
-└── resolved/
-    └── DEF-{NNN}-{slug}.md
+├── resolved/
+│   └── DEF-{NNN}-{slug}.md
+└── recommendations/
+    ├── README.md
+    └── REC-{NNN}-{slug}.md
 ```
 
 - `open/` - confirmed defect, fix pending
 - `disputed/` - QA has evidence but business or dev team disputes the expected behavior; pending functional decision
 - `resolved/` - closed by fix or formal decision
+- `recommendations/` - a finding that violates no business rule (technical debt, usability, accessibility, testability, latent risk). Not a defect: own `REC-` numbering, no `test.fail()`, no Bug in the tracker. If a source later defines the rule, it moves to `open/`
+
+A finding reclassified from defect to recommendation gets a new `REC-` id; its `DEF-` number stays retired and is never reused.
 
 **Decision guide**:
 - ADO enabled -> use ADO Work Items. `06-defects/` contains lightweight references only

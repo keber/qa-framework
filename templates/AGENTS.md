@@ -102,6 +102,9 @@ An in-scope test case has one of these three states, and no other:
 | Defect | The system violates it **and** a file in `qa/06-defects/open/` documents which rule is violated and what the application actually does |
 | Not executable | Marked `PENDING-CODE` (not implemented), `PENDING-BROWSER` (not observed in the UI) or `PENDING-SPEC` (no acceptance criterion), with the question recorded in `{{OPEN_QUESTIONS_FILE}}` |
 
+A finding that violates no specified rule is not a test case state: it is a recommendation,
+filed in `qa/06-defects/recommendations/`, and it never makes a test case fail.
+
 ---
 
 ## 4. Specification traceability
@@ -153,7 +156,7 @@ npx qa-framework validate --strict
 
 | # | Rule |
 |---|---|
-| H1 | **Never invent or estimate a timestamp.** Take it from the system clock |
+| H1 | **Never invent or estimate a timestamp.** Take it from the system clock: `npx qa-framework clock --tz <IANA zone>` |
 | H2 | Session state files ({{SESSION_STATE_FILES}}) stay in `.gitignore` |
 | H3 | Reported counts come from a tool's output, not from an estimate |
 | H4 | **A green tool is not proof of compliance with everything.** It detects what it checks; wording quality and citation correctness need human reading |

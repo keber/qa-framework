@@ -184,7 +184,7 @@ qa/
 ├── 03-test-cases/               <- TC-*.md step-by-step docs (manual track; optional if fully automated)
 ├── 04-test-data/                <- Shared test data factories/seeders (optional - per-module data lives in 01-specs)
 ├── 05-test-execution/           <- Execution reports and results
-├── 06-defects/open|resolved/    <- Defect tracking
+├── 06-defects/                  <- Defect tracking: open|disputed|resolved|recommendations
 ├── 07-automation/               <- Playwright automation code and config
 │   ├── e2e/                     <- Playwright E2E project (self-contained)
 │   │   ├── playwright.config.ts

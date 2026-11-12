@@ -11,6 +11,7 @@
  *   upgrade   Update framework-owned files after npm update (skills, copilot-instructions)
  *   generate  Generate an artifact (spec template, test plan, etc.)
  *   validate  Validate qa/ folder structure and conventions
+ *   clock     Print the real current date/time from the OS clock (IANA time zone)
  */
 
 'use strict';
@@ -25,6 +26,7 @@ const commands = {
   upgrade:  'upgrade.js',
   generate: 'generate.js',
   validate: 'validate.js',
+  clock:    'clock.js',
 };
 
 if (!command || command === '--help' || command === '-h') {
@@ -62,6 +64,8 @@ Commands:
                                           execution-report | defect-report |
                                           session-summary
   validate [--strict]         Validate qa/ structure and naming conventions
+  clock [--tz <zone>]         Print the real date/time from the OS clock, naming
+                              the IANA zone (offline; see clock --help)
 
 Options:
   --help, -h                  Show help
@@ -75,5 +79,6 @@ Examples:
   qa-framework generate spec --module suppliers --submodule create
   qa-framework validate
   qa-framework validate --strict
+  qa-framework clock --tz America/Santiago
 `);
 }

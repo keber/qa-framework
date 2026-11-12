@@ -40,6 +40,16 @@ Follow the full module analysis process: `skills/qa-module-analysis/`.
 4. Run the test at least 2 times with different `EXEC_IDX` values to confirm stability
 5. Update `qa/06-defects/open/DEF-{NNN}.md` status to Resolved; move file to `06-defects/resolved/`
 
+### Defect reclassified as a recommendation
+
+When review confirms that no source (spec, business rule, functional document, code)
+requires the behavior a defect describes, it is a recommendation, not a defect:
+
+1. Move the file to `qa/06-defects/recommendations/` with a new `REC-{PREFIX}-NNN` id
+2. Leave the `DEF-` number retired: never reuse it, and record which `REC-` id replaced it
+3. Remove any `test.fail()` / defect marker that cited the `DEF-` id; a test asserts spec rules only
+4. If a source later defines the rule, move the file back to `qa/06-defects/open/`, citing that source
+
 ---
 
 ## Automation Update Rules
