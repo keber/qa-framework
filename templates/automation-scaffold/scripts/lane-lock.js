@@ -45,9 +45,9 @@
  *   node lane-lock.js acquire "<label>"
  *   node lane-lock.js acquire "<label>" --require-capability mcp
  *   node lane-lock.js reserve <laneId> "<label>"
- *   node lane-lock.js release <lane>
+ *   node lane-lock.js release <lane> [request_id]
  *   node lane-lock.js force-release <lane>
- *   node lane-lock.js heartbeat <lane>
+ *   node lane-lock.js heartbeat <lane> [request_id]
  *   node lane-lock.js status
  *
  * acquire vs reserve (do not collapse them into one verb):
@@ -65,6 +65,16 @@
  * lane-heartbeat-caller.md the DISPATCHER calls heartbeat from its own wait loop -
  * the executor is not required to and must not be relied upon to. A liveness
  * protocol that depends on an uninstructed party is not a control.
+ *
+ * HOLDER CHECK (request_id): pass the request_id that acquire/reserve returned to
+ * `heartbeat` and `release`. After a sweep and a re-acquisition by someone else, a
+ * late heartbeat from the previous owner would otherwise keep the NEW owner's lane
+ * alive, and a late release would free it under them. With request_id both verbs
+ * compare it to the holder inside the mutex and fail without touching the state on a
+ * mismatch. Without it they keep their old unchecked behavior (existing callers pass
+ * only <lane>) and print a warning on stderr; the exit code does not change.
+ * `force-release` never checks: it is the explicit path for a lane with no
+ * verifiable owner.
  */
 
 const fs = require('fs');
@@ -400,7 +410,29 @@ function cmdReserve(laneId, label) {
   });
 }
 
-function cmdRelease(lane) {
+/**
+ * Throws, before anything is written, when `requestId` is given and does not hold
+ * `lane`. A no-op when `requestId` is absent (the unchecked legacy call).
+ */
+function assertHolder(state, lane, requestId, verb) {
+  if (!requestId) return;
+  const laneState = state.lanes[lane];
+  if (laneState.status !== 'busy') {
+    throw new Error(
+      `[lane-lock] Lane ${lane} is free - ${requestId} does not hold it, refusing to ${verb}. ` +
+      'It was probably swept as stale or released by someone else.'
+    );
+  }
+  if (laneState.holder !== requestId) {
+    throw new Error(
+      `[lane-lock] Lane ${lane} is held by ${laneState.holder} (label: ${laneState.label}), ` +
+      `not by ${requestId} - refusing to ${verb}. Your lane was swept and handed to someone ` +
+      'else: stop the worker that was using it.'
+    );
+  }
+}
+
+function cmdRelease(lane, requestId) {
   return withMutex(() => {
     const state = loadState();
     if (!state.lanes[lane]) {
@@ -408,6 +440,7 @@ function cmdRelease(lane) {
         `[lane-lock] Unknown lane: ${lane}. Declared lanes: ${Object.keys(LANE_INFO).join(', ')}.`
       );
     }
+    assertHolder(state, lane, requestId, 'release');
 
     state.lanes[lane] = freeLane();
     const promoted = promoteQueueInto(state, lane);
@@ -427,7 +460,7 @@ function cmdRelease(lane) {
  * Throws on an unknown or free lane: a heartbeat on a lane you do not hold is a bug
  * in the caller, not something to swallow.
  */
-function cmdHeartbeat(lane) {
+function cmdHeartbeat(lane, requestId) {
   return withMutex(() => {
     const state = loadState();
     if (!state.lanes[lane]) {
@@ -435,6 +468,7 @@ function cmdHeartbeat(lane) {
         `[lane-lock] Unknown lane: ${lane}. Declared lanes: ${Object.keys(LANE_INFO).join(', ')}.`
       );
     }
+    assertHolder(state, lane, requestId, 'heartbeat');
     if (state.lanes[lane].status !== 'busy') {
       throw new Error(
         `[lane-lock] Lane ${lane} is free - cannot heartbeat a lane that is not reserved or acquired.`
@@ -505,6 +539,17 @@ function parseCapabilityFlag(args) {
   return { capability, rest };
 }
 
+// Visible but non-breaking: the unchecked call keeps its exit code, so existing callers
+// (consumer rules, qa-investigador) keep working, while anyone reading stderr - which
+// already carries the locks-dir line on every call - sees the unsafe form.
+function warnUncheckedHolder(cmd, lane) {
+  console.error(
+    `[lane-lock] warning: ${cmd} without request_id does not check the holder. ` +
+    `If lane ${lane} was swept and re-acquired, this ${cmd} acts on someone else's lane. ` +
+    `Use: lane-lock.js ${cmd} ${lane} <request_id>`
+  );
+}
+
 function main() {
   logLocksDir();
   const [, , cmd, ...rawArgs] = process.argv;
@@ -520,13 +565,17 @@ function main() {
       result = cmdReserve(args[0], args.slice(1).join(' '));
       break;
     case 'release':
-    case 'force-release':
-      if (!args[0]) throw new Error('[lane-lock] Usage: lane-lock.js release <lane>');
-      result = cmdRelease(args[0]);
+    case 'heartbeat': {
+      if (!args[0]) throw new Error(`[lane-lock] Usage: lane-lock.js ${cmd} <lane> [request_id]`);
+      const [lane, requestId] = args;
+      if (!requestId) warnUncheckedHolder(cmd, lane);
+      result = cmd === 'release' ? cmdRelease(lane, requestId) : cmdHeartbeat(lane, requestId);
       break;
-    case 'heartbeat':
-      if (!args[0]) throw new Error('[lane-lock] Usage: lane-lock.js heartbeat <lane>');
-      result = cmdHeartbeat(args[0]);
+    }
+    case 'force-release':
+      // Deliberately unchecked: the explicit path for a lane with no verifiable owner.
+      if (!args[0]) throw new Error('[lane-lock] Usage: lane-lock.js force-release <lane>');
+      result = cmdRelease(args[0]);
       break;
     case 'status':
       result = cmdStatus();
@@ -534,7 +583,10 @@ function main() {
     default:
       console.error(
         'Commands: acquire <label> [--require-capability <cap>] | reserve <laneId> <label> |\n' +
-        '          release <lane> | force-release <lane> | heartbeat <lane> | status\n' +
+        '          release <lane> [request_id] | force-release <lane> |\n' +
+        '          heartbeat <lane> [request_id] | status\n' +
+        '  request_id - the value acquire/reserve returned. With it, release and heartbeat\n' +
+        '              refuse (exit 1, state untouched) when someone else holds the lane.\n' +
         '  acquire   - random free lane, queues when none are free. For workers that do not\n' +
         '              care which lane they get.\n' +
         '  reserve   - exact lane id, no queue, throws if busy. For CI jobs and local CLI runs\n' +

@@ -24,7 +24,7 @@ Applies to every dispatch against a lane in `parallelLanes.lanes`. The **dispatc
 
 ### Before dispatching
 
-1. Run `node <S>` with no arguments once and confirm `heartbeat` is in its usage. If it is not, the project's lane-lock predates heartbeat: do not dispatch work that can run longer than `QA_LANE_STALE_MINUTES`; report it instead.
+1. Run `node <S>` with no arguments once and read its usage. If `heartbeat` is not in it, the project's lane-lock predates heartbeat: do not dispatch work that can run longer than `QA_LANE_STALE_MINUTES`; report it instead. If it lists `heartbeat <lane> [request_id]`, `heartbeat` and `release` check the holder themselves. If it lists `heartbeat` without `[request_id]`, the script silently ignores the extra argument: the protocol below still protects you through its `status` checks, but tell the user the project's lane-lock is older than the framework's.
 2. `node <S> acquire "<label>"` (or `reserve <laneId> "<label>"`). Use a label that names the owner and the work, such as `"<branch>:<task>"`, so anyone reading `status` later can find the owner. Record `lane` and `request_id` from the output. When you work from a git worktree, check the `locks dir:` line on stderr points at the shared `QA_LANE_LOCKS_DIR`, not at a per-checkout default.
 3. If the result is `queued` or `rejected`, do not dispatch.
 4. Start the heartbeat pump (next section) as a background Bash command (`run_in_background: true`) and record its task id. Start it BEFORE the worker.
@@ -41,14 +41,14 @@ T=${QA_LANE_STALE_MINUTES:-20}; H=$(( T * 60 / 4 )); [ "$H" -gt 300 ] && H=300
 N=$(( 1200 / H )); i=0
 while :; do
   node "$S" status 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s).lanes.find(x=>String(x.lane)===process.argv[1]);process.exit(l&&l.holder===process.argv[2]?0:1)})' "$L" "$ID" || { echo "PUMP-LOST lane $L is no longer held by $ID"; exit 3; }
-  node "$S" heartbeat "$L" >/dev/null 2>&1 || { echo "PUMP-LOST heartbeat failed on lane $L"; exit 3; }
+  node "$S" heartbeat "$L" "$ID" >/dev/null 2>&1 || { echo "PUMP-LOST heartbeat failed on lane $L"; exit 3; }
   [ "$i" -ge "$N" ] && { echo "PUMP-LEASE-END lane $L"; exit 0; }
   i=$((i+1)); sleep "$H"
 done
 ```
 
 - **Interval:** `min(5 minutes, QA_LANE_STALE_MINUTES / 4)`. With the default threshold of 20 that is every 5 minutes: three consecutive heartbeats can be late or lost before the lane becomes sweepable. If a project raises the threshold the interval stays at 5 minutes; if it lowers it the interval shrinks with it. Below 4 minutes the pump refuses to start (`PUMP-ABORT`): raise the threshold. `lane-lock.js` reads `QA_LANE_STALE_MINUTES` from the shell environment only, not from `.env`, and the sweep runs in whichever process calls `acquire`, `reserve` or `status` with ITS threshold - so every process that touches the lock must share the same value.
-- **Holder check:** `heartbeat` and `release` do not check who holds the lane. If the lane was swept and handed to someone else, a bare `heartbeat` would succeed on their lane. The pump compares the holder with your `request_id` first and stops with `PUMP-LOST` otherwise.
+- **Holder check:** if the lane was swept and handed to someone else, a bare `heartbeat <lane>` would keep THEIR lane alive. The pump checks twice: `heartbeat <lane> <request_id>` refuses atomically when someone else holds the lane, and the `status` comparison before it is defense in depth - and the only protection on an older lane-lock.js that ignores the `request_id` argument. Either check stops the pump with `PUMP-LOST`.
 - **Lease:** the pump runs about 20 minutes, heartbeats one last time and exits with `PUMP-LEASE-END`. A background command re-invokes the dispatcher when it exits, so the lease end is the dispatcher's wait loop: a forced check-in every 20 minutes that only the dispatcher can renew. After the last heartbeat the dispatcher still has `QA_LANE_STALE_MINUTES` to renew.
 - **Why not `/loop` with `ScheduleWakeup`:** scheduled wakeups fire only between turns, so a dispatcher busy on a long turn misses them. The background pump keeps beating regardless, and background commands are cleaned up when the session exits, so a dead dispatcher can never keep a lane alive.
 
@@ -66,8 +66,8 @@ Read the size and modification time of the worker's output file (`stat`, never r
 On the worker's completion notification, whatever the outcome (success, failure, error, or stopped):
 
 1. Stop the pump with `TaskStop`.
-2. `node <S> status` and confirm the lane's `holder` is still your `request_id`.
-3. If it is, `node <S> release <lane>`. If it is not, do NOT release (the lane belongs to someone else now) and report it as in "PUMP-LOST".
+2. `node <S> status` and confirm the lane's `holder` is still your `request_id`. If it is not, do NOT release (the lane belongs to someone else now) and report it as in "PUMP-LOST".
+3. `node <S> release <lane> <request_id>`. If it fails with `is held by` or `is free`, the lane changed hands after step 2: same as "PUMP-LOST". Never retry it without the `request_id`.
 
 Release before you report the worker's results. A failed worker is not a reason to skip the release.
 
@@ -87,7 +87,7 @@ The lane was swept or released while your worker was running: another worker may
 
 1. `stale: true`: the lane is already sweepable. Running `status` sweeps it and logs it to `stale-lane-alerts.log`. No force needed.
 2. `stale: false` with a recent heartbeat: someone is keeping it alive. It is not an orphan; find the owner from the label and never force it.
-3. The holder is a `request_id` of yours and its worker is stopped or finished: `node <S> release <lane>`.
+3. The holder is a `request_id` of yours and its worker is stopped or finished: `node <S> release <lane> <request_id>`.
 4. `node <S> force-release <lane>` only when the user confirms nobody is driving that account and waiting for the sweep is not acceptable. It does not check the holder, so double-check the lane id.
 
 ### What travels in the worker prompt

@@ -29,6 +29,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`lane-lock.js` `heartbeat` and `release` can check the holder.** After a sweep and a
+  re-acquisition by someone else, a late `heartbeat` from the previous owner kept the new
+  holder's lane alive and a late `release` freed it under them. Both now accept an
+  optional `request_id` (`heartbeat <lane> [request_id]`, `release <lane> [request_id]`):
+  on a mismatch they exit 1 and leave the state untouched. Without it they work as
+  before and print a warning on stderr (exit code unchanged), so existing callers do not
+  break. `force-release` is unchanged. The Claude Code dispatcher protocol now passes the
+  `request_id` to both verbs. Note: `upgrade` does not yet deliver the new `lane-lock.js`
+  to projects installed with v1.12.0 to v1.13.2 (it reports the lane group as user-owned).
+
 - **`upgrade` moves a path only with positive evidence that it is a framework leftover.**
   The field report against v1.12.0 (`lib/` and `node_modules/` moved into `e2e/tests/`,
   flat plans moved to `sprints/legacy/`) no longer reproduces since 1.13.2, and is now

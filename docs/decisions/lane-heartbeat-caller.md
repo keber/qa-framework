@@ -119,13 +119,25 @@ against Claude Code 2.1.312 and its documentation on 2026-11-11:
 The decision itself is unchanged: the dispatcher calls `heartbeat` from its own wait
 loop, and the loop is now the pump plus its lease check-ins.
 
+**Holder check (2026-11-11, follow-up).** `heartbeat` and `release` in `lane-lock.js`
+did not check the holder: after a sweep and a re-acquisition by someone else, a late
+`heartbeat` from the previous owner kept the new holder's lane alive and a late `release`
+freed it under them. Both now take an optional `request_id` (`heartbeat <lane>
+[request_id]`, `release <lane> [request_id]`); with it they compare the holder inside the
+mutex and exit 1 without touching the state on a mismatch. Without it they behave as
+before and print a warning on stderr with an unchanged exit code, so existing callers
+keep working. `force-release` is unchanged: the explicit path for a lane with no
+verifiable owner. The protocol passes the `request_id` to both verbs and keeps its
+`status` comparison as defense in depth, since an older `lane-lock.js` silently ignores
+the extra argument.
+
 **Left out.**
 
-- `heartbeat` and `release` in `lane-lock.js` do not check the holder. After a sweep and a
-  re-acquisition by someone else, a bare `heartbeat` succeeds on the new holder's lane
-  and a late `release` frees it. The protocol works around it by comparing the holder
-  with the recorded `request_id` through `status`; fixing the script itself (an optional
-  `request_id` argument) is pending.
+- `upgrade` does not deliver the fixed `lane-lock.js` to existing projects.
+  `SHIPPED_SCAFFOLD_HASHES['automation-scaffold/scripts/lane-lock.js']` is empty, so the
+  copy the framework itself installed in v1.12.0 to v1.13.2 is classified as user-owned
+  and the whole lane group is skipped with a warning. Adding that release's hash to the
+  table would fix it; it is pending a decision on `scripts/upgrade.js`.
 - `templates/agents/qa-investigador.md` still tells that worker heartbeats are
   mandatory. It is harmless redundancy under this decision, but its wording contradicts
   "the executor is not required to call it".

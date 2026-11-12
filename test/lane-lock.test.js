@@ -430,6 +430,153 @@ test('heartbeat: throws on an undeclared lane', () => {
   }
 });
 
+// --- holder check (request_id) ----------------------------------------------------
+//
+// After a sweep and a re-acquisition by someone else, a late heartbeat from the
+// previous owner would keep the NEW owner's lane alive and a late release would free
+// it - the same family as the 2026-08-22 incident. Passing the request_id returned by
+// acquire/reserve makes both verbs check the holder inside the mutex.
+
+/** Reads lanes.json straight from disk: the reference for "state untouched". */
+function rawState(project) {
+  return fs.readFileSync(path.join(project.e2e, '.locks', 'lanes.json'), 'utf8');
+}
+
+/** Simulates a sweep plus re-acquisition: the lane now belongs to someone else. */
+function laneTakenOver(project, lane) {
+  const mine = runCli(project, ['reserve', lane, 'original-owner']).json.request_id;
+  runCli(project, ['force-release', lane]);
+  const theirs = runCli(project, ['reserve', lane, 'new-owner']).json.request_id;
+  return { mine, theirs };
+}
+
+test('heartbeat <lane> <request_id>: succeeds for the holder, without a warning', () => {
+  const project = makeProject(THREE_LANES);
+  try {
+    const id = runCli(project, ['reserve', '1', 'mine']).json.request_id;
+    const res = runCli(project, ['heartbeat', '1', id]);
+    assert.equal(res.status, 0, res.stderr);
+    assert.equal(res.json.status, 'heartbeat-ok');
+    assert.doesNotMatch(res.stderr, /warning/i);
+  } finally {
+    cleanup(project);
+  }
+});
+
+test('heartbeat <lane> <request_id>: a wrong request_id fails and leaves the state untouched', () => {
+  const project = makeProject(THREE_LANES);
+  try {
+    const { mine, theirs } = laneTakenOver(project, '1');
+    const before = rawState(project);
+    const res = runCli(project, ['heartbeat', '1', mine]);
+    assert.equal(res.status, 1);
+    assert.match(res.stderr, new RegExp(`Lane 1 is held by ${theirs}`));
+    assert.match(res.stderr, new RegExp(`not by ${mine}`));
+    assert.equal(rawState(project), before, 'a rejected heartbeat must not write the state');
+  } finally {
+    cleanup(project);
+  }
+});
+
+test('heartbeat <lane> (no request_id): still works, warns on stderr, exit code 0', () => {
+  // Back-compat: consumer rules and qa-investigador call `heartbeat <lane>` today.
+  const project = makeProject(THREE_LANES);
+  try {
+    runCli(project, ['reserve', '2', 'legacy-caller']);
+    const res = runCli(project, ['heartbeat', '2']);
+    assert.equal(res.status, 0, res.stderr);
+    assert.equal(res.json.status, 'heartbeat-ok');
+    assert.match(res.stderr, /warning: heartbeat without request_id does not check the holder/);
+  } finally {
+    cleanup(project);
+  }
+});
+
+test('release <lane> <request_id>: frees the lane for the holder, without a warning', () => {
+  const project = makeProject(THREE_LANES);
+  try {
+    const id = runCli(project, ['reserve', '1', 'mine']).json.request_id;
+    const res = runCli(project, ['release', '1', id]);
+    assert.equal(res.status, 0, res.stderr);
+    assert.equal(res.json.status, 'released');
+    assert.doesNotMatch(res.stderr, /warning/i);
+    const status = runCli(project, ['status']);
+    assert.equal(status.json.lanes.find((l) => l.lane === '1').status, 'free');
+  } finally {
+    cleanup(project);
+  }
+});
+
+test('release <lane> <request_id>: a wrong request_id fails and leaves the state untouched', () => {
+  const project = makeProject(THREE_LANES);
+  try {
+    const { mine, theirs } = laneTakenOver(project, '3');
+    runCli(project, ['reserve', '1', 'other']);
+    runCli(project, ['reserve', '2', 'other']);
+    assert.equal(runCli(project, ['acquire', 'waiter']).json.status, 'queued');
+    const before = rawState(project);
+    const res = runCli(project, ['release', '3', mine]);
+    assert.equal(res.status, 1);
+    assert.match(res.stderr, new RegExp(`Lane 3 is held by ${theirs}`));
+    assert.equal(rawState(project), before, 'a rejected release must not free or promote');
+  } finally {
+    cleanup(project);
+  }
+});
+
+test('release <lane> <request_id>: a request_id on a free lane fails instead of a silent no-op', () => {
+  const project = makeProject(THREE_LANES);
+  try {
+    const id = runCli(project, ['reserve', '1', 'mine']).json.request_id;
+    runCli(project, ['release', '1', id]);
+    const res = runCli(project, ['release', '1', id]);
+    assert.equal(res.status, 1);
+    assert.match(res.stderr, /Lane 1 is free/);
+  } finally {
+    cleanup(project);
+  }
+});
+
+test('release <lane> (no request_id): still frees the lane, warns on stderr, exit code 0', () => {
+  const project = makeProject(THREE_LANES);
+  try {
+    runCli(project, ['reserve', '1', 'legacy-caller']);
+    const res = runCli(project, ['release', '1']);
+    assert.equal(res.status, 0, res.stderr);
+    assert.equal(res.json.status, 'released');
+    assert.match(res.stderr, /warning: release without request_id does not check the holder/);
+  } finally {
+    cleanup(project);
+  }
+});
+
+test('force-release: unchanged - frees any holder, ignores an extra argument, no warning', () => {
+  const project = makeProject(THREE_LANES);
+  try {
+    const { mine } = laneTakenOver(project, '2');
+    const res = runCli(project, ['force-release', '2', mine]);
+    assert.equal(res.status, 0, res.stderr);
+    assert.equal(res.json.status, 'released');
+    assert.doesNotMatch(res.stderr, /warning/i);
+    const status = runCli(project, ['status']);
+    assert.equal(status.json.lanes.find((l) => l.lane === '2').status, 'free');
+  } finally {
+    cleanup(project);
+  }
+});
+
+test('CLI usage documents the optional request_id on heartbeat and release', () => {
+  // The Claude Code protocol detects holder-check support from this usage text.
+  const project = makeProject(THREE_LANES);
+  try {
+    const res = runCli(project, []);
+    assert.match(res.stderr, /heartbeat <lane> \[request_id\]/);
+    assert.match(res.stderr, /release <lane> \[request_id\]/);
+  } finally {
+    cleanup(project);
+  }
+});
+
 // --- lock directory precedence --------------------------------------------------
 
 test('locks dir: defaults to a per-checkout .locks and says so on stderr', () => {

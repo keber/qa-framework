@@ -82,8 +82,13 @@ test('rules.md rule 12 is the lane lock and points at the Claude Code protocol',
 test('Claude Code protocol: the dispatcher heartbeats from its own wait loop', () => {
   const body = section(read(RULES_PATH), PROTOCOL_HEADING);
   assert.match(body, /`<S>` below is `qa\/07-automation\/e2e\/scripts\/lane-lock\.js`/);
-  assert.match(body, /node "\$S" heartbeat "\$L"/, 'the pump must call heartbeat');
-  assert.match(body, /node <S> release <lane>/);
+  // Both verbs pass the request_id so lane-lock checks the holder atomically.
+  assert.match(body, /node "\$S" heartbeat "\$L" "\$ID"/, 'the pump must call heartbeat with the request_id');
+  assert.match(body, /node <S> release <lane> <request_id>/);
+  // The status-based holder check stays: it is the only protection on an older
+  // lane-lock.js, which silently ignores the extra argument.
+  assert.match(body, /node "\$S" status/, 'the pump keeps its status-based holder check');
+  assert.match(body, /heartbeat <lane> \[request_id\]/, 'step 1 must detect holder-check support');
   assert.match(body, /node <S> status/);
   assert.match(body, /QA_LANE_STALE_MINUTES/);
   assert.match(body, /\bthe dispatcher\b[^.]*\bheartbeat\b/i);
