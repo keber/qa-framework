@@ -1,7 +1,7 @@
 # qa-framework
 
 > Reusable, installable, agent-oriented QA framework for spec-driven automated testing.
-> Current version: **v1.14.0-rc.4**
+> Current version: **v1.14.0-rc.5**
 
 ---
 
