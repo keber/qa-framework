@@ -18,6 +18,7 @@ const path = require('path');
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
 const { AGENT_NAMES, isSprintCycleEnabled, renderAllAgents, stampGenerated } = require('./lib/claude-agents');
 const { DEFECT_CATEGORIES, DISPUTED_README, RECOMMENDATIONS_README } = require('./lib/defect-categories');
+const { renderRulesTemplate } = require('./lib/rules-template');
 
 // Version stamped into the installed agent rules and qa/README.md. Always the package
 // doing the install: the consumer's frameworkVersion is a one-time copy that nothing
@@ -368,8 +369,7 @@ const githubDir         = path.join(cwd, '.github');
 const copilotInstrPath  = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
 
 const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.instructions.md');
-const copilotInstrContent = fs.readFileSync(instrTemplatePath, 'utf8')
-  .replace('{{VERSION}}', PACKAGE_VERSION);
+const copilotInstrContent = renderRulesTemplate(fs.readFileSync(instrTemplatePath, 'utf8'), PACKAGE_VERSION, config);
 writeIfMissing(copilotInstrPath, copilotInstrContent);
 
 // --- .claude/commands/qa-*.md - thin wrappers pointing at .github/skills/ ---
@@ -382,8 +382,7 @@ for (const skillName of discoverSkillNames(skillsSrc)) {
 // --- .claude/rules/qa-framework.md - always-loaded rules (Claude Code equivalent of applyTo: '**') ---
 const claudeRulesPath  = path.join(cwd, '.claude', 'rules', 'qa-framework.md');
 const rulesTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.rules.md');
-const claudeRulesContent = fs.readFileSync(rulesTemplatePath, 'utf8')
-  .replace('{{VERSION}}', PACKAGE_VERSION);
+const claudeRulesContent = renderRulesTemplate(fs.readFileSync(rulesTemplatePath, 'utf8'), PACKAGE_VERSION, config);
 writeIfMissing(claudeRulesPath, claudeRulesContent);
 
 // --- .claude/agents/qa-*.md - optional ANALISIS/PLAN sprint-cycle mode (Claude Code only) ---

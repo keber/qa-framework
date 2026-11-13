@@ -61,7 +61,7 @@ npm install @keber/qa-framework
 1. Create the `qa/` directory tree in your project root
 2. Copy all base templates into place
 3. Create `qa/qa-framework.config.json` for project-specific settings
-4. Generate `.github/instructions/qa-framework.instructions.md` with QA agent behavior rules (11 rules + ADO detection)
+4. Generate `.github/instructions/qa-framework.instructions.md` with QA agent behavior rules (15 rules, numbered 0-14, + ADO detection)
 5. Copy the `skills/` set to `.github/skills/` so the agent can load them on demand
 6. Create `qa/AGENT-NEXT-STEPS.md` with follow-up steps
 7. Install `qa/00-standards/agents-md-template.md`, a review-rulebook template to copy to

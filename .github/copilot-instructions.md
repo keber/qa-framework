@@ -16,12 +16,12 @@ npm install @keber/qa-framework
   -> postinstall: scripts/init.js --skip-if-exists
      -> creates qa/ (10 subfolders)
      -> copies skills/ to .github/skills/
-     -> writes .github/instructions/qa-framework.instructions.md (11 agent rules + pipeline table)
+     -> writes .github/instructions/qa-framework.instructions.md (15 agent rules, numbered 0-14, + pipeline table)
      -> writes qa/AGENT-NEXT-STEPS.md
 ```
 
 **What the agent in the end-user project receives:**
-- `.github/instructions/qa-framework.instructions.md` - 11 behavioral rules + the 6-stage pipeline
+- `.github/instructions/qa-framework.instructions.md` - 15 behavioral rules (0-14) + the 6-stage pipeline
 - `.github/skills/*.md` - 10 skills loaded on demand (not all at once, to conserve context)
 
 ### QA pipeline (6 stages)

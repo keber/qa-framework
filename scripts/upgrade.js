@@ -104,6 +104,7 @@ const { buildCommandContent, discoverSkillNames, commandFileName } = require('./
 const { isSprintCycleEnabled, renderAllAgents, stampGenerated, classifyAgentFile } = require('./lib/claude-agents');
 const { STANDARDS_DOCS, standardsDocContent } = require('./lib/standards-docs');
 const ownership = require('./lib/ownership');
+const rulesTemplate = require('./lib/rules-template');
 const { INTEGRATION_GUARD_FILES } = require('./lib/integration-guard-files');
 const {
   DISPUTED_README,
@@ -296,6 +297,10 @@ if (!ownershipManifest) {
       `    this release is backed up before it is overwritten.`
   );
 }
+// How this project renders the rule files' placeholders (the rule 8 defect prefix from
+// conventions.defectIdPattern): lets ownership recognise a file this framework rendered
+// with the project's prefix as a shipped version, not as an edit.
+const rulesRenderContext = rulesTemplate.renderContext(config);
 const backups = [];        // { key, backup, reason, result, note }
 let backupRunDir = null;   // absolute; claimed on the first backup of this run
 
@@ -318,8 +323,8 @@ if (!fs.existsSync(skillsSrc)) {
 // ---------------------------------------------------------------------------
 const copilotInstrPath = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
 const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.instructions.md');
-const copilotContent = fs.readFileSync(instrTemplatePath, 'utf8')
-  .replace('{{VERSION}}', PACKAGE_VERSION);
+const copilotContent = rulesTemplate.renderRulesTemplate(
+  fs.readFileSync(instrTemplatePath, 'utf8'), PACKAGE_VERSION, config);
 writeOwned(copilotInstrPath, copilotContent);
 
 // ---------------------------------------------------------------------------
@@ -334,8 +339,8 @@ for (const skillName of discoverSkillNames(skillsSrc)) {
 
 const claudeRulesPath   = path.join(cwd, '.claude', 'rules', 'qa-framework.md');
 const rulesTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.rules.md');
-const claudeRulesContent = fs.readFileSync(rulesTemplatePath, 'utf8')
-  .replace('{{VERSION}}', PACKAGE_VERSION);
+const claudeRulesContent = rulesTemplate.renderRulesTemplate(
+  fs.readFileSync(rulesTemplatePath, 'utf8'), PACKAGE_VERSION, config);
 writeOwned(claudeRulesPath, claudeRulesContent);
 
 // ---------------------------------------------------------------------------
@@ -1200,7 +1205,7 @@ function writeOwned(dest, content) {
   if (!fs.existsSync(dest)) return forceWrite(dest, content);
   const key = projectKey(dest);
   const existing = fs.readFileSync(dest, 'utf8');
-  const { state, reason } = ownership.classify(ownershipManifest, key, existing, content);
+  const { state, reason } = ownership.classify(ownershipManifest, key, existing, content, rulesRenderContext);
   if (state !== 'edited') return forceWrite(dest, content);
   const backup = backupFile(dest, key);
   if (!backup) return 'unchanged';
@@ -1211,7 +1216,7 @@ function writeOwned(dest, content) {
       'marker-mismatch': 'edited after it was generated',
       'hand-written': 'hand-written: no ownership marker and no shipped version matches',
     }[reason] || 'edited: it matches no version the framework shipped',
-    result: ownership.triage(ownershipManifest, key, existing, content),
+    result: ownership.triage(ownershipManifest, key, existing, content, rulesRenderContext),
   });
   return forceWrite(dest, content);
 }
