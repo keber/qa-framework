@@ -167,6 +167,7 @@ const SHIPPED_SCAFFOLD_HASHES = {
     '59acff16e745ccd802254e65a1a5f8ddec549328c9c1fa94f715fb9daf449a1a', // v1.12.0 - v1.14.0-rc.1
     'c4b43b3075bcb283e4d1a32ad91b53395ea1930a24fd44afef554422f002903b', // unreleased: WP1.2 qaBaseUrl fallback, credentials checked at login
     'd9f06d5066438dc34241c7a6960b0aaedf157510c4ef407f71a4d0e6bf4bf9e3', // unreleased: WP3.4 login only in global setup, opt-in projects
+    '30779fe76c8f1f66e42f63b7cc66832ed907e6ed58864c5a10f24ce521f6685f', // unreleased: WP6 unpadded sprint number in the testRunTitle comment
   ],
   'automation-scaffold/global-setup.ts': [
     '077580914881ee71ac082d47579dc4cffa01e8348b0744fced6b8de2863e0bd1', // v1.0.1 - v1.10.0
