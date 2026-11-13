@@ -113,7 +113,10 @@ npx qa-framework upgrade
 
 This refreshes both `.claude/commands/qa-*.md` and `.claude/rules/qa-framework.md` the
 same safe way it refreshes the Copilot artifacts (framework-owned, always overwritten
-with the current version; nothing else under `.claude/` is touched).
+with the current version; nothing else under `.claude/` is touched). Generated commands end
+with an ownership marker; a command or rules file the project edited, or a hand-written
+command, is first backed up to `.claude/qa-framework-backup/upgrade-to-<version>/` and listed
+in that folder's `TRIAGE.md`.
 
 ---
 

@@ -11,6 +11,11 @@
  *     - .github/skills/             <- New skills architecture; always current
  *     - .github/copilot-instructions.md <- Pipeline sequencer; framework-owned
  *     - qa/QA-STRUCTURE-GUIDE.md    <- Folder reference; framework-owned
+ *     - .claude/commands/qa-*.md, .claude/rules/qa-framework.md <- Claude Code equivalents
+ *     A file that matches no version the framework shipped (ownership-manifest.json) and
+ *     carries no intact generated marker is the project's edit: it is copied first to
+ *     .claude/qa-framework-backup/upgrade-to-<version>[-runN]/<path without leading dot>,
+ *     then overwritten, and TRIAGE.md in that folder lists the lines the project added.
  *
  *   Every move below needs positive evidence that the source is a framework leftover.
  *   Without it the path is left where it is and reported as a warning: an upgrade that
@@ -95,6 +100,7 @@ const path = require('path');
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
 const { isSprintCycleEnabled, renderAllAgents, stampGenerated, classifyAgentFile } = require('./lib/claude-agents');
 const { STANDARDS_DOCS, standardsDocContent } = require('./lib/standards-docs');
+const ownership = require('./lib/ownership');
 const { INTEGRATION_GUARD_FILES } = require('./lib/integration-guard-files');
 const {
   DISPUTED_README,
@@ -275,41 +281,59 @@ const kept     = [];
 const warnings = [];
 const errors   = [];
 
+// Ownership of the force-written framework files (skills, commands, rules, instructions,
+// QA structure guide). A file that differs from every version the framework shipped is
+// the project's edit: it is backed up to one per-run folder before it is overwritten,
+// and listed in that folder's TRIAGE.md. See scripts/lib/ownership.js.
+const ownershipManifest = ownership.loadManifest();
+if (!ownershipManifest) {
+  warnings.push(
+    `scripts/lib/ownership-manifest.json is missing or unreadable in this package, so no\n` +
+      `    earlier framework version can be recognised: every framework file that differs from\n` +
+      `    this release is backed up before it is overwritten.`
+  );
+}
+const backups = [];        // { key, backup, reason, result, note }
+let backupRunDir = null;   // absolute; claimed on the first backup of this run
+
 console.log(`\n[qa-framework/upgrade] ${dryRun ? '(dry-run) ' : ''}Upgrading framework-owned files`);
 console.log(`[qa-framework/upgrade] Project root: ${cwd}\n`);
 
 // ---------------------------------------------------------------------------
-// 1. .github/skills/ - always overwrite (framework-owned)
+// 1. .github/skills/ - overwrite (framework-owned); an edited file is backed up first
 // ---------------------------------------------------------------------------
 if (!fs.existsSync(skillsSrc)) {
   warnings.push('skills/ source directory not found in package - skipping skill install');
 } else {
   fs.mkdirSync(skillsDest, { recursive: true });
-  copyDirForce(skillsSrc, skillsDest);
+  copyDirOwned(skillsSrc, skillsDest);
 }
 
 // ---------------------------------------------------------------------------
-// 2. .github/instructions/qa-framework.instructions.md - overwrite (framework-owned)
+// 2. .github/instructions/qa-framework.instructions.md - overwrite (framework-owned;
+//    an edited file is backed up first)
 // ---------------------------------------------------------------------------
 const copilotInstrPath = path.join(githubDir, 'instructions', 'qa-framework.instructions.md');
 const instrTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.instructions.md');
 const copilotContent = fs.readFileSync(instrTemplatePath, 'utf8')
   .replace('{{VERSION}}', PACKAGE_VERSION);
-forceWrite(copilotInstrPath, copilotContent);
+writeOwned(copilotInstrPath, copilotContent);
 
 // ---------------------------------------------------------------------------
-// 2a. .claude/commands/qa-*.md and .claude/rules/qa-framework.md - overwrite (framework-owned)
+// 2a. .claude/commands/qa-*.md and .claude/rules/qa-framework.md - overwrite (framework-owned;
+//     an edited file is backed up first). Generated commands carry the ownership marker;
+//     a command without one that matches no shipped wrapper is hand-written.
 // ---------------------------------------------------------------------------
 const claudeCommandsDest = path.join(cwd, '.claude', 'commands');
 for (const skillName of discoverSkillNames(skillsSrc)) {
-  forceWrite(path.join(claudeCommandsDest, commandFileName(skillName)), buildCommandContent(skillName));
+  writeOwned(path.join(claudeCommandsDest, commandFileName(skillName)), buildCommandContent(skillName));
 }
 
 const claudeRulesPath   = path.join(cwd, '.claude', 'rules', 'qa-framework.md');
 const rulesTemplatePath = path.resolve(__dirname, '..', 'templates', 'qa-framework.rules.md');
 const claudeRulesContent = fs.readFileSync(rulesTemplatePath, 'utf8')
   .replace('{{VERSION}}', PACKAGE_VERSION);
-forceWrite(claudeRulesPath, claudeRulesContent);
+writeOwned(claudeRulesPath, claudeRulesContent);
 
 // ---------------------------------------------------------------------------
 // 2c. .claude/agents/qa-*.md - optional ANALISIS/PLAN sprint-cycle mode (Claude Code only)
@@ -320,8 +344,10 @@ forceWrite(claudeRulesPath, claudeRulesContent);
 //     classifyAgentFile in scripts/lib/claude-agents.js), never from a static hash table:
 //       pristine -> overwritten
 //       edited   -> kept, with a warning naming the template to merge from
-//       legacy   -> no marker (pre-marker release or hand-written): copied to
-//                   .claude/qa-framework-backup/agents/ first, then overwritten
+//       legacy   -> no marker (pre-marker release or hand-written): copied to this
+//                   run's backup folder (.claude/qa-framework-backup/<run>/claude/agents/)
+//                   first, then overwritten. Backups rc.6 made in
+//                   .claude/qa-framework-backup/agents/ stay where they are.
 //     The backup lives OUTSIDE .claude/agents/ on purpose: Claude Code scans that folder
 //     recursively and identifies agents by their frontmatter name, so a backup copy
 //     inside it would load as a second agent with the same name.
@@ -377,12 +403,12 @@ if (fs.existsSync(oldCopilotPath)) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. qa/QA-STRUCTURE-GUIDE.md - overwrite (framework doc)
+// 3. qa/QA-STRUCTURE-GUIDE.md - overwrite (framework doc; an edited file is backed up first)
 // ---------------------------------------------------------------------------
 const structureGuideSrc  = path.resolve(__dirname, '..', 'docs', 'folder-structure-guide.md');
 const structureGuideDest = path.join(qaRoot, 'QA-STRUCTURE-GUIDE.md');
 if (fs.existsSync(structureGuideSrc) && fs.existsSync(qaRoot)) {
-  forceWrite(structureGuideDest, fs.readFileSync(structureGuideSrc, 'utf8'));
+  writeOwned(structureGuideDest, fs.readFileSync(structureGuideSrc, 'utf8'));
 }
 
 // ---------------------------------------------------------------------------
@@ -1062,6 +1088,8 @@ if (hasIntegrationScaffold) {
 // ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
+reportBackups();
+
 console.log('\n--- Results ---');
 if (updated.length) {
   console.log('\n  Updated (framework-owned):');
@@ -1131,30 +1159,108 @@ function upgradeAgent(dest, agent) {
     );
     return;
   }
-  // legacy: keep a copy of exactly what is on disk, then regenerate.
-  const backup = backupPath(path.join(cwd, '.claude', 'qa-framework-backup', 'agents'), agent.agentName);
-  if (!dryRun) {
-    fs.mkdirSync(path.dirname(backup), { recursive: true });
-    fs.copyFileSync(dest, backup, fs.constants.COPYFILE_EXCL);
-  }
+  // legacy: keep a copy of exactly what is on disk, then regenerate. Agents are rendered
+  // from the config, so the triage compares with this release's render (approximate).
+  const existing = fs.readFileSync(dest, 'utf8');
+  const key = projectKey(dest);
+  const backup = backupFile(dest, key);
+  if (!backup) return;
+  backups.push({
+    key,
+    backup,
+    reason: 'no ownership marker: written before 1.14.0 or by hand',
+    result: ownership.triage(null, key, existing, agent.content),
+    note: 'agents are rendered from qa-framework.config.json, so the version this file came from cannot be rebuilt',
+  });
   reportWrite(forceWrite(dest, content), label);
-  warnings.push(
-    `${label} had no qa-framework ownership marker (written before 1.14.0 or by hand)\n` +
-      `    and differed from this release's version. ${dryRun ? 'It would be saved to' : 'Your copy was saved to'}\n` +
-      `      ${path.relative(cwd, backup)}\n` +
-      `    and the agent ${dryRun ? 'would be' : 'was'} regenerated. Merge back any edits you want to keep.`
-  );
 }
 
-// <dir>/<name>.<YYYYMMDD-HHMMSS>.md in local time; never reuses an existing name.
-function backupPath(dir, name) {
-  const d = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-` +
-    `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-  let candidate = path.join(dir, `${name}.${stamp}.md`);
-  for (let i = 1; fs.existsSync(candidate); i++) candidate = path.join(dir, `${name}.${stamp}-${i}.md`);
-  return candidate;
+// Project-relative path of `file`, '/' separated: the key of the ownership manifest.
+function projectKey(file) {
+  return path.relative(cwd, file).split(path.sep).join('/');
+}
+
+// Writes a force-written framework file. A file the framework shipped (or one carrying an
+// intact generated marker) is overwritten as before; anything else is the project's
+// edit, so it is backed up first and listed in the triage report.
+function writeOwned(dest, content) {
+  if (!fs.existsSync(dest)) return forceWrite(dest, content);
+  const key = projectKey(dest);
+  const existing = fs.readFileSync(dest, 'utf8');
+  const { state, reason } = ownership.classify(ownershipManifest, key, existing, content);
+  if (state !== 'edited') return forceWrite(dest, content);
+  const backup = backupFile(dest, key);
+  if (!backup) return 'unchanged';
+  backups.push({
+    key,
+    backup,
+    reason: {
+      'marker-mismatch': 'edited after it was generated',
+      'hand-written': 'hand-written: no ownership marker and no shipped version matches',
+    }[reason] || 'edited: it matches no version the framework shipped',
+    result: ownership.triage(ownershipManifest, key, existing, content),
+  });
+  return forceWrite(dest, content);
+}
+
+// The run folder every backup of this upgrade goes to, claimed on first use:
+// .claude/qa-framework-backup/upgrade-to-<version>[-runN]/. An existing folder is never
+// reused, so no earlier backup can be overwritten.
+function claimBackupRunDir() {
+  if (backupRunDir) return backupRunDir;
+  const root = path.join(cwd, ...ownership.BACKUP_ROOT.split('/'));
+  const base = `upgrade-to-${PACKAGE_VERSION}`;
+  for (let n = 1; ; n++) {
+    const candidate = path.join(root, n === 1 ? base : `${base}-run${n}`);
+    if (dryRun) {
+      if (!fs.existsSync(candidate)) return (backupRunDir = candidate);
+      continue;
+    }
+    fs.mkdirSync(root, { recursive: true });
+    try {
+      fs.mkdirSync(candidate);
+      return (backupRunDir = candidate);
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
+    }
+  }
+}
+
+// Copies `dest` into this run's backup folder and returns the backup's project-relative
+// path. Returns null, after recording an error, when the copy fails: the caller must then
+// leave the file untouched, because overwriting it would lose the project's edit.
+function backupFile(dest, key) {
+  try {
+    const target = path.join(claimBackupRunDir(), ...ownership.backupRelPath(key).split('/'));
+    if (!dryRun) {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(dest, target, fs.constants.COPYFILE_EXCL);
+    }
+    return projectKey(target);
+  } catch (err) {
+    errors.push(`${key} could not be backed up (${err.message}), so it was left untouched.`);
+    return null;
+  }
+}
+
+// Writes the triage report next to the backups and adds one warning listing them.
+function reportBackups() {
+  if (!backups.length) return;
+  const runRel = projectKey(backupRunDir);
+  const reportRel = `${runRel}/${ownership.REPORT_NAME}`;
+  if (!dryRun) {
+    const report = ownership.renderTriageReport({ toVersion: PACKAGE_VERSION, runDir: runRel, entries: backups });
+    fs.writeFileSync(path.join(backupRunDir, ownership.REPORT_NAME), report, { encoding: 'utf8', flag: 'wx' });
+  }
+  const native = (rel) => rel.split('/').join(path.sep);
+  warnings.push(
+    `${backups.length} framework file(s) had been edited in this project. ` +
+      `${dryRun ? 'Each would be saved to' : 'Each was saved to'}\n` +
+      `    the path shown, then overwritten with this release's version:\n` +
+      backups.map((b) => `      ${native(b.key)} (${b.reason})\n        -> ${native(b.backup)}`).join('\n') +
+      `\n    ${dryRun ? 'A triage report would list' : 'Review the lines each one added, and where they belong, in'}:\n` +
+      `      ${native(reportRel)}`
+  );
 }
 
 // Progress line for a forceWrite() result. An unchanged file prints nothing here: the
@@ -1164,15 +1270,15 @@ function reportWrite(status, label) {
   console.log(`  [${status}] ${label}`);
 }
 
-function copyDirForce(srcDir, destDir) {
+function copyDirOwned(srcDir, destDir) {
   for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
     const srcPath  = path.join(srcDir, entry.name);
     const destPath = path.join(destDir, entry.name);
     if (entry.isDirectory()) {
-      fs.mkdirSync(destPath, { recursive: true });
-      copyDirForce(srcPath, destPath);
+      if (!dryRun) fs.mkdirSync(destPath, { recursive: true });
+      copyDirOwned(srcPath, destPath);
     } else {
-      forceWrite(destPath, fs.readFileSync(srcPath, 'utf8'));
+      writeOwned(destPath, fs.readFileSync(srcPath, 'utf8'));
     }
   }
 }

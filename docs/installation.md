@@ -95,7 +95,9 @@ npx qa-framework upgrade
 
 This overwrites only framework-owned files (`.github/skills/`, `.github/instructions/qa-framework.instructions.md`,
 `QA-STRUCTURE-GUIDE.md`) and migrates the `07-automation/` structure if upgrading from
-v1.5.x. Your specs, tests, and memory are never touched.
+v1.5.x. Your specs, tests, and memory are never touched. A framework-owned file your project
+edited is backed up to `.claude/qa-framework-backup/upgrade-to-<version>/` before it is
+overwritten, with a `TRIAGE.md` listing the lines the project added.
 
 Use `--dry-run` to preview without writing:
 
