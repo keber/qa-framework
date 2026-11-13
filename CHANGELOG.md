@@ -11,6 +11,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Rule 13: ADO work item full-content read (BLOCKING).** Both agent rule files
+  (`.claude/rules/qa-framework.md` and `.github/instructions/qa-framework.instructions.md`)
+  now require reading a work item in full before any conclusion about it - Type, Title,
+  State and Reason, every content field (Description, Repro Steps, Acceptance Criteria),
+  every embedded or attached image, every comment, and the parent/child hierarchy - as
+  defined by the shipped `qa-ado-integration/references/ado-workitem-full-read-protocol.md`,
+  which the rule names at its installed path. A sub-agent's conclusion without the full
+  read is provisional. Two consumer projects had hand-added this rule.
+- **Rule 14: PowerShell authorization travels to sub-agents (BLOCKING).** When the
+  project authorizes PowerShell for its QA scripts the agent may run it, and it must copy
+  that authorization verbatim into every sub-agent prompt: sub-agents do not inherit it
+  and otherwise refuse the work. Grants nothing when the project has not authorized
+  PowerShell. The Claude Code dispatcher protocol carries it in the worker prompt.
+  Rules are appended, so rules 0 to 12 keep their numbers.
+- **Framework-owned header in both rule files.** Each file now says that upgrade
+  overwrites it (an edited copy is backed up under `.claude/qa-framework-backup/`) and
+  that project rules belong in `.claude/rules/<project>.md` or
+  `.github/instructions/<project>.instructions.md`.
 - **Cross-module and cascading-field dependency discovery (module analysis and specs).**
   New section 2.7 of `skills/qa-module-analysis/references/exploration-checklist.md`,
   linked from Phase 2 and Phase 4 of the skill: for every dynamic field, identify what
@@ -335,6 +353,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Rule 8 renders the project's defect prefix.** `init` and `upgrade` render both rule
+  files through `scripts/lib/rules-template.js`, which takes the prefix from
+  `conventions.defectIdPattern`: `DEF-ABC-{NUM}` (or `DEF-ABC-NNN`) renders
+  `DEF-ABC-NNN` and `REC-ABC-NNN`, `DEF-{MODULE}-{NNN}` renders `DEF-{MODULE}-NNN`, and
+  `DEF-{NUM}` renders `DEF-NNN`. A missing pattern, or one that does not start with
+  `DEF-`, end with a number token and use plain or `{PLACEHOLDER}` segments, keeps the
+  generic `DEF-{PREFIX}-NNN`. Ownership normalization puts the rendered prefix back to
+  `{{DEFECT_PREFIX}}` (the generic one always, the project's own from its config), so a
+  file rendered with the project's prefix stays a recognised shipped version and later
+  upgrades do not back it up. A prefix typed by hand that the config does not produce is
+  still an edit and is backed up. The ownership manifest was regenerated.
 - **ADO scripts: read/write credential split.** Verified with mocks only; real Azure
   DevOps verification pending. Following `references/credential-policy.md`, the shipped
   scripts that write to ADO prefer `ADO_PROJECT_WRITE` / `ADO_PAT_WRITE` and fall back to

@@ -26,6 +26,7 @@ const FIXTURES = path.join(__dirname, 'fixtures', 'ownership-v1.12.0');
 const VERSION = require('../package.json').version;
 const { buildCommandContent, discoverSkillNames } = require('../scripts/lib/claude-commands');
 const ownership = require('../scripts/lib/ownership');
+const { renderRulesTemplate } = require('../scripts/lib/rules-template');
 const { publishedFiles } = require('./helpers/published-files');
 
 const BACKUP_ROOT = ['.claude', 'qa-framework-backup'];
@@ -68,11 +69,12 @@ function put(root, key, content) {
 
 /** What this release writes at `key`. */
 function currentContent(key) {
+  // These projects have no config: rule 8 renders the generic defect prefix.
   if (key === '.claude/rules/qa-framework.md') {
-    return read(path.join(REPO_ROOT, 'templates', 'qa-framework.rules.md')).replace('{{VERSION}}', VERSION);
+    return renderRulesTemplate(read(path.join(REPO_ROOT, 'templates', 'qa-framework.rules.md')), VERSION, {});
   }
   if (key === '.github/instructions/qa-framework.instructions.md') {
-    return read(path.join(REPO_ROOT, 'templates', 'qa-framework.instructions.md')).replace('{{VERSION}}', VERSION);
+    return renderRulesTemplate(read(path.join(REPO_ROOT, 'templates', 'qa-framework.instructions.md')), VERSION, {});
   }
   if (key === 'qa/QA-STRUCTURE-GUIDE.md') return read(path.join(REPO_ROOT, 'docs', 'folder-structure-guide.md'));
   if (key.startsWith('.claude/commands/')) return buildCommandContent(path.basename(key, '.md'));

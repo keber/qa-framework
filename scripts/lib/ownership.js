@@ -35,7 +35,9 @@
  * generated marker removed (commands), and for the rules and instructions the rendered
  * version in "`@keber/qa-framework` v<version>" put back to {{VERSION}}: init and
  * upgrade render that placeholder, from config.frameworkVersion before 1.14.0-rc.2
- * and from the package version since.
+ * and from the package version since. The rule 8 defect prefix goes back to
+ * {{DEFECT_PREFIX}} too (see rules-template.js): the generic {PREFIX}- always, the
+ * project's own rendering only when the caller passes its renderContext() as `ctx`.
  */
 
 const crypto = require('crypto');
@@ -48,6 +50,7 @@ const {
   stampGenerated,
 } = require('./generated-marker');
 const { buildCommandBody, discoverSkillNames, commandFileName } = require('./claude-commands');
+const { normalizeDefectPrefix } = require('./rules-template');
 
 const MANIFEST_PATH = path.join(__dirname, 'ownership-manifest.json');
 const MANIFEST_FORMAT = 1;
@@ -75,11 +78,17 @@ const REPORT_NAME = 'TRIAGE.md';
 
 const isMarked = (key) => key.startsWith(COMMANDS_PREFIX);
 
-/** Normalized form of `text` for the file at `key`, the form every hash is taken on. */
-function normalizeFor(key, text) {
+/**
+ * Normalized form of `text` for the file at `key`, the form every hash is taken on.
+ * `ctx` is the project's rules-template renderContext(), when known.
+ */
+function normalizeFor(key, text, ctx = {}) {
   let t = normalizeNewlines(text);
   if (isMarked(key)) t = splitGenerated(t).body;
-  if (STAMPED_KEYS.has(key)) t = t.replace(STAMP_RE, '$1{{VERSION}}');
+  if (STAMPED_KEYS.has(key)) {
+    t = t.replace(STAMP_RE, '$1{{VERSION}}');
+    t = normalizeDefectPrefix(t, ctx.defectPrefix);
+  }
   return t;
 }
 
@@ -243,11 +252,12 @@ function versionLines(manifest, key, base) {
  * Ownership of the project file at `key`, given what this release writes there.
  *   { state: 'unchanged' | 'pristine' | 'edited', reason }
  * reason: 'current' | 'marker' | 'shipped' | 'marker-mismatch' | 'hand-written' | 'unknown'
+ * `ctx` is the project's rules-template renderContext() (see normalizeFor).
  */
-function classify(manifest, key, existing, current) {
+function classify(manifest, key, existing, current, ctx = {}) {
   if (existing === current) return { state: 'unchanged', reason: 'current' };
-  const norm = normalizeFor(key, existing);
-  if (norm === normalizeFor(key, current)) return { state: 'pristine', reason: 'current' };
+  const norm = normalizeFor(key, existing, ctx);
+  if (norm === normalizeFor(key, current, ctx)) return { state: 'pristine', reason: 'current' };
   if (isMarked(key)) {
     const parts = splitGenerated(normalizeNewlines(existing));
     if (parts.marker) {
@@ -324,13 +334,14 @@ function addedIndexes(a, b) {
  * release's content, flagged approximate, when no shipped version is known.
  *   { approximate, tags, added: [{ number, text }], missing }
  * `missing` counts lines of the compared version that the project file lacks.
+ * `ctx` is the project's rules-template renderContext() (see normalizeFor).
  */
-function triage(manifest, key, existing, current) {
+function triage(manifest, key, existing, current, ctx = {}) {
   const display = splitLines(isMarked(key)
     ? splitGenerated(normalizeNewlines(existing)).body
     : normalizeNewlines(existing));
-  const projectLines = lineHashes(normalizeFor(key, existing));
-  const base = normalizeFor(key, current);
+  const projectLines = lineHashes(normalizeFor(key, existing, ctx));
+  const base = normalizeFor(key, current, ctx);
   const candidates = versionLines(manifest, key, base) || [];
 
   // Closest: fewest added lines, then fewest lines missing, then the newest version.

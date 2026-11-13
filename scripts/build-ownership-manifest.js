@@ -20,7 +20,7 @@
  *                                       templates/qa-framework.instructions.md
  *   - qa/QA-STRUCTURE-GUIDE.md          docs/folder-structure-guide.md
  * Every content is normalized with ownership.normalizeFor() (BOM, CRLF, marker,
- * {{VERSION}}) and recorded once per distinct content, with the releases that shipped
+ * {{VERSION}}, {{DEFECT_PREFIX}}) and recorded once per distinct content, with the releases that shipped
  * it. Only files this release still force-writes are recorded.
  *
  * Not reproducible, and therefore never recognised as pristine (an existing copy is
@@ -40,6 +40,7 @@ const os = require('os');
 const path = require('path');
 
 const ownership = require('./lib/ownership');
+const rulesTemplate = require('./lib/rules-template');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const PKG_VERSION = require(path.join(REPO_ROOT, 'package.json')).version;
@@ -77,16 +78,26 @@ function releaseTags() {
   return git('tag', '-l', 'v*').split('\n').map((t) => t.trim()).filter((t) => TAG_RE.test(t)).sort(compareTags);
 }
 
-// The rules and instructions templates are rendered with .replace('{{VERSION}}', v).
-// The manifest records them unrendered, which is only sound while that is the only
-// substitution: refuse to build otherwise rather than record a wrong "shipped" content.
+// The rules and instructions templates are rendered by rulesTemplate.renderRulesTemplate()
+// ({{VERSION}} once, and {{DEFECT_PREFIX}} from conventions.defectIdPattern since 1.14.0).
+// The manifest records them unrendered, which is only sound while normalizeFor() undoes
+// every substitution: refuse to build otherwise rather than record a wrong "shipped"
+// content. Checked with a prefixed, an empty and the generic rendering of the prefix.
+const SAMPLE_CONFIGS = [
+  { conventions: { defectIdPattern: 'DEF-QZX-{NUM}' } },
+  { conventions: { defectIdPattern: 'DEF-{NUM}' } },
+  {},
+];
 function checkStampedTemplate(tag, key, template) {
-  const count = template.split('{{VERSION}}').length - 1;
-  const rendered = template.replace('{{VERSION}}', '9.8.7-rc.6');
-  if (count > 1 || /\{\{[A-Z_]+\}\}/.test(rendered) ||
-      ownership.normalizeFor(key, rendered) !== ownership.normalizeFor(key, template)) {
-    throw new Error(`${tag}: ${key} no longer renders as a single {{VERSION}} substitution; ` +
-      'update normalizeFor() in scripts/lib/ownership.js and this generator together.');
+  const count = template.split(rulesTemplate.VERSION_PLACEHOLDER).length - 1;
+  for (const config of SAMPLE_CONFIGS) {
+    const rendered = rulesTemplate.renderRulesTemplate(template, '9.8.7-rc.6', config);
+    const ctx = rulesTemplate.renderContext(config);
+    if (count > 1 || /\{\{[A-Z_]+\}\}/.test(rendered) ||
+        ownership.normalizeFor(key, rendered, ctx) !== ownership.normalizeFor(key, template)) {
+      throw new Error(`${tag}: ${key} no longer renders as the substitutions normalizeFor() undoes; ` +
+        'update scripts/lib/rules-template.js, normalizeFor() in scripts/lib/ownership.js and this generator together.');
+    }
   }
 }
 
