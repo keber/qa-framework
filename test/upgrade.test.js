@@ -618,6 +618,166 @@ test('upgrade: an existing project without the v1.13.0 keys gets all six agents 
   }
 });
 
+// --- ownership marker (rc.6) -------------------------------------------------
+
+const MARKER_RE = /\r?\n<!-- qa-framework:generated sha256=([0-9a-f]{64}) -->\r?\n?$/;
+const backupDir = (root) => path.join(root, '.claude', 'qa-framework-backup', 'agents');
+
+function sprintProject() {
+  const root = tmpProject();
+  fs.writeFileSync(path.join(root, 'qa-framework.config.json'), JSON.stringify({
+    project: { name: 'demo' },
+    integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+  }));
+  return root;
+}
+
+/** Body without the marker, hashed the way the marker is computed (BOM and CRLF agnostic). */
+function bodyHash(text) {
+  return scaffoldHash(text.replace(MARKER_RE, ''));
+}
+
+test('agents: every generated agent ends with a marker holding the hash of its own body', () => {
+  const root = sprintProject();
+  try {
+    assert.equal(runUpgrade(root).status, 0);
+    for (const name of SPRINT_AGENTS) {
+      const text = fs.readFileSync(agentFile(root, name), 'utf8');
+      const match = text.match(MARKER_RE);
+      assert.ok(match, `${name}: no marker`);
+      assert.equal(match[1], bodyHash(text), `${name}: marker hash does not match the body`);
+      assert.match(text, /^---\r?\nname: /, `${name}: frontmatter must stay at the top`);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents: a second upgrade changes zero bytes under .claude/', () => {
+  const root = sprintProject();
+  try {
+    assert.equal(runUpgrade(root).status, 0);
+    const before = snapshot(path.join(root, '.claude'));
+    const second = runUpgrade(root);
+    assert.equal(second.status, 0, second.stderr);
+    assert.deepEqual(snapshot(path.join(root, '.claude')), before);
+    assert.equal(fs.existsSync(backupDir(root)), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents: a pristine but outdated agent (marker matches) is overwritten without backup', () => {
+  const root = sprintProject();
+  try {
+    assert.equal(runUpgrade(root).status, 0);
+    const current = fs.readFileSync(agentFile(root, 'qa-plan'), 'utf8');
+    const oldBody = '---\nname: qa-plan\ndescription: old\n---\n\nOld generated body.\n';
+    fs.writeFileSync(agentFile(root, 'qa-plan'),
+      `${oldBody}\n<!-- qa-framework:generated sha256=${scaffoldHash(oldBody)} -->\n`);
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(fs.readFileSync(agentFile(root, 'qa-plan'), 'utf8'), current);
+    assert.equal(fs.existsSync(backupDir(root)), false);
+    assert.doesNotMatch(result.stdout, /qa-plan\.md.*(edited|backup)/i);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents: an edited agent (marker no longer matches) is kept and warned with its template', () => {
+  const root = sprintProject();
+  try {
+    assert.equal(runUpgrade(root).status, 0);
+    const file = agentFile(root, 'qa-plan');
+    const edited = fs.readFileSync(file, 'utf8').replace(/^(---\r?\nname: qa-plan\r?\n)/, '$1# my note\n');
+    fs.writeFileSync(file, edited);
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(fs.readFileSync(file, 'utf8'), edited);
+    assert.match(result.stdout, /\.claude[\\/]agents[\\/]qa-plan\.md/);
+    assert.match(result.stdout, /templates\/agents\/qa-plan\.md/);
+    assert.equal(fs.existsSync(backupDir(root)), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents: a legacy agent without marker is backed up once, then regenerated', () => {
+  const root = sprintProject();
+  try {
+    const legacy = '---\nname: qa-plan\ndescription: hand-tuned\n---\n\nMy own instructions.\n';
+    fs.mkdirSync(path.dirname(agentFile(root, 'qa-plan')), { recursive: true });
+    fs.writeFileSync(agentFile(root, 'qa-plan'), legacy);
+
+    const first = runUpgrade(root);
+    assert.equal(first.status, 0, first.stderr);
+    const backups = fs.readdirSync(backupDir(root));
+    assert.equal(backups.length, 1, backups.join(', '));
+    assert.match(backups[0], /^qa-plan\.\d{8}-\d{6}\.md$/);
+    assert.equal(fs.readFileSync(path.join(backupDir(root), backups[0]), 'utf8'), legacy);
+    assert.match(fs.readFileSync(agentFile(root, 'qa-plan'), 'utf8'), MARKER_RE);
+    assert.match(first.stdout, /qa-framework-backup[\\/]agents[\\/]qa-plan\.\d{8}-\d{6}\.md/);
+    // The other agents did not exist, so nothing else was backed up.
+    assert.ok(!fs.existsSync(path.join(root, '.claude', 'agents', '.backup')));
+
+    const before = snapshot(path.join(root, '.claude'));
+    const second = runUpgrade(root);
+    assert.equal(second.status, 0, second.stderr);
+    assert.deepEqual(snapshot(path.join(root, '.claude')), before);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents: a legacy agent identical to the current render is stamped without backup', () => {
+  const root = sprintProject();
+  try {
+    assert.equal(runUpgrade(root).status, 0);
+    const stamped = fs.readFileSync(agentFile(root, 'qa-plan'), 'utf8');
+    fs.writeFileSync(agentFile(root, 'qa-plan'), stamped.replace(MARKER_RE, ''));
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(fs.readFileSync(agentFile(root, 'qa-plan'), 'utf8'), stamped);
+    assert.equal(fs.existsSync(backupDir(root)), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents: init stamps the marker, so the next upgrade neither warns nor backs up', () => {
+  const root = sprintProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    for (const name of SPRINT_AGENTS) {
+      const text = fs.readFileSync(agentFile(root, name), 'utf8');
+      assert.equal(text.match(MARKER_RE)?.[1], bodyHash(text), `${name}: init must stamp a valid marker`);
+    }
+    const before = snapshot(path.join(root, '.claude'));
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.doesNotMatch(result.stdout, /ownership marker|edited after it was generated/);
+    assert.deepEqual(snapshot(path.join(root, '.claude')), before);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents: --dry-run neither backs up nor rewrites a legacy agent', () => {
+  const root = sprintProject();
+  try {
+    const legacy = '---\nname: qa-plan\ndescription: hand-tuned\n---\n\nMy own instructions.\n';
+    fs.mkdirSync(path.dirname(agentFile(root, 'qa-plan')), { recursive: true });
+    fs.writeFileSync(agentFile(root, 'qa-plan'), legacy);
+    const result = runUpgrade(root, ['--dry-run']);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(fs.readFileSync(agentFile(root, 'qa-plan'), 'utf8'), legacy);
+    assert.equal(fs.existsSync(backupDir(root)), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('upgrade: bare MCP server names (1.12 config shape) generate qa-investigador and exit 0', () => {
   const root = tmpProject();
   try {

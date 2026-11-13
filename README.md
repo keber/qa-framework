@@ -257,7 +257,13 @@ See [docs/skills-architecture.md](docs/skills-architecture.md) for the full desi
 ## Claude Code Sprint Agents (optional)
 
 When `integrations.azureDevOps.sprintCycle.enabled` is `true`, `init` (only if missing) and
-`upgrade` (always, framework-owned) generate six Claude Code subagents under `.claude/agents/`:
+`upgrade` generate six Claude Code subagents under `.claude/agents/`. Each generated file ends
+with an ownership marker, `<!-- qa-framework:generated sha256=<hex> -->`, holding the hash of the
+content above it. On `upgrade`, a file whose marker still matches is overwritten; a file edited
+after generation is kept and reported with the template to merge from; a file without marker
+(generated before 1.14.0, or hand-written) is first copied to
+`.claude/qa-framework-backup/agents/<name>.<YYYYMMDD-HHMMSS>.md` and then regenerated. The backup
+folder is outside `.claude/agents/` because Claude Code loads agents from that folder recursively.
 
 | Agent | What it does |
 |---|---|

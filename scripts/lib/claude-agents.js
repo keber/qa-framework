@@ -22,6 +22,7 @@
  * valid, report the one that is not, and exit non-zero.
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -346,6 +347,57 @@ function validateAgentConfig(config) {
   return errors;
 }
 
+// ---------------------------------------------------------------------------
+// Ownership marker
+//
+// Agents are rendered from a template plus the project config, so no static table of
+// shipped hashes can tell a generated file from an edited one. Each generated file
+// instead carries the hash of its own body in a trailing HTML comment:
+//
+//   <!-- qa-framework:generated sha256=<hex> -->
+//
+// It sits after the body, separated by a blank line, so the YAML frontmatter Claude
+// Code reads stays at the top of the file and the comment renders as nothing. The hash
+// covers everything before that blank line after the same normalization upgrade uses
+// for scaffold files (UTF-8 BOM dropped, CRLF as LF), so line-ending churn is not
+// mistaken for an edit.
+// ---------------------------------------------------------------------------
+
+const GENERATED_MARKER_RE = /\r?\n<!-- qa-framework:generated sha256=([0-9a-f]{64}) -->\r?\n?$/;
+
+function normalizedHash(text) {
+  const normalized = text.replace(/^﻿/, '').replace(/\r\n/g, '\n');
+  return crypto.createHash('sha256').update(normalized, 'utf8').digest('hex');
+}
+
+function withFinalNewline(text) {
+  if (text.endsWith('\n')) return text;
+  return text + (text.includes('\r\n') ? '\r\n' : '\n');
+}
+
+/** Rendered agent content plus the trailing ownership marker. */
+function stampGenerated(content) {
+  const eol = content.includes('\r\n') ? '\r\n' : '\n';
+  const body = withFinalNewline(content);
+  return `${body}${eol}<!-- qa-framework:generated sha256=${normalizedHash(body)} -->${eol}`;
+}
+
+/**
+ * Classifies an agent file already on disk against this release's rendered content.
+ *   'pristine' - framework output: its marker matches its body, or its body already
+ *                equals the new render. Safe to overwrite.
+ *   'edited'   - has a marker but the body changed after generation: the user's file.
+ *   'legacy'   - no marker (written before markers existed, or by hand) and different
+ *                from the new render: overwrite only after a backup.
+ */
+function classifyAgentFile(existing, rendered) {
+  const match = existing.match(GENERATED_MARKER_RE);
+  const bodyHash = normalizedHash(match ? existing.slice(0, match.index) : existing);
+  if (bodyHash === normalizedHash(withFinalNewline(rendered))) return 'pristine';
+  if (!match) return 'legacy';
+  return bodyHash === match[1] ? 'pristine' : 'edited';
+}
+
 function agentFileName(agentName) {
   return `${agentName}.md`;
 }
@@ -363,4 +415,6 @@ module.exports = {
   renderAllAgents,
   validateAgentConfig,
   agentFileName,
+  stampGenerated,
+  classifyAgentFile,
 };

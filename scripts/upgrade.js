@@ -93,7 +93,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
-const { isSprintCycleEnabled, renderAllAgents } = require('./lib/claude-agents');
+const { isSprintCycleEnabled, renderAllAgents, stampGenerated, classifyAgentFile } = require('./lib/claude-agents');
 const { STANDARDS_DOCS, standardsDocContent } = require('./lib/standards-docs');
 const { INTEGRATION_GUARD_FILES } = require('./lib/integration-guard-files');
 const {
@@ -313,8 +313,18 @@ forceWrite(claudeRulesPath, claudeRulesContent);
 
 // ---------------------------------------------------------------------------
 // 2c. .claude/agents/qa-*.md - optional ANALISIS/PLAN sprint-cycle mode (Claude Code only)
-//     Gated by integrations.azureDevOps.sprintCycle.enabled. Framework-owned when the
-//     flag is on; never generated (and never deleted if it was hand-authored) otherwise.
+//     Gated by integrations.azureDevOps.sprintCycle.enabled. Never generated (and never
+//     deleted if it was hand-authored) when the flag is off.
+//
+//     Ownership comes from the marker each generated file carries (see
+//     classifyAgentFile in scripts/lib/claude-agents.js), never from a static hash table:
+//       pristine -> overwritten
+//       edited   -> kept, with a warning naming the template to merge from
+//       legacy   -> no marker (pre-marker release or hand-written): copied to
+//                   .claude/qa-framework-backup/agents/ first, then overwritten
+//     The backup lives OUTSIDE .claude/agents/ on purpose: Claude Code scans that folder
+//     recursively and identifies agents by their frontmatter name, so a backup copy
+//     inside it would load as a second agent with the same name.
 // ---------------------------------------------------------------------------
 if (isSprintCycleEnabled(config)) {
   const templatesDir = path.resolve(__dirname, '..', 'templates');
@@ -326,7 +336,7 @@ if (isSprintCycleEnabled(config)) {
       errors.push(`.claude/agents/${agent.fileName} was not generated. ${agent.error.message}`);
       continue;
     }
-    forceWrite(path.join(claudeAgentsDest, agent.fileName), agent.content);
+    upgradeAgent(path.join(claudeAgentsDest, agent.fileName), agent);
   }
 }
 
@@ -1097,6 +1107,54 @@ function forceWrite(filePath, content) {
   }
   updated.push(filePath);
   return exists ? 'updated' : 'created';
+}
+
+// Writes one rendered agent according to the ownership of the file already on disk.
+function upgradeAgent(dest, agent) {
+  const label = `.claude/agents/${agent.fileName}`;
+  const content = stampGenerated(agent.content);
+  if (!fs.existsSync(dest)) {
+    reportWrite(forceWrite(dest, content), label);
+    return;
+  }
+  const state = classifyAgentFile(fs.readFileSync(dest, 'utf8'), agent.content);
+  if (state === 'pristine') {
+    reportWrite(forceWrite(dest, content), label);
+    return;
+  }
+  if (state === 'edited') {
+    warnings.push(
+      `${label} was edited after it was generated - left untouched, so this release's\n` +
+        `    changes to it were NOT applied. Merge them by hand from the template (rendered\n` +
+        `    with qa-framework.config.json), or delete the file and run upgrade again:\n` +
+        `      node_modules/@keber/qa-framework/templates/agents/${agent.fileName}`
+    );
+    return;
+  }
+  // legacy: keep a copy of exactly what is on disk, then regenerate.
+  const backup = backupPath(path.join(cwd, '.claude', 'qa-framework-backup', 'agents'), agent.agentName);
+  if (!dryRun) {
+    fs.mkdirSync(path.dirname(backup), { recursive: true });
+    fs.copyFileSync(dest, backup, fs.constants.COPYFILE_EXCL);
+  }
+  reportWrite(forceWrite(dest, content), label);
+  warnings.push(
+    `${label} had no qa-framework ownership marker (written before 1.14.0 or by hand)\n` +
+      `    and differed from this release's version. ${dryRun ? 'It would be saved to' : 'Your copy was saved to'}\n` +
+      `      ${path.relative(cwd, backup)}\n` +
+      `    and the agent ${dryRun ? 'would be' : 'was'} regenerated. Merge back any edits you want to keep.`
+  );
+}
+
+// <dir>/<name>.<YYYYMMDD-HHMMSS>.md in local time; never reuses an existing name.
+function backupPath(dir, name) {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-` +
+    `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  let candidate = path.join(dir, `${name}.${stamp}.md`);
+  for (let i = 1; fs.existsSync(candidate); i++) candidate = path.join(dir, `${name}.${stamp}-${i}.md`);
+  return candidate;
 }
 
 // Progress line for a forceWrite() result. An unchanged file prints nothing here: the
