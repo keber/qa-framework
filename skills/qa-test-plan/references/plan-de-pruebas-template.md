@@ -17,10 +17,10 @@ Where `{modulo}` is the module code (e.g., `RCL-Casino`, `PortalProveedores`, `A
 ## Complete Document Template
 
 ```markdown
-# Plan de Pruebas - {PROYECTO} - Sprint {NNN} - {MODULO_NOMBRE}
+# Plan de Pruebas - {PROYECTO} - Sprint {N} - {MODULO_NOMBRE}
 
 **Proyecto:** {PROYECTO}
-**Sprint:** {NNN}
+**Sprint:** {N}
 **Módulo:** {MODULO_NOMBRE}
 **Código módulo:** {MODULO_CODE}
 **Fecha planificación:** {YYYY-MM-DD}

@@ -39,6 +39,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { normalizeNewlines } = require('./lib/generated-marker');
 const ownership = require('./lib/ownership');
 const rulesTemplate = require('./lib/rules-template');
 
@@ -223,12 +224,20 @@ function serialize(manifest) {
   return `${headJson.slice(0, -1)},"files":{\n${body}\n}}\n`;
 }
 
+// --check compares line-ending agnostic: a Windows checkout (core.autocrlf=true) has the
+// manifest with CRLF endings, which is the same content. The hashes inside are already
+// line-ending agnostic: every content goes through ownership.normalizeFor() (BOM and
+// CRLF dropped) before it is hashed, exactly as upgrade does with a project's files.
+function isUpToDate(onDisk, generated) {
+  return normalizeNewlines(onDisk) === normalizeNewlines(generated);
+}
+
 function main() {
   const check = process.argv.includes('--check');
   const text = serialize(buildManifest());
   if (check) {
     const onDisk = fs.existsSync(ownership.MANIFEST_PATH) ? fs.readFileSync(ownership.MANIFEST_PATH, 'utf8') : '';
-    if (onDisk !== text) {
+    if (!isUpToDate(onDisk, text)) {
       console.error('[build-ownership-manifest] scripts/lib/ownership-manifest.json is stale. Run: npm run build:ownership-manifest');
       process.exitCode = 1;
       return;
@@ -251,4 +260,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { compareTags, serialize };
+module.exports = { compareTags, isUpToDate, serialize };

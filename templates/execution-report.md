@@ -1,7 +1,7 @@
 # Execution Report - {{MODULE_NAME}}
 
 **Report ID**: EXEC-{{MODULE}}-{{YYYYMMDD}}-{{NNN}}
-**Sprint / Release**: Sprint {{NNN}}
+**Sprint / Release**: Sprint {{N}}
 **Execution type**: Automated / Manual / Mixed
 **Executor**: (agent name or analyst name)
 **Environment**: QA - `{{QA_BASE_URL}}`
