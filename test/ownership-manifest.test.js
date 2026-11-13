@@ -8,7 +8,24 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const ownership = require('../scripts/lib/ownership');
-const { compareTags } = require('../scripts/build-ownership-manifest');
+const { compareTags, isUpToDate, serialize } = require('../scripts/build-ownership-manifest');
+
+test('generator --check: line endings do not make the manifest stale; content changes do', () => {
+  const generated = serialize({
+    format: 1,
+    lines: 'abcdef',
+    files: { 'a.md': { current: '0123456789abcdef', x: [0, 1], versions: [] }, 'b.md': { current: 'f', x: [1, 0], versions: [] } },
+  });
+  assert.ok(generated.includes('\n'), 'the serialized manifest spans several lines');
+  // A Windows checkout (core.autocrlf=true) has the same content with CRLF endings.
+  assert.equal(isUpToDate(generated.replace(/\n/g, '\r\n'), generated), true);
+  assert.equal(isUpToDate(generated, generated), true);
+  // A real content change is still stale, whatever the line endings.
+  const changed = generated.replace('0123456789abcdef', '0123456789abcdee');
+  assert.equal(isUpToDate(changed, generated), false);
+  assert.equal(isUpToDate(changed.replace(/\n/g, '\r\n'), generated), false);
+  assert.equal(isUpToDate('', generated), false);
+});
 
 test('generator: release tags sort by semver precedence', () => {
   const tags = ['v1.14.0', 'v1.10.0', 'v1.14.0-rc.10', 'v1.4.0', 'v1.14.0-rc.2', 'v1.4.0-0', 'v1.9.1'];
