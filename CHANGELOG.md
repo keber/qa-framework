@@ -309,6 +309,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`qa-framework --version` / `-v`.** The help listed both flags, but they fell
+  through to "Unknown command" and exited 1. They now print the package version and
+  exit 0.
+
 - **`mcpNamespace` accepts the bare MCP server name.** Since 1.13.0
   `parallelLanes.lanes[].mcpNamespace` had to be the tool prefix `mcp__<name>__`, so a
   1.12 config holding the server name as written in `.mcp.json` (for example

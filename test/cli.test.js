@@ -35,6 +35,16 @@ test('cli: -h prints help and exits 0', () => {
   assert.match(result.stdout, /Commands:/);
 });
 
+for (const flag of ['--version', '-v']) {
+  test(`cli: ${flag} prints the package version and exits 0`, () => {
+    const { version } = require('../package.json');
+    const result = runCli([flag]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), version);
+    assert.equal(result.stderr, '');
+  });
+}
+
 test('cli: unknown command exits 1 and prints error plus help', () => {
   const result = runCli(['not-a-real-command']);
   assert.equal(result.status, 1);
