@@ -1,18 +1,18 @@
-# Plan de Pruebas - {{PROYECTO}} - Sprint {{NNN}} - {{MODULO_NOMBRE}}
+# Plan de Pruebas - {{PROYECTO}} - Sprint {{N}} - {{MODULO_NOMBRE}}
 
 **Proyecto:** {{PROYECTO}}
-**Sprint:** {{NNN}}
+**Sprint:** {{N}}
 **Módulo:** {{MODULO_NOMBRE}}
 **Código módulo:** {{MODULO_CODE}}
 **Fecha planificación:** {{YYYY-MM-DD}}
 **Ventana QA:** {{YYYY-MM-DD}} y {{YYYY-MM-DD}}
-**ADO Test Plan:** [Plan {{ADO_PLAN_ID}} - {{PROYECTO}} Sprint {{NNN}}]({{ADO_TEST_PLAN_URL}}) *(omitir si ADO no está habilitado)*
+**ADO Test Plan:** [Plan {{ADO_PLAN_ID}} - {{PROYECTO}} Sprint {{N}}]({{ADO_TEST_PLAN_URL}}) *(omitir si ADO no está habilitado)*
 
 ---
 
 ## 1. Objetivo
 
-> Definir la estrategia de pruebas para el Sprint {{NNN}}, orientada a:
+> Definir la estrategia de pruebas para el Sprint {{N}}, orientada a:
 > - Confirmar la correcta implementación de las tareas comprometidas en el sprint.
 > - Cubrir los flujos críticos del módulo **{{MODULO_NOMBRE}}**.
 > - Identificar riesgos funcionales, de datos y de integración.
@@ -146,7 +146,7 @@
 ## Consolidado de sprint
 
 > Si este sprint cubre múltiples módulos, existe un documento consolidado generado automáticamente:
-> `qa/02-test-plans/sprints/Sprint-{{NNN}}/Plan-de-Pruebas-{{PROYECTO}}-Sprint-{{NNN}}.md`
+> `qa/02-test-plans/sprints/Sprint-{{N}}/Plan-de-Pruebas-{{PROYECTO}}-Sprint-{{N}}.md`
 >
-> El consolidado se genera con el script `@keber/ado-qa consolidate-sprint --sprint {{NNN}}`.
+> El consolidado se genera con el script `@keber/ado-qa consolidate-sprint --sprint {{N}}`.
 > **No editar manualmente** - es derivado de los archivos por módulo.

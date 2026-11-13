@@ -8,7 +8,7 @@
 
 **Plan ID**: TP-{{MODULE}}-{{VERSION}}
 **Module**: {{MODULE_NAME}}
-**Sprint / Release**: Sprint {{NNN}}
+**Sprint / Release**: Sprint {{N}}
 **Prepared by**: (agent output - reviewed by human)
 **Date**: YYYY-MM-DD
 **ADO Test Plan**: #{ADO_PLAN_ID} (if ADO enabled)
