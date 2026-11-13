@@ -396,6 +396,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`build-ownership-manifest.js --check` on a Windows checkout.** With
+  `core.autocrlf=true` the manifest on disk has CRLF endings, and `--check` reported it
+  stale although the content was identical. The comparison now ignores line endings; a
+  real content change still fails. The hashes inside the manifest were already
+  line-ending agnostic (every content is normalized before hashing, as `upgrade` does
+  with a project's files). Repository tool only: not published.
+- **`04-test-data.md` template carries the "Upstream dependencies" table.** The spec
+  template now has the table the `qa-module-analysis` format describes (Upstream entity
+  (module), Validity condition, Consumed by, Rule), with the same guidance, so a spec
+  started from the template matches the skill. A test keeps the columns and the guidance
+  in sync.
+- **Sprint numbers are unpadded everywhere: `Sprint-{N}`.** The folder guide (installed
+  as `qa/QA-STRUCTURE-GUIDE.md`) prescribed a zero-padded `Sprint-{NNN}`, while `init`,
+  `upgrade`, the ADO scripts' examples and the sprint agents use the plain number
+  (`Sprint-12`). The guide, `plan-de-pruebas-template.md` and the test plan, sprint plan,
+  execution report and Playwright config templates now use `{N}`. No framework script
+  parses the sprint number, so folders already created with padding keep working. A test
+  fails if a padded sprint placeholder returns to a shipped skill, template, doc or the
+  README.
+
 - **ASCII-only CLI output.** `upgrade` and `validate` printed emoji (a check mark, a
   warning sign, a cross) that became mojibake when Windows PowerShell 5.1 redirected the
   output to a file. They now print `[ok]`, `[!]` and `[error]`. A test runs `init`,
