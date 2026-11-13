@@ -1065,7 +1065,7 @@ if (hasIntegrationScaffold) {
 console.log('\n--- Results ---');
 if (updated.length) {
   console.log('\n  Updated (framework-owned):');
-  for (const f of new Set(updated)) console.log(`    ✅ ${path.relative(cwd, f)}`);
+  for (const f of new Set(updated)) console.log(`    [ok] ${path.relative(cwd, f)}`);
 }
 if (skipped.length) {
   console.log('\n  Skipped (already up to date):');
@@ -1077,7 +1077,7 @@ if (kept.length) {
 }
 if (warnings.length) {
   console.log('\n  Warnings:');
-  for (const w of warnings) console.log(`    ⚠️  ${w}`);
+  for (const w of warnings) console.log(`    [!] ${w}`);
 }
 
 if (errors.length) {

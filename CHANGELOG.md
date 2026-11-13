@@ -309,6 +309,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **ASCII-only CLI output.** `upgrade` and `validate` printed emoji (a check mark, a
+  warning sign, a cross) that became mojibake when Windows PowerShell 5.1 redirected the
+  output to a file. They now print `[ok]`, `[!]` and `[error]`. A test runs `init`,
+  `upgrade` and `validate` and fails on any non-ASCII output line, and another fails on
+  any `console` call in `scripts/` that carries a non-ASCII character. The emoji in the
+  heading of the generated `qa/AGENT-NEXT-STEPS.md` is file content, not console output,
+  and is unchanged.
+
 - **`upgrade` no longer overwrites edited sprint agents silently.** With
   `sprintCycle.enabled`, every `.claude/agents/qa-*.md` was force-written, so edits to an
   agent were lost. Each generated agent now ends with an ownership marker,
