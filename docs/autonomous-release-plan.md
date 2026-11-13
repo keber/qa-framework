@@ -119,6 +119,54 @@ verification is pending, and **promotion requires Keber to verify against ADO**.
 | 4.2 | C11 | `publish-results.ps1` (manual results linked to test points); idempotent `create-issue.ps1` |
 | 4.3 | B10, C13 | Three-tier credential policy and `ADO_PROJECT_READ`/`WRITE` split as guidance; PR review rubric as a template |
 
+## Wave 5 - Upgrade ownership and harvested content (rc.7)
+
+**Origin.** Keber upgraded copies of four consumer projects to rc.6 (2026-11-13). None lost a file outside framework paths and every second run changed zero bytes. But `upgrade` force-writes five kinds of framework files with no ownership check, and three projects had edited them:
+
+| Project | Edited framework files overwritten |
+|---|---|
+| GMOIndustrial (from 1.12.0) | none |
+| Enrolamiento (from 1.12.0) | `.claude/rules/qa-framework.md`, `qa/QA-STRUCTURE-GUIDE.md` |
+| BioFruit (from 1.12.0) | `.claude/rules/qa-framework.md`, `.github/instructions/qa-framework.instructions.md` |
+| Exportadora (from 1.11.3) | 7 skill files, `qa/QA-STRUCTURE-GUIDE.md`, 8 hand-written `.claude/commands/qa-*.md` |
+
+Most of the overwritten content had already been generalized into the framework, often in stronger form: rule 11, the lane lock and its dispatcher protocol, the BOM policy, the automation gates, and the stabilization known-issues step. The rest is either project-specific or a real framework gap. The evidence is in `upgrade.js` lines 298, 305, 312, 385 and 1175 (all `forceWrite`) and in the rule-by-rule and line-by-line comparisons recorded in the decision log.
+
+**Goal.** rc.7 must (a) carry the framework gaps upstream, and (b) make `upgrade` keep every project edit recoverable and visible, while still delivering framework improvements.
+
+| WP | Content | Files (disjoint by design) |
+|---|---|---|
+| 5.1 | **Rules content.** New BLOCKING rule: ADO work item full-content read, pointing to the shipped `ado-workitem-full-read-protocol.md` reference (deferred by WP1.6 and never followed up; present in Enrolamiento and BioFruit). New rule: PowerShell is authorized, and the authorization must be copied verbatim into sub-agent prompts; general part only, with no project names (Enrolamiento and BioFruit). Rule 8 renders the real defect prefix from `conventions.defectIdPattern` instead of `{PREFIX}` (both projects hand-edited `DEF-SIS` and `DEF-BFR`). Header of both files: "framework-owned; put project rules in `.claude/rules/<project>.md` / `.github/instructions/<project>.instructions.md`" | `templates/qa-framework.rules.md`, `templates/qa-framework.instructions.md`, the render function in `scripts/` |
+| 5.2 | **Exportadora gaps.** (1) Cross-module and cascading-field dependency discovery: identify what feeds each dynamic field, try 2-3 values, use the network capture, confirm the real endpoint and the upstream record's validity condition. (2) Business rule type `Dependency`, with its fields. (3) An "upstream dependencies" table in `04-test-data`. (4) Anti-pattern: declaring a field empty after one value. (5) ADO Conditional Access (VS403463) warning. Cheap partials: the "local to ADO only" direction note in `qa-ado-integration`, and the sprint tree and standards table in `folder-structure-guide.md`, plus a "project additions" pointer there | `skills/qa-module-analysis/`, `skills/qa-spec-generation/`, `skills/qa-ado-integration/SKILL.md`, `docs/folder-structure-guide.md` |
+| 5.3 | **Ownership for every force-written file** (skills, commands, rules, instructions, guide). Details below | `scripts/upgrade.js`, new `scripts/lib/` modules, a generated manifest, tests |
+
+**WP5.3 behaviour.**
+
+- **Ownership manifest.** A manifest of the content of every version ever shipped of each force-written file. It is generated from the git tags by a repo script and published with the package; `upgrade` never runs git. Rules and instructions vary only by `{{VERSION}}`, so they are hashed with the version normalized. An invariant test fails if a current template is not registered, the same way it works for `SHIPPED_SCAFFOLD_HASHES`.
+- **Generated commands carry an ownership marker,** like the rc.6 agents. Hand-written commands are not wrappers that `upgrade` can regenerate.
+- **Pristine file** (it matches a shipped version or its own marker): overwrite, as today.
+- **Edited file:**
+  1. Back up the current file, preserving its relative path, under a single location that no agent loads.
+  2. Overwrite it.
+  3. Warn with the backup path.
+
+  Overwriting is deliberate: the four projects show that what they wrote usually reached the framework in stronger form, and keeping the old file would freeze them out of it.
+- **Triage report** in the backup folder. For each edited file it lists the lines the project added relative to the version it came from, not relative to the new template. That is the input a human needs to decide, line by line: already absorbed, move to a project-owned file, or propose upstream. It is the manual work done on 2026-11-13, made repeatable. The manifest therefore has to support "lines of version X"; line hashes are acceptable. Size budget: at most +10% unpacked.
+- **The rc.6 agent backups** move under the same single location. Agents already backed up stay where they are.
+- **Second run:** zero bytes, and no new backup.
+
+**Order.** 5.2 and 5.3 in parallel, because they touch different files. Then 5.1, after 5.3 merges: 5.1 changes templates whose hashes 5.3 registers. The coordinator regenerates the manifest after each merge, and the invariant test enforces it.
+
+**Gate for rc.7.** Besides the standing quality gates:
+
+- Re-run the four-project test from the untouched originals, with a CI-equivalent LF tarball. Backups must appear for exactly the edited files listed above, and none for GMOIndustrial.
+- Each triage report must contain the known additions: BioFruit and Enrolamiento rules 12 to 14, Enrolamiento's "Added by this project" table, Exportadora's section 2.7 and its Blazor/Radzen command rules.
+- No deletions; the second run changes zero bytes.
+
+**Stop conditions specific to this wave.**
+- **Package stop:** if the triage report cannot be computed relative to the origin version within the size budget, ship it relative to the new template, mark it as approximate, and report.
+- **Hard stop:** any design in which a project edit becomes unrecoverable.
+
 ## Parked - needs a human decision, outside autonomous scope
 
 | Item | Why parked |
@@ -277,3 +325,4 @@ Per release candidate:
 | 2026-11-12 | Consolidated report written: `docs/release-report-1.14.0.md` (Minto pyramid), excluded from npm; the real-ADO checklist for wave 4 now lives there (A.5) | The checklist existed only in the coordinator's chat report |
 | 2026-11-13 | **rc.6 from a real-project test.** Upgrading a copy of a consumer project from 1.12.0 to rc.5 lost no user file and was idempotent, but found five defects: bare `mcpNamespace` names rejected (agent not generated, exit 1 on every run), `--version` unimplemented, `[updated]` printed for unchanged files, agents overwritten without an ownership check, emoji turned to mojibake in PowerShell 5.1 redirects. All fixed in `a139065..ee238a4` | Found by Keber's upgrade test; verified by the coordinator on a clean copy with a CI-equivalent LF tarball and again with the published rc.6: exit 0, `qa-investigador` generated, one backup byte-identical to the original, edited agent kept, second run zero bytes |
 | 2026-11-13 | Agent ownership: generated agents carry `<!-- qa-framework:generated sha256=... -->`; legacy agents are backed up to `.claude/qa-framework-backup/agents/` before being overwritten | Claude Code scans `.claude/agents/` recursively, so a backup inside it would load as a duplicate agent |
+| 2026-11-13 | Wave 5 (rc.7) planned from the four-project upgrade test: harvest 7 content gaps upstream and give every force-written file an ownership check with backup, overwrite and a triage report | Most overwritten project edits had already been absorbed upstream in stronger form, so overwriting stays; what was missing is recoverability, visibility and the remaining gaps |
