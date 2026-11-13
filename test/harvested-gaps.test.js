@@ -103,6 +103,28 @@ test('spec-file-formats: 04-test-data carries an upstream dependencies table', (
   assert.match(s, /\| Upstream entity \(module\) \| Validity condition \| Consumed by \| Rule \|/);
 });
 
+test('04-test-data template: upstream dependencies table matches the skill format', () => {
+  // The template is what a generated spec starts from: it must carry the same table,
+  // with the same columns and guidance, as the format the skill describes.
+  // Lines from the heading to the table header row (the skill's copy is inside a fence).
+  const block = (content) => {
+    const lines = content.split(/\r?\n/);
+    const start = lines.indexOf('## Upstream dependencies');
+    assert.ok(start >= 0, 'missing heading: ## Upstream dependencies');
+    const header = lines.findIndex((l, i) => i > start && l.startsWith('|'));
+    assert.ok(header > start, 'missing the upstream dependencies table');
+    return {
+      guidance: lines.slice(start + 1, header).filter(Boolean).join(' '),
+      columns: lines[header].split('|').map((c) => c.trim()).filter(Boolean),
+    };
+  };
+  const skill = block(section(read('formats'), '## `04-test-data.md`'));
+  const template = block(fs.readFileSync(path.join(ROOT, 'templates', 'specification', '04-test-data.md'), 'utf8'));
+  assert.deepEqual(skill.columns, ['Upstream entity (module)', 'Validity condition', 'Consumed by', 'Rule']);
+  assert.deepEqual(template.columns, skill.columns);
+  assert.equal(template.guidance, skill.guidance);
+});
+
 test('qa-spec-generation SKILL.md: 04-test-data guidance requires the upstream table', () => {
   const s = section(read('specSkill'), '### `04-test-data.md`');
   assert.match(s, /Upstream dependencies/);

@@ -21,6 +21,18 @@ The following data must exist in the QA environment before tests run:
 
 ---
 
+## Upstream dependencies
+
+Required when `01-business-rules.md` has an RN of Type "Dependency" for this submodule.
+Use the same entity and condition as the RN, not a paraphrase; test data setup must
+create a record that meets the condition.
+
+| Upstream entity (module) | Validity condition | Consumed by | Rule |
+|---|---|---|---|
+| {{entity}} ({{module}}) | {{condition that makes a record count}} | {{field(s) of this submodule, and the scoping field}} | RN-{{MODULE_CODE}}-{{NNN}} |
+
+---
+
 ## Data Shapes for Key Scenarios
 
 ### Scenario: Happy path - create record
