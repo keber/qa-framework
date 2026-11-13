@@ -539,6 +539,36 @@ test('upgrade: a file already identical to the current template is not called us
   }
 });
 
+test('progress: [created] for new files, [updated] only for changed ones', () => {
+  const root = makeLegacyProject();
+  try {
+    const first = runUpgrade(root);
+    assert.equal(first.status, 0, first.stderr);
+    // The lane scripts did not exist in a v1.11.3 project; the config did and changed.
+    assert.match(first.stdout, /\[created\]\s+e2e\/scripts\/lane-config\.js/);
+    assert.doesNotMatch(first.stdout, /\[updated\]\s+e2e\/scripts\/lane-config\.js/);
+    assert.match(first.stdout, /\[updated\]\s+e2e\/playwright\.config\.ts/);
+
+    const second = runUpgrade(root);
+    assert.equal(second.status, 0, second.stderr);
+    assert.doesNotMatch(second.stdout, /\[(updated|created)\]/, second.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('progress: upgrading a freshly initialized project prints no [updated] line', () => {
+  const root = tmpProject();
+  try {
+    assert.equal(runInit(root).status, 0);
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.doesNotMatch(result.stdout, /\[updated\]/, result.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('upgrade: is idempotent - a second run changes nothing further', () => {
   const root = makeLegacyProject();
   try {

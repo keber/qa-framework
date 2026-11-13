@@ -902,8 +902,7 @@ if (hasAutomationScaffold) {
   if (laneScaffoldInstalled) {
     if (blockers.length === 0) {
       for (const m of scriptMembers) {
-        forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
-        console.log(`  [updated]  e2e/${m.rel}`);
+        reportWrite(forceWrite(m.dest, fs.readFileSync(m.src, 'utf8')), `e2e/${m.rel}`);
         automationRefreshed.add(m.rel);
       }
       // Host files follow only when pristine; a user-owned one keeps working because
@@ -914,8 +913,7 @@ if (hasAutomationScaffold) {
           continue;
         }
         if (!fs.existsSync(m.dest) || isPristine(m.dest, m.key)) {
-          forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
-          console.log(`  [updated]  e2e/${m.rel}`);
+          reportWrite(forceWrite(m.dest, fs.readFileSync(m.src, 'utf8')), `e2e/${m.rel}`);
           automationRefreshed.add(m.rel);
         } else {
           warnUserOwned(m.dest, m.src, `e2e/${m.rel}`, m.key);
@@ -943,8 +941,7 @@ if (hasAutomationScaffold) {
     ));
   } else if (blockers.length === 0) {
     for (const m of groupMembers) {
-      forceWrite(m.dest, fs.readFileSync(m.src, 'utf8'));
-      console.log(`  [updated]  e2e/${m.rel}`);
+      reportWrite(forceWrite(m.dest, fs.readFileSync(m.src, 'utf8')), `e2e/${m.rel}`);
       automationRefreshed.add(m.rel);
     }
   } else {
@@ -980,8 +977,7 @@ if (hasAutomationScaffold) {
       continue;
     }
     if (!fs.existsSync(dest) || isPristine(dest, key)) {
-      forceWrite(dest, fs.readFileSync(path.join(scaffoldSrc, 'fixtures', file), 'utf8'));
-      console.log(`  [updated]  e2e/fixtures/${file}`);
+      reportWrite(forceWrite(dest, fs.readFileSync(path.join(scaffoldSrc, 'fixtures', file), 'utf8')), `e2e/fixtures/${file}`);
     } else {
       warnUserOwned(dest, path.join(scaffoldSrc, 'fixtures', file), `e2e/fixtures/${file}`, key);
     }
@@ -996,8 +992,7 @@ if (hasAutomationScaffold) {
     const src  = path.join(scaffoldSrc, 'scripts', 'run-opt-in.js');
     const key  = `automation-scaffold/${rel}`;
     if (!fs.existsSync(dest) || isPristine(dest, key)) {
-      forceWrite(dest, fs.readFileSync(src, 'utf8'));
-      console.log(`  [updated]  e2e/${rel}`);
+      reportWrite(forceWrite(dest, fs.readFileSync(src, 'utf8')), `e2e/${rel}`);
       automationRefreshed.add(rel);
     } else {
       warnUserOwned(dest, src, `e2e/${rel}`, key);
@@ -1038,8 +1033,7 @@ if (hasIntegrationScaffold) {
     const dest = path.join(integrationDir, file);
     const key  = `integration-scaffold/${file}`;
     if (!fs.existsSync(dest) || isPristine(dest, key)) {
-      forceWrite(dest, fs.readFileSync(path.join(integrationSrc, file), 'utf8'));
-      console.log(`  [updated]  integration/${file}`);
+      reportWrite(forceWrite(dest, fs.readFileSync(path.join(integrationSrc, file), 'utf8')), `integration/${file}`);
       integrationCurrent.add(file);
     } else {
       warnUserOwned(dest, path.join(integrationSrc, file), `integration/${file}`, key);
@@ -1088,18 +1082,28 @@ console.log('\n[qa-framework/upgrade] Done.\n');
 // Helpers
 // -----------------------------------------------------------------------
 
+// Writes `content` unless the file already holds exactly that, and returns what
+// happened: 'created', 'updated' or 'unchanged' (a dry run reports what it would do).
 function forceWrite(filePath, content) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const exists  = fs.existsSync(filePath);
   const changed = !exists || fs.readFileSync(filePath, 'utf8') !== content;
-  if (dryRun) {
-    if (changed) updated.push(filePath);
-    else skipped.push(filePath);
-    return;
+  if (!changed) {
+    skipped.push(filePath);
+    return 'unchanged';
   }
-  fs.writeFileSync(filePath, content, 'utf8');
-  if (changed) updated.push(filePath);
-  else skipped.push(filePath);
+  if (!dryRun) {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, content, 'utf8');
+  }
+  updated.push(filePath);
+  return exists ? 'updated' : 'created';
+}
+
+// Progress line for a forceWrite() result. An unchanged file prints nothing here: the
+// Results section lists it under "Skipped (already up to date)".
+function reportWrite(status, label) {
+  if (status === 'unchanged') return;
+  console.log(`  [${status}] ${label}`);
 }
 
 function copyDirForce(srcDir, destDir) {
@@ -1156,8 +1160,7 @@ function isPristine(filePath, key) {
 function upgradeReferenceEnvExample(dest, src, key, label) {
   if (!fs.existsSync(src)) return;
   if (!fs.existsSync(dest) || isPristine(dest, key)) {
-    forceWrite(dest, fs.readFileSync(src, 'utf8'));
-    console.log(`  [updated]  ${label}`);
+    reportWrite(forceWrite(dest, fs.readFileSync(src, 'utf8')), `${label}`);
   } else {
     warnUserOwned(dest, src, label, key);
   }
@@ -1272,8 +1275,7 @@ function deliverApiGuard(srcDir, current) {
   const dependents = entries.filter((e) => e.owner === 'user' && !baseData.includes(e));
 
   const install = (e) => {
-    forceWrite(e.dest, fs.readFileSync(e.src, 'utf8'));
-    console.log(`  [${e.state === 'absent' ? 'created' : 'updated'}] ${e.label}`);
+    reportWrite(forceWrite(e.dest, fs.readFileSync(e.src, 'utf8')), e.label);
     current.add(e.rel);
   };
   // A file this run leaves as it is: identical ones are up to date, the project's own

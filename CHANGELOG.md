@@ -309,6 +309,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`upgrade` progress lines match what was written.** Scaffold files that were already
+  byte-identical were announced as `[updated]` although nothing was written (the Results
+  section was right). A progress line is now printed only when the file changed:
+  `[created]` for a new file, `[updated]` for a changed one, nothing for an unchanged
+  one. An unchanged file is no longer rewritten either, so its timestamp stays as it was.
+
 - **`qa-framework --version` / `-v`.** The help listed both flags, but they fell
   through to "Unknown command" and exited 1. They now print the package version and
   exit 0.
