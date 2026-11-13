@@ -264,7 +264,7 @@ test('init: sprintCycle disabled generates no agents', () => {
 
 test('init: an invalid lane config fails qa-investigador only, writes the other five, exits 1', () => {
   for (const parallelLanes of [
-    { enabled: true, lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright' }] },
+    { enabled: true, lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'mcp__playwright' }] },
     { enabled: true, lanes: [] },
   ]) {
     const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-init-'));
@@ -316,7 +316,7 @@ test('init --skip-if-exists (postinstall): an agent render failure is a warning 
       project: { name: 'demo' },
       parallelLanes: {
         enabled: true,
-        lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright' }],
+        lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'mcp__playwright' }],
       },
       integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
     });

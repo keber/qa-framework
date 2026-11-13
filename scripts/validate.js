@@ -172,18 +172,18 @@ for (const f of specFiles) {
 // -----------------------------------------------------------------------
 console.log('');
 if (errors.length === 0 && warnings.length === 0) {
-  console.log('✅ Validation passed - no issues found.');
+  console.log('[ok] Validation passed - no issues found.');
   process.exit(0);
 }
 
 if (warnings.length > 0) {
-  console.log(`⚠️  ${warnings.length} warning(s):`);
+  console.log(`[!] ${warnings.length} warning(s):`);
   for (const w of warnings) console.log(`   WARN  ${w}`);
   console.log('');
 }
 
 if (errors.length > 0) {
-  console.log(`❌ ${errors.length} error(s):`);
+  console.log(`[error] ${errors.length} error(s):`);
   for (const e of errors) console.log(`   ERROR ${e}`);
   console.log('');
   process.exit(1);

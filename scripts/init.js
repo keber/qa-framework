@@ -16,7 +16,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const { buildCommandContent, discoverSkillNames, commandFileName } = require('./lib/claude-commands');
-const { AGENT_NAMES, isSprintCycleEnabled, renderAllAgents } = require('./lib/claude-agents');
+const { AGENT_NAMES, isSprintCycleEnabled, renderAllAgents, stampGenerated } = require('./lib/claude-agents');
 const { DEFECT_CATEGORIES, DISPUTED_README, RECOMMENDATIONS_README } = require('./lib/defect-categories');
 
 // Version stamped into the installed agent rules and qa/README.md. Always the package
@@ -401,7 +401,8 @@ if (isSprintCycleEnabled(config)) {
       agentFailures.push(agent);
       continue;
     }
-    writeIfMissing(path.join(claudeAgentsDest, agent.fileName), agent.content);
+    // Stamped with the ownership marker so a later upgrade can tell it from an edit.
+    writeIfMissing(path.join(claudeAgentsDest, agent.fileName), stampGenerated(agent.content));
   }
 }
 

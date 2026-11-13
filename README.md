@@ -257,7 +257,13 @@ See [docs/skills-architecture.md](docs/skills-architecture.md) for the full desi
 ## Claude Code Sprint Agents (optional)
 
 When `integrations.azureDevOps.sprintCycle.enabled` is `true`, `init` (only if missing) and
-`upgrade` (always, framework-owned) generate six Claude Code subagents under `.claude/agents/`:
+`upgrade` generate six Claude Code subagents under `.claude/agents/`. Each generated file ends
+with an ownership marker, `<!-- qa-framework:generated sha256=<hex> -->`, holding the hash of the
+content above it. On `upgrade`, a file whose marker still matches is overwritten; a file edited
+after generation is kept and reported with the template to merge from; a file without marker
+(generated before 1.14.0, or hand-written) is first copied to
+`.claude/qa-framework-backup/agents/<name>.<YYYYMMDD-HHMMSS>.md` and then regenerated. The backup
+folder is outside `.claude/agents/` because Claude Code loads agents from that folder recursively.
 
 | Agent | What it does |
 |---|---|
@@ -285,10 +291,15 @@ Config keys read by the agents (all optional; defaults shown):
 - **0 MCP lanes** (no `parallelLanes`, `enabled: false`, or no lane with `mcpNamespace`): tools are
   `Read, Write, Edit, Grep, Glob, Bash` and the agent investigates through code, config, logs and the
   CLI runner, reporting browser-only hypotheses as blocked.
-- **1 or N MCP lanes**: every lane with an `mcpNamespace` (e.g. `mcp__playwright-qauser__`) adds its
-  15 Playwright MCP browser tools, in config order, plus a lane table and the mandatory
-  `lane-lock.js heartbeat` protocol. CLI-only lanes are skipped.
-- An invalid lane block or an `mcpNamespace` not matching `^mcp__[A-Za-z0-9_-]+__$` fails
+- **1 or N MCP lanes**: every lane with an `mcpNamespace` adds its 15 Playwright MCP browser tools,
+  in config order, plus a lane table and the mandatory `lane-lock.js heartbeat` protocol. CLI-only
+  lanes are skipped.
+- `mcpNamespace` accepts either the MCP server name as it appears in `.mcp.json`
+  (e.g. `"playwright-qauser"`, letters, digits, `-` and `_`) or its tool prefix
+  (`"mcp__playwright-qauser__"`). A server name is normalized to the prefix; both forms produce the
+  same agent.
+- An invalid lane block or an `mcpNamespace` that is neither form (for example a value with spaces,
+  or an incomplete prefix such as `"mcp__playwright"`) fails
   `qa-investigador` only: the other five agents are still written and the command exits 1.
   `qa-framework validate` reports the same problems.
 

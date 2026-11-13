@@ -154,7 +154,7 @@ test('qa-investigador: lane order follows the config array, not numeric key orde
 });
 
 test('qa-investigador: an invalid mcpNamespace throws an error naming the agent', () => {
-  const config = withLanes([lane('1', 'playwright-qauser')]);
+  const config = withLanes([lane('1', 'playwright qauser')]);
   assert.throws(() => build('qa-investigador', config), (err) => {
     assert.match(err.message, /qa-investigador/);
     assert.match(err.message, /mcpNamespace/);
@@ -163,6 +163,34 @@ test('qa-investigador: an invalid mcpNamespace throws an error naming the agent'
   // The other five agents do not depend on lanes and must still build.
   for (const name of agents.AGENT_NAMES.filter((n) => n !== 'qa-investigador')) {
     assert.doesNotThrow(() => build(name, config), `${name} must not depend on the lane config`);
+  }
+});
+
+test('qa-investigador: a bare MCP server name (1.12 config shape) is normalized to the tool prefix', () => {
+  const content = build('qa-investigador', withLanes([lane('1', 'playwright-gmo-lane1')]));
+  assert.equal(toolsLine(content), expectedTools(['mcp__playwright-gmo-lane1__']));
+  assert.match(content, /| 1 | playwright-gmo-lane1 | `mcp__playwright-gmo-lane1__` |/);
+  assert.doesNotMatch(content, /mcp__mcp__/);
+});
+
+test('qa-investigador: bare names and prefixed namespaces can be mixed', () => {
+  const config = withLanes([lane('1', 'playwright-a'), lane('2', 'mcp__playwright-b__')]);
+  const content = build('qa-investigador', config);
+  assert.equal(toolsLine(content), expectedTools(['mcp__playwright-a__', 'mcp__playwright-b__']));
+});
+
+for (const bad of ['playwright qauser', 'mcp__bad', 'mcp__x_', 'pw/1', 'mcp__a b__']) {
+  test(`qa-investigador: mcpNamespace ${JSON.stringify(bad)} is still an error`, () => {
+    assert.throws(() => build('qa-investigador', withLanes([lane('1', bad)])), /mcpNamespace/);
+  });
+}
+
+test('normalizeMcpNamespace: bare name -> prefix, prefix kept, anything else null', () => {
+  assert.equal(agents.normalizeMcpNamespace('playwright-gmo-lane1'), 'mcp__playwright-gmo-lane1__');
+  assert.equal(agents.normalizeMcpNamespace('pw_1'), 'mcp__pw_1__');
+  assert.equal(agents.normalizeMcpNamespace('mcp__playwright-qauser__'), 'mcp__playwright-qauser__');
+  for (const bad of ['', 'a b', 'mcp__bad', 'mcp__', 'pw.1', 42, {}]) {
+    assert.equal(agents.normalizeMcpNamespace(bad), null, JSON.stringify(bad));
   }
 });
 

@@ -34,6 +34,11 @@ if (!command || command === '--help' || command === '-h') {
   process.exit(0);
 }
 
+if (command === '--version' || command === '-v') {
+  console.log(require(path.join(__dirname, '..', 'package.json')).version);
+  process.exit(0);
+}
+
 if (!commands[command]) {
   console.error(`[qa-framework] Unknown command: "${command}"`);
   printHelp();
