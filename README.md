@@ -79,9 +79,19 @@ npx qa-framework upgrade
 This overwrites **only** framework-owned files (skills, `qa-framework.instructions.md`,
 `QA-STRUCTURE-GUIDE.md`) and never touches your specs, test plans, automation code, or memory.
 
+A framework-owned file that your project edited is never lost. When it matches no version
+the framework shipped (a hand-written `.claude/commands/qa-*.md` included), `upgrade` first
+copies it to `.claude/qa-framework-backup/upgrade-to-<version>/`, under its own relative path
+without the leading dot (`.claude/rules/qa-framework.md` becomes `claude/rules/qa-framework.md`),
+then overwrites it and warns. `TRIAGE.md` in that folder lists, for each file, the lines your
+project added to the version it came from: move what is project-specific to a file you own,
+such as `.claude/rules/<project>.md`. A later run uses a new `-runN` folder, so no backup is
+ever overwritten; a run with nothing to back up creates no folder.
+
 If upgrading from a version that wrote to `.github/copilot-instructions.md`, `upgrade`
 automatically removes the QA section from that file (or deletes it if it contained only
 framework content), and creates `.github/instructions/qa-framework.instructions.md` instead.
+The original file is backed up first, like every file `upgrade` removes or moves.
 
 ---
 
@@ -261,9 +271,10 @@ When `integrations.azureDevOps.sprintCycle.enabled` is `true`, `init` (only if m
 with an ownership marker, `<!-- qa-framework:generated sha256=<hex> -->`, holding the hash of the
 content above it. On `upgrade`, a file whose marker still matches is overwritten; a file edited
 after generation is kept and reported with the template to merge from; a file without marker
-(generated before 1.14.0, or hand-written) is first copied to
-`.claude/qa-framework-backup/agents/<name>.<YYYYMMDD-HHMMSS>.md` and then regenerated. The backup
-folder is outside `.claude/agents/` because Claude Code loads agents from that folder recursively.
+(generated before 1.14.0, or hand-written) is first copied to the run's backup folder,
+`.claude/qa-framework-backup/upgrade-to-<version>/claude/agents/<name>.md`, and then regenerated.
+The backup folder is outside `.claude/agents/` because Claude Code loads agents from that folder
+recursively. Backups made by 1.14.0-rc.6 in `.claude/qa-framework-backup/agents/` stay where they are.
 
 | Agent | What it does |
 |---|---|

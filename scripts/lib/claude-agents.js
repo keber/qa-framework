@@ -22,9 +22,14 @@
  * valid, report the one that is not, and exit non-zero.
  */
 
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const {
+  GENERATED_MARKER_RE,
+  normalizedHash,
+  withFinalNewline,
+  stampGenerated,
+} = require('./generated-marker');
 
 const { laneTableFromConfig, DEFAULT_LANE_TABLE } = require('../../templates/automation-scaffold/scripts/lane-config');
 
@@ -361,26 +366,8 @@ function validateAgentConfig(config) {
 // covers everything before that blank line after the same normalization upgrade uses
 // for scaffold files (UTF-8 BOM dropped, CRLF as LF), so line-ending churn is not
 // mistaken for an edit.
+// The marker itself lives in generated-marker.js, shared with the command wrappers.
 // ---------------------------------------------------------------------------
-
-const GENERATED_MARKER_RE = /\r?\n<!-- qa-framework:generated sha256=([0-9a-f]{64}) -->\r?\n?$/;
-
-function normalizedHash(text) {
-  const normalized = text.replace(/^﻿/, '').replace(/\r\n/g, '\n');
-  return crypto.createHash('sha256').update(normalized, 'utf8').digest('hex');
-}
-
-function withFinalNewline(text) {
-  if (text.endsWith('\n')) return text;
-  return text + (text.includes('\r\n') ? '\r\n' : '\n');
-}
-
-/** Rendered agent content plus the trailing ownership marker. */
-function stampGenerated(content) {
-  const eol = content.includes('\r\n') ? '\r\n' : '\n';
-  const body = withFinalNewline(content);
-  return `${body}${eol}<!-- qa-framework:generated sha256=${normalizedHash(body)} -->${eol}`;
-}
 
 /**
  * Classifies an agent file already on disk against this release's rendered content.

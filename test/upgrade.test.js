@@ -621,7 +621,9 @@ test('upgrade: an existing project without the v1.13.0 keys gets all six agents 
 // --- ownership marker (rc.6) -------------------------------------------------
 
 const MARKER_RE = /\r?\n<!-- qa-framework:generated sha256=([0-9a-f]{64}) -->\r?\n?$/;
-const backupDir = (root) => path.join(root, '.claude', 'qa-framework-backup', 'agents');
+// Every backup upgrade makes lives under this root, in one folder per run (WP5.3).
+const backupDir = (root) => path.join(root, '.claude', 'qa-framework-backup');
+const UPGRADE_RUN_DIR = `upgrade-to-${require('../package.json').version}`;
 
 function sprintProject() {
   const root = tmpProject();
@@ -712,12 +714,12 @@ test('agents: a legacy agent without marker is backed up once, then regenerated'
 
     const first = runUpgrade(root);
     assert.equal(first.status, 0, first.stderr);
-    const backups = fs.readdirSync(backupDir(root));
-    assert.equal(backups.length, 1, backups.join(', '));
-    assert.match(backups[0], /^qa-plan\.\d{8}-\d{6}\.md$/);
-    assert.equal(fs.readFileSync(path.join(backupDir(root), backups[0]), 'utf8'), legacy);
+    const runDir = path.join(backupDir(root), UPGRADE_RUN_DIR);
+    assert.deepEqual(fs.readdirSync(backupDir(root)), [UPGRADE_RUN_DIR]);
+    assert.deepEqual(fs.readdirSync(path.join(runDir, 'claude', 'agents')), ['qa-plan.md']);
+    assert.equal(fs.readFileSync(path.join(runDir, 'claude', 'agents', 'qa-plan.md'), 'utf8'), legacy);
     assert.match(fs.readFileSync(agentFile(root, 'qa-plan'), 'utf8'), MARKER_RE);
-    assert.match(first.stdout, /qa-framework-backup[\\/]agents[\\/]qa-plan\.\d{8}-\d{6}\.md/);
+    assert.match(first.stdout, /qa-framework-backup[\\/]upgrade-to-[^\\/\s]+[\\/]claude[\\/]agents[\\/]qa-plan\.md/);
     // The other agents did not exist, so nothing else was backed up.
     assert.ok(!fs.existsSync(path.join(root, '.claude', 'agents', '.backup')));
 

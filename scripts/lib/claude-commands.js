@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { stampGenerated } = require('./generated-marker');
 
 // Stage prerequisites mirrored from templates/qa-framework.instructions.md pipeline table.
 // Skills not listed here (e.g. a future addition) still get a valid command with no
@@ -28,7 +29,9 @@ const STAGE_PREREQUISITES = {
   'qa-ado-integration': 'Prerequisite: ADO enabled in `qa/qa-framework.config.json`.',
 };
 
-function buildCommandContent(skillName) {
+// The wrapper text, without the ownership marker. This is what the ownership manifest
+// registers: releases before 1.14.0-rc.7 wrote exactly this, with no marker.
+function buildCommandBody(skillName) {
   const prerequisite = STAGE_PREREQUISITES[skillName];
   const lines = [
     `Read the full skill at \`.github/skills/${skillName}/SKILL.md\` FIRST, then follow its instructions exactly.`,
@@ -37,6 +40,12 @@ function buildCommandContent(skillName) {
     lines.push('', prerequisite);
   }
   return `${lines.join('\n')}\n`;
+}
+
+// What init and upgrade write: the body plus the ownership marker, so a later upgrade
+// can tell a generated wrapper from a hand-written or edited command.
+function buildCommandContent(skillName) {
+  return stampGenerated(buildCommandBody(skillName));
 }
 
 function discoverSkillNames(skillsSrcDir) {
@@ -52,6 +61,7 @@ function commandFileName(skillName) {
 }
 
 module.exports = {
+  buildCommandBody,
   buildCommandContent,
   discoverSkillNames,
   commandFileName,

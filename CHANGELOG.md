@@ -33,6 +33,41 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   adds a "Project additions" section: project rules go in `.claude/rules/<project>.md`
   and `.github/instructions/<project>.instructions.md`, project documents in
   `qa/00-standards/`, instead of framework-owned files that `upgrade` overwrites.
+- **`upgrade` keeps every project edit to a framework-owned file recoverable (WP5.3).**
+  The skills, `.claude/commands/qa-*.md`, `.claude/rules/qa-framework.md`,
+  `.github/instructions/qa-framework.instructions.md` and `qa/QA-STRUCTURE-GUIDE.md` are
+  still overwritten, so framework improvements keep arriving, but only after an ownership
+  check:
+  - A file equal to a version the framework shipped (BOM, CRLF and the rendered version
+    number ignored), or carrying an intact generated marker, is overwritten as before.
+  - Any other file is the project's edit (including a hand-written command): it is copied
+    to `.claude/qa-framework-backup/upgrade-to-<version>/`, under its relative path without
+    the leading dot (`.claude/rules/qa-framework.md` -> `claude/rules/qa-framework.md`),
+    then overwritten, and `upgrade` warns with the backup path. No agent loads that folder.
+    A folder that already exists is never reused (`-run2`, `-run3`, ...), so no backup is
+    overwritten; a run with nothing to back up creates nothing.
+  - `TRIAGE.md` in that folder lists, per file, the lines the project added to the
+    shipped version it came from (the closest by line overlap, named in the report), to
+    decide line by line: already in the framework, move to a project-owned file, or
+    propose upstream. Characters outside ASCII and Latin letters appear as `<U+XXXX>`.
+  - Every path that removes or moves a project file goes through the same backup first,
+    and the change happens only once the copy (`COPYFILE_EXCL`) has succeeded; if it
+    fails, the file is left untouched and `upgrade` exits with an error. This covers
+    removing a QA-only `.github/copilot-instructions.md` and stripping the QA section
+    from one with custom content (both listed whole in `TRIAGE.md`, since that file has
+    no shipped baseline), and the v1.5.x and v1.6.x layout migrations that move
+    `qa/07-automation/` files and folders and pre-v1.7.0 test plans (backed up as they
+    were, and listed in `TRIAGE.md` with their new location).
+  - A marker-less agent is now backed up to the same run folder
+    (`claude/agents/<name>.md`) instead of `.claude/qa-framework-backup/agents/`; backups
+    already there stay where they are.
+  - What was shipped comes from `scripts/lib/ownership-manifest.json` (about 30 KB): whole
+    file and per-line hashes of every released version of each file, generated from the
+    release tags by `npm run build:ownership-manifest` (a repository script, not
+    published; `upgrade` never runs git). A test fails until it is regenerated after any
+    change to a skill, one of those templates, the guide or the command text.
+- **Generated commands carry the ownership marker** (`<!-- qa-framework:generated
+  sha256=... -->`), like the agents since 1.14.0-rc.6.
 
 - **Credential policy for Azure DevOps access (guidance).** New reference
   `skills/qa-ado-integration/references/credential-policy.md`, linked from the skill:
