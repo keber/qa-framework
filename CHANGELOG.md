@@ -309,6 +309,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`mcpNamespace` accepts the bare MCP server name.** Since 1.13.0
+  `parallelLanes.lanes[].mcpNamespace` had to be the tool prefix `mcp__<name>__`, so a
+  1.12 config holding the server name as written in `.mcp.json` (for example
+  `"playwright-gmo-lane1"`) never got `qa-investigador` and made every `upgrade` exit 1.
+  Both forms are valid now: a server name (`[A-Za-z0-9_-]+`) is normalized to
+  `mcp__<name>__`, a prefix is kept as is, and anything else (spaces, an incomplete prefix
+  such as `"mcp__playwright"`) is still an error. Generation, `validate` and the docs
+  apply the same rule. The lane scripts keep reporting the configured value unchanged.
+
 - **ADO scripts: BOM-less output, intact spec files, helper auto-load.** Verified with
   mocks only; real Azure DevOps verification pending.
   - `inject-ado-ids.ps1` read spec files and mappings without an encoding (Windows

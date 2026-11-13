@@ -191,7 +191,10 @@ defaults (8-day sprint, 2-day manual testing timebox, `dd-mm-aaaa`, `America/San
 `decimalSeparator` (`","` or `"."`, otherwise derived from the locale) and
 `defectIdPrefix` (e.g. `"ACME"`, otherwise derived from `project.name`).
 `qa-investigador` gets Playwright MCP browser tools only for `parallelLanes.lanes[]`
-entries with an `mcpNamespace` (pattern `^mcp__[A-Za-z0-9_-]+__$`).
+entries with an `mcpNamespace`: either the MCP server name from `.mcp.json`
+(e.g. `"playwright-qauser"`, pattern `^[A-Za-z0-9_-]+$`) or its tool prefix
+(e.g. `"mcp__playwright-qauser__"`, pattern `^mcp__[A-Za-z0-9_-]+__$`). A server name is
+normalized to the prefix. A value that starts with `mcp__` must be a complete prefix.
 - `ADO_PLAN_ID` - Test Plan ID (can also go in `module-registry.json`)
 - `ADO_SUITE_ID` - Suite ID
 

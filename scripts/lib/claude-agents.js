@@ -48,6 +48,11 @@ const DEFAULT_TC_ID_PATTERN = 'TC-{MODULE}-{SUBMODULE}-{NUM}';
 const NOT_CONFIGURED = '(no configurado: ver qa/qa-framework.config.json)';
 
 const MCP_NAMESPACE_PATTERN = /^mcp__[A-Za-z0-9_-]+__$/;
+// A bare MCP server name, as written in .mcp.json (the shape configs used up to 1.12).
+const MCP_SERVER_NAME_PATTERN = /^[A-Za-z0-9_-]+$/;
+const MCP_NAMESPACE_RULE =
+  'must be an MCP server name from .mcp.json (letters, digits, "-", "_"; e.g. "playwright-qauser") ' +
+  'or its tool prefix (e.g. "mcp__playwright-qauser__")';
 const DEFECT_ID_PREFIX_PATTERN = /^[A-Z0-9-]+$/;
 const DECIMAL_SEPARATORS = [',', '.'];
 
@@ -128,12 +133,27 @@ function resolveProjectField(value) {
 }
 
 /**
+ * Normalizes a lane mcpNamespace to the Claude Code tool prefix `mcp__<server>__`.
+ *
+ * Accepts the prefix itself (kept as is) or the bare server name from .mcp.json
+ * (wrapped). A value that starts with "mcp__" is taken as an attempted prefix and must
+ * be complete: wrapping "mcp__bad" again would hide the typo behind "mcp__mcp__bad__".
+ * Returns null for anything else.
+ */
+function normalizeMcpNamespace(value) {
+  if (typeof value !== 'string') return null;
+  if (value.startsWith('mcp__')) return MCP_NAMESPACE_PATTERN.test(value) ? value : null;
+  return MCP_SERVER_NAME_PATTERN.test(value) ? `mcp__${value}__` : null;
+}
+
+/**
  * MCP-capable lanes in config order: [{ id, mcpNamespace }].
  *
  * Validation is delegated to laneTableFromConfig (the same reader the automation
  * scaffold uses). Order comes from the config array, not from the table object,
  * because numeric-like lane ids would otherwise be reordered by the JS engine.
- * Throws on an invalid lane block or an mcpNamespace that is not a tool prefix.
+ * Throws on an invalid lane block or an mcpNamespace that is neither a server name
+ * nor a tool prefix. Every returned mcpNamespace is the normalized tool prefix.
  */
 function resolveMcpLanes(config) {
   const table = laneTableFromConfig(config);
@@ -143,13 +163,13 @@ function resolveMcpLanes(config) {
   for (const [index, entry] of config.parallelLanes.lanes.entries()) {
     const lane = table[entry.id];
     if (!lane || lane.mcpNamespace === null) continue;
-    if (!MCP_NAMESPACE_PATTERN.test(lane.mcpNamespace)) {
+    const mcpNamespace = normalizeMcpNamespace(lane.mcpNamespace);
+    if (mcpNamespace === null) {
       throw new Error(
-        `parallelLanes.lanes[${index}].mcpNamespace must match ${MCP_NAMESPACE_PATTERN} ` +
-          `(e.g. "mcp__playwright-qauser__"). Got: ${JSON.stringify(lane.mcpNamespace)}`
+        `parallelLanes.lanes[${index}].mcpNamespace ${MCP_NAMESPACE_RULE}. Got: ${JSON.stringify(lane.mcpNamespace)}`
       );
     }
-    lanes.push({ id: entry.id, mcpNamespace: lane.mcpNamespace });
+    lanes.push({ id: entry.id, mcpNamespace });
   }
   return lanes;
 }
@@ -312,10 +332,8 @@ function validateAgentConfig(config) {
   if (Array.isArray(lanes)) {
     lanes.forEach((lane, index) => {
       const ns = lane && typeof lane === 'object' ? lane.mcpNamespace : undefined;
-      if (ns !== undefined && ns !== null && (typeof ns !== 'string' || !MCP_NAMESPACE_PATTERN.test(ns))) {
-        errors.push(
-          `parallelLanes.lanes[${index}].mcpNamespace must match ${MCP_NAMESPACE_PATTERN} or be null. Got: ${JSON.stringify(ns)}`
-        );
+      if (ns !== undefined && ns !== null && normalizeMcpNamespace(ns) === null) {
+        errors.push(`parallelLanes.lanes[${index}].mcpNamespace ${MCP_NAMESPACE_RULE}, or null. Got: ${JSON.stringify(ns)}`);
       }
     });
   }
@@ -338,6 +356,7 @@ module.exports = {
   DEFAULT_SPRINT_CYCLE,
   isSprintCycleEnabled,
   buildPlaceholders,
+  normalizeMcpNamespace,
   resolveMcpLanes,
   renderTemplate,
   buildAgentContent,

@@ -296,12 +296,24 @@ test('validate: an invalid mcpNamespace is an error (config under qa/)', () => {
   const result = validateWithConfig({
     parallelLanes: {
       enabled: true,
-      lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright-qauser' }],
+      lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright qauser' }],
     },
     ...sprintCycle({}),
   }, 'qa');
   assert.equal(result.status, 1, result.stdout);
   assert.match(result.stdout, /mcpNamespace/);
+});
+
+test('validate: a bare MCP server name as mcpNamespace is valid (1.12 config shape)', () => {
+  const result = validateWithConfig({
+    parallelLanes: {
+      enabled: true,
+      lanes: [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright-gmo-lane1' }],
+    },
+    ...sprintCycle({}),
+  });
+  assert.equal(result.status, 0, result.stdout);
+  assert.doesNotMatch(result.stdout, /mcpNamespace/);
 });
 
 test('validate: an invalid parallelLanes block is an error', () => {
@@ -311,7 +323,7 @@ test('validate: an invalid parallelLanes block is an error', () => {
 });
 
 // REL-007: lanes are only consumed by the generator when lanes AND sprint agents are on.
-const BAD_NS_LANES = [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright-qauser' }];
+const BAD_NS_LANES = [{ id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright qauser' }];
 
 test('validate: a bad mcpNamespace in a disabled lane block is not an error', () => {
   const result = validateWithConfig({ parallelLanes: { enabled: false, lanes: BAD_NS_LANES }, ...sprintCycle({}) });

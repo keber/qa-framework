@@ -588,6 +588,30 @@ test('upgrade: an existing project without the v1.13.0 keys gets all six agents 
   }
 });
 
+test('upgrade: bare MCP server names (1.12 config shape) generate qa-investigador and exit 0', () => {
+  const root = tmpProject();
+  try {
+    fs.writeFileSync(path.join(root, 'qa-framework.config.json'), JSON.stringify({
+      project: { name: 'demo' },
+      parallelLanes: {
+        enabled: true,
+        lanes: [
+          { id: '1', account: 'QA_USER', storageState: '.auth/a.json', mcpNamespace: 'playwright-gmo-lane1' },
+          { id: '2', account: 'QA_USER2', storageState: '.auth/b.json', mcpNamespace: 'playwright-gmo-lane2' },
+        ],
+      },
+      integrations: { azureDevOps: { sprintCycle: { enabled: true } } },
+    }));
+    const result = runUpgrade(root);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const investigador = fs.readFileSync(agentFile(root, 'qa-investigador'), 'utf8');
+    assert.match(investigador, /mcp__playwright-gmo-lane1__browser_navigate/);
+    assert.match(investigador, /mcp__playwright-gmo-lane2__browser_navigate/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('upgrade: an invalid mcpNamespace fails qa-investigador only and exits 1', () => {
   const root = tmpProject();
   try {
