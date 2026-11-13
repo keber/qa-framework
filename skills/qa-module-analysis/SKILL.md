@@ -53,6 +53,7 @@ For each submodule, use browser automation to collect:
 4. **Role access** - log in as each configured role; record `can access / cannot access / permission error`
 5. **Workflow** - execute the primary happy path; record steps, branch points, state transitions
 6. **Business rules** - attempt invalid inputs and boundary conditions; record validation messages exactly
+7. **Dependencies** - for every dynamic field, identify what feeds its options (a static catalog, another field, another record's state, or another module); exercise the driver with 2-3 values and the network capture before writing anything about it; never conclude "empty" or "broken" from one value. See `references/exploration-checklist.md` section 2.7
 
 Detailed exploration checklist: `references/exploration-checklist.md`
 
@@ -81,6 +82,7 @@ Completeness checklist before closing the stage:
 
 - [ ] All menu items in the module have a submodule folder
 - [ ] All `UI-OBSERVED` TCs were actually observed in this session
+- [ ] Every dynamic field was exercised with 2-3 driving values before being documented as static, cascading or broken; each dependency found is an RN of Type "Dependency" (section 2.7 of the exploration checklist)
 - [ ] No credentials appear in any file
 - [ ] All TC IDs are unique across the module
 - [ ] Module README updated with submodule table and TC counts

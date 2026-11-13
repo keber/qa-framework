@@ -39,10 +39,25 @@
 ```markdown
 ### RN-{MODULE}-{NNN}: {Rule Title}
 
-- **Type**: Validation / Access Control / State Machine / Calculation / Integration
+- **Type**: Validation / Access Control / State Machine / Calculation / Integration / Dependency
 - **Trigger**: {What user action triggers this rule}
 - **Behavior**: {What the system does when the rule is evaluated}
 - **Error message** (if validation): "{exact text as shown in UI}"
+- **Notes**: {any special circumstances}
+```
+
+**Type "Dependency"** (cascading or cross-module fields, found with section 2.7 of
+`exploration-checklist.md`). It replaces Trigger, Behavior and Error message with:
+
+```markdown
+### RN-{MODULE}-{NNN}: {Field} options depend on {upstream entity}
+
+- **Type**: Dependency
+- **Depends on**: {upstream entity and the module that owns it, or the driving field of this form}
+- **Scoping field**: {the field whose value narrows the options, e.g. a period, a parent record}
+- **Upstream validity condition**: {what makes an upstream record count, e.g. "has at least 1 detail line and field X filled; header-only records do not count"}
+- **Real endpoint observed**: {method and path pattern seen in the network capture when the driver changes, e.g. `GET /api/{entity}/{scopingValue}`}
+- **Values tried**: {the 2-3 driving values exercised and which ones returned options}
 - **Notes**: {any special circumstances}
 ```
 
@@ -52,6 +67,7 @@
 - Every state transition -> 1 RN (can only approve if status=pending)
 - Every role restriction -> 1 RN
 - Every auto-calculated field -> 1 RN
+- Every cascading or cross-module field -> 1 RN of Type "Dependency", confirmed with 2-3 driving values and the network capture, never from one value
 
 ---
 
@@ -122,6 +138,16 @@
 | Item | Description | Source |
 |------|-------------|--------|
 | {entity} | {description} | QA seed / pre-existing |
+
+## Upstream dependencies
+
+Required when `01-business-rules.md` has an RN of Type "Dependency" for this submodule.
+Use the same entity and condition as the RN, not a paraphrase; test data setup must
+create a record that meets the condition.
+
+| Upstream entity (module) | Validity condition | Consumed by | Rule |
+|---|---|---|---|
+| {entity} ({module}) | {condition that makes a record count} | {field(s) of this submodule, and the scoping field} | RN-{MODULE}-{NNN} |
 
 ## Data shapes for key scenarios
 

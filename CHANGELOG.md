@@ -11,6 +11,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Cross-module and cascading-field dependency discovery (module analysis and specs).**
+  New section 2.7 of `skills/qa-module-analysis/references/exploration-checklist.md`,
+  linked from Phase 2 and Phase 4 of the skill: for every dynamic field, identify what
+  feeds its options, exercise the driver with 2-3 values and the network capture,
+  record the real endpoint, and find the validity condition of the upstream record when
+  the data comes from another module. Findings become a business rule of the new type
+  `Dependency` (depends on, scoping field, upstream validity condition, real endpoint
+  observed, values tried) in `spec-file-formats.md` and `qa-spec-generation`, and a row
+  of a new "Upstream dependencies" table in the `04-test-data.md` format. New
+  anti-pattern in both skills: declaring a field empty or unused after one value.
+- **ADO Conditional Access warning.** `qa-ado-integration` explains error `VS403463`
+  (an Entra Conditional Access policy rejected the network or device; the PAT is not the
+  cause and regenerating it does not help), how to read the `X-TFS-ServiceError` header
+  in PowerShell 5.1 and 7, and what to do, with a troubleshooting row. The skill also
+  states its direction: local to ADO only; execution results are pulled by the
+  `qa-reporte-ejecucion` agent.
+- **Folder guide.** `docs/folder-structure-guide.md` (installed as
+  `qa/QA-STRUCTURE-GUIDE.md`) shows the `historical/sprint-{N}/` tree and the three
+  sprint closeout documents, separates them from the run-level execution report, and
+  adds a "Project additions" section: project rules go in `.claude/rules/<project>.md`
+  and `.github/instructions/<project>.instructions.md`, project documents in
+  `qa/00-standards/`, instead of framework-owned files that `upgrade` overwrites.
+
 - **Credential policy for Azure DevOps access (guidance).** New reference
   `skills/qa-ado-integration/references/credential-policy.md`, linked from the skill:
   three tiers by lifetime and blast radius (identity: the organization-wide PAT;

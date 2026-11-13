@@ -19,6 +19,7 @@ description: >
 **Output**: ADO Test Plan populated with Test Suites and Test Cases (with steps) + `qa/08-azure-integration/module-registry.json` updated
 **Use any time** after Stage 3 (Plan de Pruebas) is ready - Stage 4 and 5 are not required
 
+> **Direction: local to ADO only.** This skill pushes the local Plan de Pruebas into ADO (suites, test cases with steps, IDs injected back into local files) and wires the reporter. It does not pull execution results out of an existing ADO Test Plan. For a sprint's execution report built from ADO results, use the `qa-reporte-ejecucion` agent, which exports them with the `ado-qa` skill.
 > **Credential rule**: NEVER hardcode PAT, username, or organization URL in any file. Always read from env vars or `<PLACEHOLDER>` in documentation. Where each credential lives, how it rotates, and the read/write split (`ADO_PROJECT_READ`/`ADO_PROJECT_WRITE`, a read-only PAT for tooling that never writes): `references/credential-policy.md`.
 > **Steps rule**: ADO Test Cases must have steps. Do not sync TCs from a Plan de Pruebas with empty or summary-only steps - run Stage 4 first to expand them.
 > **Work item read rule (BLOCKING)**: Never conclude anything about an ADO work item from its title or State. Read it in full first - see "Reading ADO work items" below.
@@ -129,12 +130,28 @@ Update `qa/08-azure-integration/module-registry.json` with:
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | 401 Unauthorized | Expired or wrong PAT | Regenerate PAT; check `$env:ADO_PAT` |
+| 403 on every call; `X-TFS-ServiceError` says `VS403463` | Entra Conditional Access policy rejected the network or device, not the PAT | See "Conditional Access blocks (VS403463)" above; regenerating the PAT does not help |
 | Plan not found | Wrong planId in config | Verify planId or set to null to create new |
 | TCs not appearing | Wrong suite parent ID | Check `module-registry.json` suite mapping |
 | Reporter not posting | Missing env var at runtime | Pass vars via CI pipeline or `.env` |
 | Duplicate TCs | Re-ran create script | Use `inject-ado-ids.ps1` idempotently |
 | "ADO session not found" or "incomplete" from `create-testplan-from-mapping.ps1` | No usable `$AdoSession` | Dot-source `load.ps1` with the `ADO_*` env vars set, or pass `-Session $AdoSession` |
 | Existing suites missing from a lookup in a large plan | Flat suite list pages at 200 | Read `suites/{parentSuiteId}?expand=children` (see `references/scripts-and-config.md`) |
+
+---
+
+## Conditional Access blocks (VS403463)
+
+**Symptom.** Every ADO call returns 403, including calls any valid token can make, such as listing the organization's projects. The response header `X-TFS-ServiceError` contains `VS403463` and says a conditional access policy has failed. Some request wrappers rewrite this 403 as "the PAT does not have sufficient permissions", which points to the wrong cause.
+
+**What it means.** The token is not the problem: it is not an expired, wrong or under-scoped PAT. The organization is backed by Microsoft Entra ID, and an Entra Conditional Access policy rejected the context of the request (typically the network location or IP range, or the device). ADO can enforce those policies for PAT and other token-based calls too, so a script that worked from one network fails from another with the same PAT. Regenerating the PAT or widening its scopes does not help.
+
+**What to do.**
+
+1. Read the header before concluding anything about credentials. In Windows PowerShell 5.1, inside the `catch` of `Invoke-RestMethod`: `$_.Exception.Response.Headers['X-TFS-ServiceError']`. In PowerShell 7 the response is an `HttpResponseMessage`: read it with `$_.Exception.Response.Headers.GetValues('X-TFS-ServiceError')`. Report the header text, never the token.
+2. Run the ADO step from a network and device the policy allows (for example the corporate network or VPN, on a managed machine). In CI, use the pipeline's own token (`System.AccessToken`) instead of a personal PAT; whether the agent's network is allowed is decided by the same policy, so confirm it with the administrator.
+3. If no allowed context is available, stop the ADO step, mark it as blocked by Conditional Access in the session summary, and leave the local artifacts ready (for example the dry-run output of a sync script) so it can run later. Do not retry in a loop: every call fails the same way.
+4. Ask the organization's Entra or ADO administrator when the block is unexpected. Never work around the policy: no proxies or tunnels to change the apparent location, no tokens that belong to someone else.
 
 ---
 

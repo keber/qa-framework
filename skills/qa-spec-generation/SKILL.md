@@ -41,7 +41,8 @@ Generate or update each file following the formats in `../qa-module-analysis/ref
 
 ### `01-business-rules.md`
 - Format: `RN-{MODULE}-{NNN}` with type, trigger, behavior, error message (exact UI text)
-- **Rule sources**: every required field -> 1 RN; every unique constraint -> 1 RN; every state transition -> 1 RN; every role restriction -> 1 RN
+- **Rule sources**: every required field -> 1 RN; every unique constraint -> 1 RN; every state transition -> 1 RN; every role restriction -> 1 RN; every cascading or cross-module field -> 1 RN of Type "Dependency" (depends on, scoping field, upstream validity condition, real endpoint observed, values tried)
+- Before writing that a dynamic field has no options, find out what feeds it with `../qa-module-analysis/references/exploration-checklist.md` section 2.7
 - Minimum 5 rules per submodule; typical 8-15
 
 ### `02-workflows.md`
@@ -54,6 +55,7 @@ Generate or update each file following the formats in `../qa-module-analysis/ref
 
 ### `04-test-data.md`
 - Prerequisites table (data that must exist before tests run)
+- Upstream dependencies table, required when `01-business-rules.md` has a Type "Dependency" RN: the same upstream entity and validity condition as the RN, not a paraphrase
 - Data shapes per key scenario (reference env vars for credentials)
 - EXEC_IDX pattern for unique dynamic values
 - Data isolation rules (each test operates on its own data)
@@ -83,6 +85,7 @@ Full format templates: `../qa-module-analysis/references/spec-file-formats.md`
 | "Verify system works correctly" as expected result | Write observable, measurable expected result |
 | 100+ TCs by copy-pasting near-identical variations | Merge cases; use parameterization |
 | TC written without observing the actual behavior | Mark as `PENDING-CODE` until verified |
+| Declaring a dynamic field empty or unused after trying one driving value | Try 2-3 values with the network capture open (exploration checklist section 2.7); if another field or module scopes it, write a Type "Dependency" RN instead |
 
 ---
 
