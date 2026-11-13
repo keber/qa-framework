@@ -91,6 +91,7 @@ ever overwritten; a run with nothing to back up creates no folder.
 If upgrading from a version that wrote to `.github/copilot-instructions.md`, `upgrade`
 automatically removes the QA section from that file (or deletes it if it contained only
 framework content), and creates `.github/instructions/qa-framework.instructions.md` instead.
+The original file is backed up first, like every file `upgrade` removes or moves.
 
 ---
 

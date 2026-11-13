@@ -16,6 +16,9 @@
  *     carries no intact generated marker is the project's edit: it is copied first to
  *     .claude/qa-framework-backup/upgrade-to-<version>[-runN]/<path without leading dot>,
  *     then overwritten, and TRIAGE.md in that folder lists the lines the project added.
+ *     Every file or folder this command removes or moves (the copilot-instructions.md
+ *     migration and the layout migrations below) is copied to the same folder first,
+ *     and is left as it is when that copy fails.
  *
  *   Every move below needs positive evidence that the source is a framework leftover.
  *   Without it the path is left where it is and reported as a warning: an upgrade that
@@ -388,12 +391,16 @@ if (fs.existsSync(oldCopilotPath)) {
     const before = oldContent.slice(0, qaIdx).replace(/\s*\n---\s*$/, '').trim();
 
     if (before.length === 0) {
-      // Case B: file contained only QA Framework content -> delete it
-      if (!dryRun) fs.unlinkSync(oldCopilotPath);
-      updated.push(oldCopilotPath);
-      console.log(`  [deleted]  .github/copilot-instructions.md (contained only QA Framework rules - now in .github/instructions/qa-framework.instructions.md)`);
-    } else {
-      // Case A: file had custom content too -> write back only the custom part
+      // Case B: file contained only QA Framework content -> delete it, after a backup:
+      // that content may have been edited, and no shipped version describes it.
+      if (backupBeforeRemoval(oldCopilotPath, 'QA-only file removed; no shipped baseline', 'init rendered it inline from the project config before 1.7.0')) {
+        if (!dryRun) fs.unlinkSync(oldCopilotPath);
+        updated.push(oldCopilotPath);
+        console.log(`  [deleted]  .github/copilot-instructions.md (contained only QA Framework rules - now in .github/instructions/qa-framework.instructions.md)`);
+      }
+    } else if (backupBeforeRemoval(oldCopilotPath, 'QA section removed, custom part kept; no shipped baseline', 'init rendered it inline from the project config before 1.7.0')) {
+      // Case A: file had custom content too -> write back only the custom part (the
+      // whole original, QA section included, is in the backup first)
       if (!dryRun) fs.writeFileSync(oldCopilotPath, before + '\n', 'utf8');
       updated.push(oldCopilotPath);
       console.log(`  [cleaned]  .github/copilot-instructions.md - removed QA Framework section, kept custom instructions`);
@@ -451,6 +458,7 @@ for (const file of scaffoldFiles) {
       warnNotMigrated(`qa/07-automation/${file}`, 'no v1.5.x qa/07-automation/playwright.config.ts proves it is legacy');
       continue;
     }
+    if (!backupBeforeMove(oldPath, newPath)) continue;
     if (!dryRun) {
       fs.mkdirSync(e2eDir, { recursive: true });
       fs.renameSync(oldPath, newPath);
@@ -467,6 +475,7 @@ for (const file of fixtureFiles) {
   const oldPath = path.join(automationDir, 'fixtures', file);
   const newPath = path.join(scaffoldFixturesDir, file);
   if (isV15Layout && fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
+    if (!backupBeforeMove(oldPath, newPath)) continue;
     if (!dryRun) {
       fs.mkdirSync(scaffoldFixturesDir, { recursive: true });
       fs.renameSync(oldPath, newPath);
@@ -481,7 +490,8 @@ const oldFixturesDir = path.join(automationDir, 'fixtures');
 const newFixturesDir = path.join(e2eDir, 'fixtures');
 if (fs.existsSync(oldFixturesDir) && !isV15Layout) {
   warnNotMigrated('qa/07-automation/fixtures/', 'no v1.5.x qa/07-automation/playwright.config.ts proves it is legacy');
-} else if (fs.existsSync(oldFixturesDir) && !fs.existsSync(newFixturesDir)) {
+} else if (fs.existsSync(oldFixturesDir) && !fs.existsSync(newFixturesDir) &&
+           backupBeforeMove(oldFixturesDir, newFixturesDir)) {
   if (!dryRun) {
     fs.mkdirSync(e2eDir, { recursive: true });
     fs.renameSync(oldFixturesDir, newFixturesDir);
@@ -551,6 +561,7 @@ if (fs.existsSync(e2eDir)) {
     const oldModDir = path.join(e2eDir, entry.name);
     const newModDir = path.join(testsDir, entry.name);
     if (!fs.existsSync(newModDir)) {
+      if (!backupBeforeMove(oldModDir, newModDir)) continue;
       if (!dryRun) {
         fs.mkdirSync(testsDir, { recursive: true });
         fs.renameSync(oldModDir, newModDir);
@@ -680,6 +691,7 @@ if (fs.existsSync(testPlansDir)) {
         warnNotMigrated(`qa/02-test-plans/${sub}/`, 'it holds no pre-v1.7.0 test plan');
         continue;
       }
+      if (!backupBeforeMove(oldDir, newDir)) continue;
       if (!dryRun) {
         fs.mkdirSync(sprintsDir, { recursive: true });
         fs.renameSync(oldDir, newDir);
@@ -699,6 +711,7 @@ if (fs.existsSync(testPlansDir)) {
       if (!isLegacyPlan(oldFile)) continue;
       const newFile = path.join(legacyDir, entry.name);
       if (!fs.existsSync(newFile)) {
+        if (!backupBeforeMove(oldFile, newFile)) continue;
         if (!dryRun) {
           fs.mkdirSync(legacyDir, { recursive: true });
           fs.renameSync(oldFile, newFile);
@@ -1232,15 +1245,53 @@ function claimBackupRunDir() {
 function backupFile(dest, key) {
   try {
     const target = path.join(claimBackupRunDir(), ...ownership.backupRelPath(key).split('/'));
-    if (!dryRun) {
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.copyFileSync(dest, target, fs.constants.COPYFILE_EXCL);
-    }
+    if (!dryRun) copyExclusive(dest, target);
     return projectKey(target);
   } catch (err) {
     errors.push(`${key} could not be backed up (${err.message}), so it was left untouched.`);
     return null;
   }
+}
+
+// Copies a file, or a folder tree, never replacing anything already at `target`.
+function copyExclusive(src, target) {
+  const stat = fs.lstatSync(src);
+  if (stat.isDirectory()) {
+    fs.mkdirSync(target, { recursive: true });
+    for (const name of fs.readdirSync(src)) copyExclusive(path.join(src, name), path.join(target, name));
+  } else if (stat.isSymbolicLink()) {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.symlinkSync(fs.readlinkSync(src), target);
+  } else {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(src, target, fs.constants.COPYFILE_EXCL);
+  }
+}
+
+// Backs up a project file that upgrade is about to remove or rewrite and that no shipped
+// version describes. Returns false (an error is recorded) when the backup failed: the
+// caller must then leave the file as it is.
+function backupBeforeRemoval(file, reason, note) {
+  const key = projectKey(file);
+  const backup = backupFile(file, key);
+  if (!backup) return false;
+  backups.push({
+    key,
+    backup,
+    reason,
+    note,
+    result: ownership.triageWithoutBaseline(fs.readFileSync(file, 'utf8')),
+  });
+  return true;
+}
+
+// Backs up a project file or folder that upgrade is about to move. Same contract.
+function backupBeforeMove(from, to) {
+  const key = projectKey(from);
+  const backup = backupFile(from, key);
+  if (!backup) return false;
+  backups.push({ key, backup, reason: `moved to ${projectKey(to)}`, movedTo: projectKey(to) });
+  return true;
 }
 
 // Writes the triage report next to the backups and adds one warning listing them.
@@ -1254,9 +1305,8 @@ function reportBackups() {
   }
   const native = (rel) => rel.split('/').join(path.sep);
   warnings.push(
-    `${backups.length} framework file(s) had been edited in this project. ` +
-      `${dryRun ? 'Each would be saved to' : 'Each was saved to'}\n` +
-      `    the path shown, then overwritten with this release's version:\n` +
+    `${backups.length} project file(s) or folder(s) ${dryRun ? 'would be' : 'were'} backed up before upgrade ` +
+      `overwrote,\n    removed or moved them. Each ${dryRun ? 'would be' : 'was'} saved to the path shown:\n` +
       backups.map((b) => `      ${native(b.key)} (${b.reason})\n        -> ${native(b.backup)}`).join('\n') +
       `\n    ${dryRun ? 'A triage report would list' : 'Review the lines each one added, and where they belong, in'}:\n` +
       `      ${native(reportRel)}`

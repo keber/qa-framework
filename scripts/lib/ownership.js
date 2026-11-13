@@ -358,6 +358,22 @@ function triage(manifest, key, existing, current) {
   };
 }
 
+/**
+ * triage() for a file with no shipped baseline at all (for example the pre-1.7.0
+ * .github/copilot-instructions.md, which init rendered inline from the config): every
+ * line is listed, because none can be attributed to the framework.
+ */
+function triageWithoutBaseline(existing) {
+  const display = splitLines(normalizeNewlines(existing));
+  return {
+    approximate: true,
+    noBaseline: true,
+    tags: [],
+    added: display.map((text, i) => ({ number: i + 1, text })),
+    missing: 0,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Backups and the report
 // ---------------------------------------------------------------------------
@@ -410,9 +426,9 @@ function renderTriageReport({ toVersion, runDir, entries }) {
   const out = [
     '# qa-framework upgrade - triage report',
     '',
-    `Upgrade to ${toVersion}. Each file below had been edited in this project, so upgrade`,
-    'saved it in this folder (same relative path, without the leading dot of `.claude` or',
-    '`.github`) and then overwrote it with the framework version.',
+    `Upgrade to ${toVersion}. Upgrade saved each file or folder below in this folder (same`,
+    'relative path, without the leading dot of `.claude` or `.github`) before it overwrote,',
+    'removed or moved it.',
     '',
     `Folder: \`${runDir}/\``,
     '',
@@ -422,9 +438,23 @@ function renderTriageReport({ toVersion, runDir, entries }) {
     'upstream). Characters outside ASCII and Latin letters are written as <U+XXXX>; the',
     'backup keeps the exact bytes.',
   ];
-  for (const { key, backup, result, note } of entries) {
+  for (const { key, backup, result, note, movedTo } of entries) {
+    if (movedTo) {
+      out.push(
+        '',
+        `## ${key}`,
+        '',
+        `- Backup: \`${backup}\``,
+        `- Moved to: \`${movedTo}\``,
+        '- The move did not change the content: nothing to triage.',
+      );
+      continue;
+    }
     let compared;
-    if (!result.approximate) {
+    if (result.noBaseline) {
+      compared = `no shipped baseline (${note || 'the framework has no record of the version this file came from'}), ` +
+        'so the whole file is listed';
+    } else if (!result.approximate) {
       const [first, ...rest] = result.tags;
       compared = `${first} (closest shipped version by line overlap` +
         (rest.length ? `; the same content shipped in ${rest.join(', ')})` : ')');
@@ -471,6 +501,7 @@ module.exports = {
   classify,
   addedIndexes,
   triage,
+  triageWithoutBaseline,
   backupRelPath,
   escapeForReport,
   renderTriageReport,

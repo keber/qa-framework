@@ -28,6 +28,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
     shipped version it came from (the closest by line overlap, named in the report), to
     decide line by line: already in the framework, move to a project-owned file, or
     propose upstream. Characters outside ASCII and Latin letters appear as `<U+XXXX>`.
+  - Every path that removes or moves a project file goes through the same backup first,
+    and the change happens only once the copy (`COPYFILE_EXCL`) has succeeded; if it
+    fails, the file is left untouched and `upgrade` exits with an error. This covers
+    removing a QA-only `.github/copilot-instructions.md` and stripping the QA section
+    from one with custom content (both listed whole in `TRIAGE.md`, since that file has
+    no shipped baseline), and the v1.5.x and v1.6.x layout migrations that move
+    `qa/07-automation/` files and folders and pre-v1.7.0 test plans (backed up as they
+    were, and listed in `TRIAGE.md` with their new location).
   - A marker-less agent is now backed up to the same run folder
     (`claude/agents/<name>.md`) instead of `.claude/qa-framework-backup/agents/`; backups
     already there stay where they are.

@@ -372,3 +372,75 @@ test('triage: the report is written only when something was backed up', () => wi
   assert.equal(upgrade(root).status, 0);
   assert.equal(fs.existsSync(path.join(runDir(root), 'TRIAGE.md')), false);
 }));
+
+// --- deletes and moves go through the same backup ----------------------------
+// Every path in upgrade that deletes, strips or moves a project file first copies it
+// into this run's backup folder (COPYFILE_EXCL) and only then changes it.
+
+const COPILOT = '.github/copilot-instructions.md';
+
+test('delete: an edited QA-only copilot-instructions.md is backed up byte for byte and triaged', () => withProject((root) => {
+  const edited = '# QA Framework Instructions\r\n\r\nOld generated rule.\r\nOur own rule: run smoke before every merge.\r\n';
+  put(root, COPILOT, edited);
+  const result = upgrade(root);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.equal(fs.existsSync(abs(root, COPILOT)), false, 'the QA-only file is still removed');
+
+  const backup = path.join(runDir(root), 'github', 'copilot-instructions.md');
+  assert.ok(fs.readFileSync(backup).equals(Buffer.from(edited)), 'backup must be byte-identical');
+  assert.match(result.stdout, /qa-framework-backup[\\/]upgrade-to-[^\\/\s]+[\\/]github[\\/]copilot-instructions\.md/);
+
+  const report = read(path.join(runDir(root), 'TRIAGE.md'));
+  const { section, lines } = reportedLines(report, COPILOT);
+  assert.match(section, /no shipped baseline/);
+  assert.deepEqual(lines.filter(Boolean),
+    ['# QA Framework Instructions', 'Old generated rule.', 'Our own rule: run smoke before every merge.']);
+
+  const before = snapshot(root);
+  const second = upgrade(root);
+  assert.equal(second.status, 0, second.stderr);
+  assert.deepEqual(snapshot(root), before, 'second run changes nothing');
+  assert.deepEqual(fs.readdirSync(backupRoot(root)), [RUN_DIR], 'second run makes no new backup');
+}));
+
+test('strip: copilot-instructions.md with custom content keeps it, and the original is backed up', () => withProject((root) => {
+  const original = '# Team rules\n\nUse Spanish.\n\n---\n# QA Framework Instructions\n\nEdited QA rule.\n';
+  put(root, COPILOT, original);
+  assert.equal(upgrade(root).status, 0);
+  assert.equal(read(abs(root, COPILOT)), '# Team rules\n\nUse Spanish.\n');
+  assert.equal(read(path.join(runDir(root), 'github', 'copilot-instructions.md')), original);
+  const { lines } = reportedLines(read(path.join(runDir(root), 'TRIAGE.md')), COPILOT);
+  assert.ok(lines.includes('Edited QA rule.'));
+}));
+
+test('move: a pre-v1.7.0 test plan is backed up before it is moved', () => withProject((root) => {
+  const plan = 'qa/02-test-plans/login-test-plan.md';
+  put(root, plan, '# Login plan\n\nOur steps.\n');
+  const result = upgrade(root);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(read(abs(root, 'qa/02-test-plans/sprints/legacy/login-test-plan.md')), '# Login plan\n\nOur steps.\n');
+  assert.equal(read(path.join(runDir(root), 'qa', '02-test-plans', 'login-test-plan.md')), '# Login plan\n\nOur steps.\n');
+  const report = read(path.join(runDir(root), 'TRIAGE.md'));
+  assert.match(report, /## qa\/02-test-plans\/login-test-plan\.md\n[\s\S]*Moved to: `qa\/02-test-plans\/sprints\/legacy\/login-test-plan\.md`/);
+}));
+
+test('move: a legacy plan folder is backed up as a tree before it is moved', () => withProject((root) => {
+  put(root, 'qa/02-test-plans/manual/users-test-plan.md', 'plan\n');
+  put(root, 'qa/02-test-plans/manual/notes/extra.md', 'notes\n');
+  assert.equal(upgrade(root).status, 0);
+  assert.equal(read(abs(root, 'qa/02-test-plans/sprints/legacy-manual/notes/extra.md')), 'notes\n');
+  assert.equal(read(path.join(runDir(root), 'qa', '02-test-plans', 'manual', 'users-test-plan.md')), 'plan\n');
+  assert.equal(read(path.join(runDir(root), 'qa', '02-test-plans', 'manual', 'notes', 'extra.md')), 'notes\n');
+}));
+
+test('delete/move: when the backup cannot be written, the file is left untouched and an error is reported', () => withProject((root) => {
+  const edited = '# QA Framework Instructions\n\nOur rule.\n';
+  put(root, COPILOT, edited);
+  // A plain file where the backup root folder must go makes every backup fail.
+  fs.mkdirSync(path.dirname(backupRoot(root)), { recursive: true });
+  fs.writeFileSync(backupRoot(root), 'not a folder');
+  const result = upgrade(root);
+  assert.equal(result.status, 1, result.stdout);
+  assert.equal(read(abs(root, COPILOT)), edited);
+  assert.match(result.stderr, /copilot-instructions\.md could not be backed up/);
+}));
