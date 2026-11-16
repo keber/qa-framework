@@ -68,6 +68,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
     shipped version it came from (the closest by line overlap, named in the report), to
     decide line by line: already in the framework, move to a project-owned file, or
     propose upstream. Characters outside ASCII and Latin letters appear as `<U+XXXX>`.
+    Every block of quoted project lines is a fenced code block, so the project's own
+    headings (`## ...`, `# ...`) never compete with the report's per-file headings; the
+    fence is one backtick longer than the longest backtick run in the block (minimum 3),
+    so quoted ```` ``` ```` fences cannot close it.
   - Every path that removes or moves a project file goes through the same backup first,
     and the change happens only once the copy (`COPYFILE_EXCL`) has succeeded; if it
     fails, the file is left untouched and `upgrade` exits with an error. This covers
@@ -396,6 +400,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **CLI suggests the command an unknown token meant.** `qa-framework --upgrade`,
+  `qa-framework upgade` or `qa-framework -validate` used to print only "Unknown command"
+  and the help. When the token, without its leading dashes, is a command or within 2
+  edits of one, the CLI now prints `Did you mean "upgrade"?` before the help. The exit
+  code stays 1 and nothing runs. A token that is not close to any command (`init`,
+  `upgrade`, `generate`, `validate`, `clock`) gets no suggestion.
 - **`build-ownership-manifest.js --check` on a Windows checkout.** With
   `core.autocrlf=true` the manifest on disk has CRLF endings, and `--check` reported it
   stale although the content was identical. The comparison now ignores line endings; a
