@@ -446,3 +446,76 @@ test('delete/move: when the backup cannot be written, the file is left untouched
   assert.equal(read(abs(root, COPILOT)), edited);
   assert.match(result.stderr, /copilot-instructions\.md could not be backed up/);
 }));
+
+// --- triage report: quoted project lines never render as Markdown -------------
+
+/**
+ * Lines of a Markdown document that sit outside fenced code blocks, per CommonMark:
+ * an opening fence is 3+ backticks or tildes (indent up to 3 spaces); it closes on a
+ * line of the same character, at least as long, with nothing after it but spaces.
+ */
+function linesOutsideFences(markdown) {
+  const outside = [];
+  let open = null;
+  for (const line of markdown.split('\n')) {
+    if (open) {
+      const close = line.match(/^ {0,3}(`{3,}|~{3,})\s*$/);
+      if (close && close[1][0] === open[0] && close[1].length >= open.length) open = null;
+      continue;
+    }
+    const start = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (start) { open = start[1]; continue; }
+    outside.push(line);
+  }
+  assert.equal(open, null, `unclosed fence ${open} in report:\n${markdown}`);
+  return outside;
+}
+
+function renderWithAdded(texts) {
+  return ownership.renderTriageReport({
+    toVersion: '9.9.9',
+    runDir: '.claude/qa-framework-backup/upgrade-to-9.9.9',
+    entries: [{
+      key: '.claude/rules/qa-framework.md',
+      backup: '.claude/qa-framework-backup/upgrade-to-9.9.9/claude/rules/qa-framework.md',
+      result: {
+        approximate: false,
+        tags: ['v1.12.0'],
+        added: texts.map((text, i) => ({ number: i + 10, text })),
+        missing: 0,
+      },
+    }],
+  });
+}
+
+test('triage report: project headings stay inside a fence, not at the report heading level', () => {
+  const quoted = ['## Formatting Rules for this project', '# Session Summary - sprint 4', 'plain text'];
+  const report = renderWithAdded(quoted);
+  const outside = linesOutsideFences(report);
+  for (const line of quoted) {
+    assert.ok(report.split('\n').includes(line), `quoted line kept verbatim: ${line}`);
+    assert.equal(outside.includes(line), false, `quoted line leaked outside a fence: ${line}`);
+  }
+  // Outside the fences: only the report title and one heading per file.
+  assert.deepEqual(outside.filter((l) => /^#{1,6} /.test(l)),
+    ['# qa-framework upgrade - triage report', '## .claude/rules/qa-framework.md']);
+});
+
+test('triage report: quoted content with ``` and ```` gets a longer fence', () => {
+  const texts = ['```js', 'const a = 1;', '```', '````', '## Inside a nested fence', '````'];
+  const report = renderWithAdded(texts);
+  const lines = report.split('\n');
+  const open = lines.findIndex((l) => /^`{3,}text$/.test(l));
+  assert.notEqual(open, -1, report);
+  const fence = lines[open].slice(0, -'text'.length);
+  assert.equal(fence, '`````', 'fence is one longer than the longest backtick run (4)');
+  assert.deepEqual(lines.slice(open + 1, open + 1 + texts.length), texts);
+  assert.equal(lines[open + 1 + texts.length], fence, 'closing fence matches the opening fence');
+  const outside = linesOutsideFences(report);
+  for (const line of texts) assert.equal(outside.includes(line), false, `leaked: ${line}`);
+});
+
+test('triage report: a hunk without backticks uses the minimum 3-backtick fence', () => {
+  const report = renderWithAdded(['# Title']);
+  assert.match(report, /\nProject line 10:\n\n```text\n# Title\n```\n/);
+});
