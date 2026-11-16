@@ -52,6 +52,36 @@ test('cli: unknown command exits 1 and prints error plus help', () => {
   assert.match(result.stdout, /Usage:/);
 });
 
+for (const [token, suggestion] of [['--upgrade', 'upgrade'], ['upgade', 'upgrade'], ['-validate', 'validate']]) {
+  test(`cli: unknown "${token}" suggests "${suggestion}" before the help and exits 1`, () => {
+    const result = runCli([token]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, new RegExp(`Unknown command: "${token}"`));
+    assert.match(result.stderr, new RegExp(`Did you mean "${suggestion}"\\?`));
+    assert.match(result.stdout, /Usage:/);
+    // Nothing else is printed on stderr after the suggestion, and help follows on stdout.
+    assert.ok(result.stderr.trimEnd().endsWith(`Did you mean "${suggestion}"?`), result.stderr);
+  });
+}
+
+test('cli: an unrelated unknown token gets no suggestion', () => {
+  const result = runCli(['not-a-real-command']);
+  assert.equal(result.status, 1);
+  assert.doesNotMatch(result.stderr + result.stdout, /Did you mean/);
+});
+
+test('cli: edit distance is the Levenshtein distance', () => {
+  const { levenshtein, suggestCommand } = require('../scripts/cli.js');
+  assert.equal(levenshtein('', ''), 0);
+  assert.equal(levenshtein('upgrade', 'upgrade'), 0);
+  assert.equal(levenshtein('upgade', 'upgrade'), 1);
+  assert.equal(levenshtein('kitten', 'sitting'), 3);
+  assert.equal(suggestCommand('--upgrade'), 'upgrade');
+  assert.equal(suggestCommand('valdiate'), 'validate');
+  assert.equal(suggestCommand('xyz'), null);
+  assert.equal(suggestCommand('---'), null);
+});
+
 test('cli: known command dispatches to the matching script', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-framework-cli-'));
   try {

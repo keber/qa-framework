@@ -19,8 +19,6 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 
-const [, , command, ...args] = process.argv;
-
 const commands = {
   init:     'init.js',
   upgrade:  'upgrade.js',
@@ -29,30 +27,75 @@ const commands = {
   clock:    'clock.js',
 };
 
-if (!command || command === '--help' || command === '-h') {
-  printHelp();
-  process.exit(0);
+// Largest edit distance at which an unknown token still gets a "Did you mean" hint.
+const MAX_SUGGESTION_DISTANCE = 2;
+
+/** Levenshtein edit distance (insertions, deletions, substitutions) between a and b. */
+function levenshtein(a, b) {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = cur;
+  }
+  return prev[b.length];
 }
 
-if (command === '--version' || command === '-v') {
-  console.log(require(path.join(__dirname, '..', 'package.json')).version);
-  process.exit(0);
+/**
+ * The known command an unknown token most likely meant, or null. Leading dashes are
+ * ignored (`--upgrade` -> `upgrade`); otherwise the closest command within
+ * MAX_SUGGESTION_DISTANCE edits wins, provided the distance is smaller than the
+ * token itself (so a one- or two-letter token does not match everything).
+ */
+function suggestCommand(token) {
+  const stripped = String(token).replace(/^-+/, '').toLowerCase();
+  if (!stripped) return null;
+  let best = null;
+  let bestDistance = Infinity;
+  for (const name of Object.keys(commands)) {
+    const d = levenshtein(stripped, name);
+    if (d < bestDistance) { best = name; bestDistance = d; }
+  }
+  return bestDistance <= MAX_SUGGESTION_DISTANCE && bestDistance < stripped.length ? best : null;
 }
 
-if (!commands[command]) {
-  console.error(`[qa-framework] Unknown command: "${command}"`);
-  printHelp();
-  process.exit(1);
+function main() {
+  const [, , command, ...args] = process.argv;
+
+  if (!command || command === '--help' || command === '-h') {
+    printHelp();
+    process.exit(0);
+  }
+
+  if (command === '--version' || command === '-v') {
+    console.log(require(path.join(__dirname, '..', 'package.json')).version);
+    process.exit(0);
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(commands, command)) {
+    console.error(`[qa-framework] Unknown command: "${command}"`);
+    const suggestion = suggestCommand(command);
+    if (suggestion) console.error(`Did you mean "${suggestion}"?`);
+    printHelp();
+    process.exit(1);
+  }
+
+  const scriptPath = path.join(__dirname, commands[command]);
+  const result = spawnSync(
+    process.execPath,
+    [scriptPath, ...args],
+    { stdio: 'inherit', cwd: process.cwd() }
+  );
+
+  process.exit(result.status ?? 0);
 }
 
-const scriptPath = path.join(__dirname, commands[command]);
-const result = spawnSync(
-  process.execPath,
-  [scriptPath, ...args],
-  { stdio: 'inherit', cwd: process.cwd() }
-);
+if (require.main === module) main();
 
-process.exit(result.status ?? 0);
+module.exports = { levenshtein, suggestCommand };
 
 function printHelp() {
   console.log(`
