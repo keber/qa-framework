@@ -1,22 +1,22 @@
-# Release report: 1.14.0 autonomous release plan (waves 0-4)
+# Release report: 1.14.0 autonomous release plan (waves 0-7)
 
 **For**: Keber (release owner); sections 3 and 5 also concern marcela.berriosc
-**Prepared by**: the release coordinator, 2026-11-12
-**Covers**: `@keber/qa-framework` 1.13.2 (npm `latest`) to 1.14.0-rc.5 (npm `next`)
-**Sources**: `docs/autonomous-release-plan.md` (tracking table, decision log), `CHANGELOG.md` `[Unreleased]`, git history `v1.13.2..v1.14.0-rc.5`, the npm registry, and the coordinator's verification runs. Figures were re-checked on 2026-11-12; where two sources disagreed, the registry or the test runner wins.
+**Prepared by**: the release coordinator, 2026-11-12; updated 2026-11-16 to rc.9
+**Covers**: `@keber/qa-framework` 1.13.2 (npm `latest`) to 1.14.0-rc.9 (npm `next`)
+**Sources**: `docs/autonomous-release-plan.md` (tracking table, wave 5 section, decision log), `CHANGELOG.md` `[Unreleased]`, git history `v1.13.2..v1.14.0-rc.9`, the npm registry, and the coordinator's verification runs. Figures were re-checked on 2026-11-16; where two sources disagreed, the registry or the test runner wins.
 
 ---
 
 ## The answer
 
-**1.14.0-rc.5 delivers the whole autonomous plan: 20 of the 34 survey items and all three of marcela.berriosc's candidates. Every package was independently verified before merge, and no defect found during the plan reached npm. It can become `latest` once two human checks are done: marcela.berriosc's review and a real Azure DevOps check of wave 4.**
+**1.14.0-rc.9 delivers the whole autonomous plan plus three waves driven by upgrading copies of real consumer projects: 20 of the 34 survey items, all three of marcela.berriosc's candidates, and an `upgrade` that keeps every project edit to a framework file recoverable. Every package was independently verified before merge, and no defect caught by those checks reached npm. It can become `latest` once two human checks are done: marcela.berriosc's review and a real Azure DevOps check of wave 4.**
 
 Four findings support this:
 
-1. **The scope is delivered.** 21 work packages across five waves: release plumbing, bug fixes, API testing with write governance, performance and automation patterns, and ADO scripts.
-2. **The quality evidence is strong.** Tests went from 202 to 562. Each package passed the coordinator's own checks before merge. Nine defects were caught, all before the affected rc was tagged.
-3. **Existing projects are protected on `upgrade`.** It refreshes only untouched framework files, warns instead of overwriting, and never edits `package.json`. Any behavior change for existing suites is held back and listed.
-4. **Promotion needs two human actions and one choice.** marcela.berriosc reviews 28 decisions, Keber checks wave 4 against real ADO, and Keber picks which tag to promote.
+1. **The scope is delivered.** 26 work packages across eight waves, plus the rc.6 fix set: release plumbing, bug fixes, API testing with write governance, performance and automation patterns, ADO scripts, then upgrade ownership and content harvested from four real projects.
+2. **The quality evidence is strong.** Tests went from 202 to 659. Each package passed the coordinator's own checks before merge. Twelve defects were caught, all before the affected rc was tagged; real-project upgrade tests then found five defects and one ownership gap in rcs under `next`, all fixed by rc.7.
+3. **Existing projects are protected on `upgrade`.** An edited framework file is backed up, with a triage report, before it is overwritten; nothing is deleted or moved without a backup; `package.json` is never edited; behavior changes for existing suites are held back and listed. Copies of four real projects upgraded with no deletions and no lost edit.
+4. **Promotion needs two human actions and one choice.** marcela.berriosc reviews 28 decisions, Keber checks wave 4 against real ADO, and Keber picks which tag to promote (rc.9 is the latest candidate).
 
 Below, each finding is argued with its evidence. Details and reference tables are in the appendix.
 
@@ -40,6 +40,10 @@ Below, each finding is argued with its evidence. Details and reference tables ar
 | 2 | API testing and write governance | WP2.1-WP2.4 | rc.3 |
 | 3 | Performance and automation patterns | WP3.1-WP3.6 (WP3.2 is research only) | rc.4 |
 | 4 | Azure DevOps scripts and credential policy | WP4.1-WP4.3 | rc.5 |
+| - | Fixes from Keber's upgrade of a real project: `mcpNamespace`, `--version`, `[updated]`, agent ownership, ASCII output | rc.6 fix set | rc.6 |
+| 5 | Upgrade ownership and content harvested from four projects: rules 13-14, dependency discovery, backups with triage | WP5.1-WP5.3 | rc.7 |
+| 6 | Wave 5 follow-ups: manifest check on CRLF, test-data template, sprint naming | WP6 | rc.8 |
+| 7 | CLI command suggestion; `TRIAGE.md` fencing pinned by tests | WP7 | rc.9 |
 
 **What a consumer gets that 1.13.2 did not have:**
 
@@ -61,6 +65,13 @@ Below, each finding is argued with its evidence. Details and reference tables ar
   - an idempotent `create-issue.ps1`;
   - fixes to the existing scripts' sessions and encoding;
   - a three-tier credential policy that splits read and write variables.
+- **Agent rules:** 15 rules numbered 0-14. Rule 13 (BLOCKING) requires reading an ADO work item in full; rule 14 authorizes PowerShell and requires copying that authorization verbatim into sub-agent prompts; rule 8 renders the project's defect prefix from `conventions.defectIdPattern`.
+- **Analysis guidance harvested from a real project:**
+  - cross-module dependency discovery (section 2.7) and a `Dependency` business rule type;
+  - an upstream dependencies table, also in the `04-test-data.md` template;
+  - the anti-pattern of declaring a field empty after one value;
+  - an ADO Conditional Access (VS403463) note.
+- **CLI:** `--version`, ASCII-only output, and a suggestion for a mistyped command (`--upgrade` -> `Did you mean "upgrade"?`, exit code still 1). Sprint folders are `Sprint-{N}`, unpadded, everywhere.
 
 **Survey coverage** (34 items):
 
@@ -71,7 +82,7 @@ Below, each finding is argued with its evidence. Details and reference tables ar
 | Parked (needs a human decision) | 8 | B1, B2, C4, C6, C7, C9, C10, C14 |
 | Not addressed | 5 | B7, C3, C15, D2, D3: not in the plan's scope |
 
-The package grew from 97 to 137 files (+40, none removed) and from 634 kB to 1,094 kB unpacked (+72.5%). All of the growth is planned content: the scaffolds, ADO scripts and skills. There are no binaries.
+The package grew from 97 to 141 files (+44, none removed) and from 634 kB to 1,203 kB unpacked (+89.7%). All of the growth is planned content: the scaffolds, ADO scripts, skills and, in rc.7, the ownership manifest (about 30 KB); rc.7 grew 8.3% over rc.6, inside wave 5's +10% budget. There are no binaries.
 
 ---
 
@@ -90,8 +101,9 @@ The package grew from 97 to 137 files (+40, none removed) and from 634 kB to 1,0
 - **Real-tool runs where a worker had used stand-ins.** WP3.4 was checked on Playwright 1.65: project selection, workers inheriting the environment, and `loginAs` refusing in a project that records traces.
 - **Adversarial probes of the API write gates.** 10 cases, each landing on the right gate.
 - **Smoke installs of every rc from the registry** into an empty folder, with `validate --strict`.
+- **Upgrades of copies of real consumer projects.** The rc.7 gate re-ran four untouched copies (Enrolamiento, BioFruit, Exportadora, GMOIndustrial) with a CI-equivalent LF tarball: all exit 0, no deletions, a second run changed 0 bytes, and backups appeared for exactly the edited files (section 3). Keber re-ran rc.8 on three copies himself with the same backup counts.
 
-**Nine defects were caught.** None of them reached npm:
+**Twelve defects were caught.** None of them reached npm:
 
 | Defect | Caught by | Outcome |
 |---|---|---|
@@ -104,6 +116,13 @@ The package grew from 97 to 137 files (+40, none removed) and from 634 kB to 1,0
 | PowerShell 7 read a BOM back as `U+FEFF` | CI on Linux (pwsh 7) | Fixed; static test added |
 | `inject-ado-ids.ps1` matched no spec on Linux or macOS (backslash paths) | CI on Linux (pwsh 7) | Fixed; static test added |
 | A release tag pushed with its commit, so publishing ran alongside CI instead of after it (process) | Coordinator | Process fixed; CI had passed 6 s earlier, so nothing unverified shipped |
+| The `.github/copilot-instructions.md` migration deleted or stripped a possibly edited file with no backup | Worker's report; coordinator review | WP5.3 sent back; all 8 delete, strip or move sites now back up first and abort that step if the backup fails |
+| `build-ownership-manifest.js --check` reported stale on a Windows CRLF checkout (repository script, not published) | Coordinator, integrating wave 5 | Fixed in rc.8; compares line-ending agnostic |
+| Ownership manifest stale on `dev` after the rc.8 tag (its header lists released versions) | Worker (wave 7) | Regenerated before the rc.9 bump |
+
+**One false finding, by the coordinator, not counted above.** It reported `TRIAGE.md` as quoting project lines unfenced; the evidence was an `rg '^#'` match inside a code fence. The wave 7 worker showed the fencing existed since WP5.3 and only pinned it with tests, which fail without it.
+
+**Found after publication, under `next` only.** Keber's upgrade of a real project copy to rc.5 found five defects, fixed in rc.6: bare `mcpNamespace` names rejected, `--version` missing, `[updated]` printed for unchanged files, agents overwritten without an ownership check, and emoji garbled in PowerShell 5.1 redirects. His four-project test of rc.6 found that `upgrade` force-wrote five kinds of framework files that three projects had edited; wave 5 fixed it in rc.7. No consumer received either, because `^` ranges never resolve to an rc.
 
 **Three defects already in `latest` 1.13.2 are fixed in 1.14.0:**
 - token authentication in the API scaffold never worked;
@@ -116,6 +135,9 @@ The package grew from 97 to 137 files (+40, none removed) and from 634 kB to 1,0
 |---|---|
 | 1.13.2 | 202 |
 | 1.14.0-rc.5 | 562, all passing on Windows; CI green on Node 20, 22 and 24 |
+| 1.14.0-rc.7 | 646 |
+| 1.14.0-rc.8 | 651 |
+| 1.14.0-rc.9 | 659, all passing; CI green on the release commit |
 
 CI on Linux runs the PowerShell tests under pwsh 7. Windows runs them under 5.1. Node 20 skips 21 tests by design, because they need Node 22's built-in TypeScript stripping.
 
@@ -125,7 +147,10 @@ CI on Linux runs the PowerShell tests under pwsh 7. Windows runs them under 5.1.
 
 The rule from v1.13.x still holds: **never touch user code; when in doubt, don't move it and warn.** In 1.14.0 that means:
 
-- **Ownership by content hash.** A file is refreshed only if it is byte-equivalent to a version the framework shipped. If the user edited it, it is kept and a warning names the template to merge from.
+- **Ownership by content hash for scaffold files.** A file is refreshed only if it is byte-equivalent to a version the framework shipped. If the user edited it, it is kept and a warning names the template to merge from.
+- **Edited framework-owned files are backed up, then overwritten.** Skills, commands, agents, rules, instructions and the folder guide are checked against a manifest of every shipped version (rules normalized for version and defect prefix). A pristine file, or one with an intact generated marker, is overwritten. An edited one is first copied to `.claude/qa-framework-backup/upgrade-to-<version>/`, which no agent loads, and `TRIAGE.md` there lists the lines the project added, fenced so they cannot act as instructions. Overwriting is deliberate: most project edits had already reached the framework in stronger form.
+- **Nothing is deleted, stripped or moved without a backup.** All 8 such sites back up first and skip the step if the backup fails.
+- **Verified on four real projects.** Backups: Enrolamiento 2 files (rules, guide), BioFruit 1 (rules; its only instructions edit, the defect prefix, is now rendered from its config), Exportadora 21 (8 commands, the guide, 12 skill files), GMOIndustrial none.
 - **Behavior changes are held, never forced:**
   - While a test still calls `loginAs` outside a `*.login.spec.ts`, `fixtures/auth.ts` is not refreshed, and each call is listed with its file and line.
   - While a spec already ends in `.slow`, `.writes` or `.login`, `playwright.config.ts` is not refreshed, and those specs are listed.
@@ -141,7 +166,7 @@ The rule from v1.13.x still holds: **never touch user code; when in doubt, don't
   - API writes need `QA_API_WRITE=1` plus an approved catalog entry;
   - k6 writes need `--allow-writes`, and concurrent writes need a dated authorization from the write approver.
 
-The full list of 14 upgrade-visible changes is in appendix A.4.
+The full list of 17 upgrade-visible changes is in appendix A.4.
 
 ---
 
@@ -155,8 +180,8 @@ The full list of 14 upgrade-visible changes is in appendix A.4.
 
 **The choice in action 3:**
 
-- **Promote rc.5** (recommended once actions 1 and 2 are done). Consumers get everything above.
-- **Promote rc.2 now.** It contains only waves 0 and 1, so it needs neither review, and it ships the bug fixes sooner. Waves 2 to 4 follow in a later minor release.
+- **Promote rc.9** (recommended once actions 1 and 2 are done). Consumers get everything above.
+- **Promote rc.2 now.** It contains only waves 0 and 1, so it needs neither review, and it ships the bug fixes sooner. Waves 2 to 7 follow in a later minor release.
 - **Wait.** Nothing is lost: `latest` stays at 1.13.2 and consumers are unaffected.
 
 A promotion branches from the promoted rc tag, not from the tip of `dev`, renames `[Unreleased]` in the CHANGELOG, and publishes from `main` (`docs/autonomous-release-plan.md`, decision log).
@@ -193,19 +218,29 @@ A promotion branches from the promoted rc tag, not from the tip of `dev`, rename
 | WP4.1 | Explicit ADO session; UTF-8 bodies; suite pagination guidance | A3, A6 | rc.5 | `67e9ed5` |
 | WP4.2 | `publish-results.ps1`, idempotent `create-issue.ps1`, encoding fixes | C11 | rc.5 | `dd2e4a2`, `4616899`, `bc90677` |
 | WP4.3 | Credential policy with read/write split; PR review rubric | B10, C13 | rc.5 | `c89781e`, `7449c83` |
+| (rc.6) | Bare `mcpNamespace` accepted; `--version`; `[updated]` only on change; agent ownership marker and backup; ASCII CLI output | - | rc.6 | `a139065`..`ee238a4` |
+| WP5.1 | Rules 13 and 14; rule 8 rendered from `defectIdPattern`; framework-owned header in both rule files | - | rc.7 | `945d7c1` |
+| WP5.2 | Dependency discovery (2.7), `Dependency` rule type, upstream dependencies table, single-value anti-pattern, ADO Conditional Access note; sprint tree in the guide | - | rc.7 | `b146861`, `87c8612` |
+| WP5.3 | Shipped-version manifest; backups with `TRIAGE.md`; generated marker on commands; backup before every delete, strip or move | - | rc.7 | `17adc8f`, `f4db086`, `7f1cebc` |
+| WP6 | Manifest `--check` line-ending agnostic; upstream dependencies table in `04-test-data.md`; unpadded `Sprint-{N}`; one scaffold hash registered | - | rc.8 | `3542539`, `b8d95db`, `19a2a3c`, `8c62f19` |
+| WP7 | CLI suggests the intended command; `TRIAGE.md` fencing pinned by tests | - | rc.9 | `a5a9b95`, `a0b9ffb` |
 
-### A.2 Release candidates (npm registry, 2026-11-12 UTC)
+### A.2 Release candidates (npm registry, UTC; checked 2026-11-16)
 
 | Version | Commit | Published | Unpacked bytes | Files | vs 1.13.2 |
 |---|---|---|---|---|---|
 | 1.13.2 | `e6a7795` | 2026-11-06 | 634,041 | 97 | - |
-| 1.14.0-rc.1 | `4199602` | 04:03 | 665,270 | 97 | +4.9% |
-| 1.14.0-rc.2 | `07d187d` | 05:25 | 698,904 | 98 | +10.2% |
-| 1.14.0-rc.3 | `fa3a859` | 06:17 | 833,116 | 117 | +31.4% |
-| 1.14.0-rc.4 | `71f0345` | 11:56 | 1,005,674 | 133 | +58.6% |
-| 1.14.0-rc.5 | `3456e7e` | 13:33 | 1,093,714 | 137 | +72.5% |
+| 1.14.0-rc.1 | `4199602` | 2026-11-12 04:03 | 665,270 | 97 | +4.9% |
+| 1.14.0-rc.2 | `07d187d` | 2026-11-12 05:25 | 698,904 | 98 | +10.2% |
+| 1.14.0-rc.3 | `fa3a859` | 2026-11-12 06:17 | 833,116 | 117 | +31.4% |
+| 1.14.0-rc.4 | `71f0345` | 2026-11-12 11:56 | 1,005,674 | 133 | +58.6% |
+| 1.14.0-rc.5 | `3456e7e` | 2026-11-12 13:33 | 1,093,714 | 137 | +72.5% |
+| 1.14.0-rc.6 | `66a0def` | 2026-11-13 14:50 | 1,104,627 | 137 | +74.2% |
+| 1.14.0-rc.7 | `810a269` | 2026-11-13 18:24 | 1,196,581 | 141 | +88.7% |
+| 1.14.0-rc.8 | `93f50a9` | 2026-11-13 20:47 | 1,199,649 | 141 | +89.2% |
+| 1.14.0-rc.9 | `a397aff` | 2026-11-16 17:02 | 1,202,641 | 141 | +89.7% |
 
-Source changes from 1.13.2 to rc.5: 131 files, +19,157 / -627 lines, 73 commits (52 without merges).
+Dist-tags on 2026-11-16: `latest` 1.13.2, `next` 1.14.0-rc.9. Source changes from 1.13.2 to rc.9: 162 files, +23,560 / -737 lines, 113 commits (85 without merges).
 
 Every rc was published by the guarded workflow with provenance, under `next`, after CI passed on the release commit. `latest` was never touched.
 
@@ -221,11 +256,14 @@ Every rc was published by the guarded workflow with provenance, under `next`, af
 8. **The B3 category is named `recommendations/`.** An existing `improvements/` folder is respected.
 9. **The ADO read/write split uses four variables with a fallback.** A PAT cannot be scoped to one project.
 10. **`--check-http` was removed from `qa-framework clock` instead of stopping the plan.** It can return with Keber's OK.
+11. **`upgrade` backs up an edited framework file, then overwrites it.** Keeping the old file would freeze a project out of improvements that had already absorbed its edits.
+12. **The canonical sprint folder is unpadded `Sprint-{N}`.** Taken from code: `init.js` and `upgrade.js` write it and no code parses the name, so padded folders keep working.
+13. **The ownership manifest is regenerated after every release tag.** Its header lists the released versions.
 
 ### A.4 Changes existing projects see on `upgrade`
 
 1. Installed rules are stamped with the package version.
-2. `.claude/rules/qa-framework.md` is overwritten. It now has rule 12, the lane dispatcher protocol and the full rule 11.
+2. `.claude/rules/qa-framework.md` is overwritten (after a backup if edited). It now has rules 12-14, the lane dispatcher protocol, the full rule 11 and the project's defect prefix in rule 8.
 3. Legacy paths move only on proof of the old layout; anything left in place is listed.
 4. Untouched lane scripts are refreshed; edited ones are reported as "NOT refreshed".
 5. "Already up to date" now means identical to the template. Edited files are listed as warnings, and `qa/memory/` files under "Kept".
@@ -238,6 +276,9 @@ Every rc was published by the guarded workflow with provenance, under `next`, af
 12. The `qa-api-integration` and `qa-performance-k6` skills and their commands are delivered. The k6 scaffold is not.
 13. `package.json` is never edited. Missing scripts are printed.
 14. The ADO scripts (in the package, so they update with `npm install`) prefer `ADO_*_WRITE` and `ADO_*_READ`, with `ADO_PROJECT` and `ADO_PAT` as fallback.
+15. Edited skills, commands, agents, rules, instructions and the folder guide are backed up to `.claude/qa-framework-backup/upgrade-to-<version>/` with a `TRIAGE.md`, then overwritten, with a warning naming the backup. A second run creates no new backup.
+16. Every delete, strip or move of a project file, including the `.github/copilot-instructions.md` migration, backs it up first and skips the step if the backup fails.
+17. Generated commands and agents carry an ownership marker, so later upgrades recognize them as pristine.
 
 ### A.5 Real Azure DevOps checklist for wave 4 (Keber)
 
@@ -273,14 +314,21 @@ Wave 4 was built and tested with mocks only. CI ran the scripts on PowerShell 7 
 | `qa-framework clock --check-http` | Keber's OK for network access in a shipped script |
 | `Get-AdoTestSuites` truncates at 200 | A fix upstream in `@keber/ado-powershell` (another repository) |
 
-**Known minor debt.** `templates/agents/qa-investigador.md` still says heartbeats are mandatory, which contradicts the accepted heartbeat decision. This was already recorded in `docs/decisions/lane-heartbeat-caller.md`. It is harmless, but should be reworded.
+**Known minor debt.** None of it blocks promotion; the wave 5 follow-ups were closed in rc.8.
+- `templates/agents/qa-investigador.md` still says heartbeats are mandatory, which contradicts the accepted heartbeat decision recorded in `docs/decisions/lane-heartbeat-caller.md`. It should be reworded.
+- The sprint placeholder token varies (`{N}`, `{{N}}`, `<N>`), although every form is unpadded.
+- `templates/specification/04-test-data.md` has a pre-existing warning emoji and a non-ASCII comparison sign.
 
 ### A.7 Lessons recorded for the next plan
 
 - **Release discipline.** Push branches with `--no-follow-tags`, and push a release tag only after CI is green on its commit.
 - **Workers run on Windows; CI runs on Linux.** Path assertions must accept both separators.
 - **PowerShell 5.1 and 7 differ.** CI is the only pwsh 7 run, and it caught two bugs.
-- **Independent coordinator checks pay off.** Simulations, re-runs and reviews by the coordinator caught six of the nine defects; CI on Linux caught the other three.
+- **Independent coordinator checks pay off.** Simulations, re-runs and reviews by the coordinator caught seven of the twelve defects, CI on Linux three, and workers' own reports two.
+- **Real-project upgrades find what simulations miss.** Keber's runs on copies of consumer projects found five defects and the ownership gap that drove waves 5 to 7.
+- **Read the context before reporting a search match.** `rg '^#'` also matches lines inside code fences; that produced the coordinator's false `TRIAGE.md` finding.
+- **Regenerate the ownership manifest after every release tag.** Its header lists released versions; rc.8 left it stale on `dev`.
+- **Decide conventions from what code writes and parses, not from prose.** Sprint naming was settled that way.
 - **Briefs must be checked against the stop conditions too.** WP3.6 broke a hard stop because its brief asked for it.
 - **Smoke installs use `--prefer-online`.** The registry cache lags for several minutes after a publish.
 - **Session tooling.** Cards drop `source_branch`, and sessions cannot be started from event-driven turns. Isolated-worktree subagents were the fallback for WP3.6 and wave 4.
