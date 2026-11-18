@@ -187,8 +187,8 @@ of the policy.
 | YAML keys | `version: v0.1`, `testId`, `testType`, `testPlan`, `engineInstances`, `description`, `configurationFiles`, `zipArtifacts`, `properties.userPropertyFile`, `splitAllCSVs`, `env`, `secrets`, `certificates`, `referenceIdentities`, `keyVaultReferenceIdentity`, `failureCriteria`, `autoStop`, `subnetId`, `publicIPDisabled`, `appComponents`, `regionalLoadTestConfig` (2026-11-12). | [S2] |
 | Fail criteria | Up to 50. Client metrics `response_time_ms`, `latency`, `error`, `requests_per_sec`, `requests`; server metrics from Azure Monitor. Request names must match the JMeter sampler name. | [S2], [S3b] |
 | Auto-stop | YAML `autoStop: disable` or `{ errorPercentage, timeWindow }` (defaults 90 %, 60 s). The in-script auto-stop listener is JMeter-only. | [S2] |
-| Server metrics | About 40 Azure resource types, including App Service, AKS, Azure SQL, Cosmos DB, Functions, Container Apps, APIM, Front Door, Service Bus, VMs. | research 2026-11-17, page not recorded |
-| Multi-region load | GA (May 2024). | research 2026-11-17, page not recorded |
+| Server metrics | About 40 Azure resource types, including App Service, AKS, Azure SQL, Cosmos DB, Functions, Container Apps, APIM, Front Door, Service Bus, VMs. | https://learn.microsoft.com/en-us/azure/app-testing/load-testing/resource-supported-azure-resource-types |
+| Multi-region load | GA (May 2024). | https://techcommunity.microsoft.com/blog/appsonazureblog/announcing-multi-region-load-tests-and-support-for-locust-framework-in-azure-loa/4145411 |
 | VNet injection | GA. Same subscription and region, no IPv6, Network Contributor on the VNet. Deploys public IP, NSG and load balancer per run unless `publicIPDisabled`. Egress needed to `*.windows.net`, `*.blob.storage.azure.net`, `*.azurecr.io`. | [S13] |
 | Limits | Up to 400 engines per run; duration 3 h by default, 24 h hard cap; 5 to 50 concurrent runs; retention: server metrics 90 days, client metrics 365 days, results and logs 6 months. | [S16] |
 | Pricing | Per VUH; minimum 10 VUs x 10 min per engine from 2026-03-01. Unit prices are placeholders on the official page; secondary sources quoted USD 0.15 and 0.06 per VUH on 2026-11-12 (unconfirmed). | [S11] |
@@ -265,4 +265,3 @@ Checked 2026-11-17 unless marked.
   `responseTimeMs` vs `response_time_ms`).
 - `referenceIdentities` kinds beyond `KeyVault` (docs disagree).
 - Locust GA date (aggregator, not the Azure Updates page itself).
-- Source pages for the server-metric resource list and multi-region GA.
